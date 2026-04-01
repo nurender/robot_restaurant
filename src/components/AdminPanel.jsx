@@ -27,7 +27,7 @@ import { io } from 'socket.io-client';
 import axios from 'axios';
 import './AdminPanel.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = 'https://robot-restaurant.onrender.com';
 const socket = io(API_URL, { autoConnect: true });
 
 const AdminPanel = () => {
@@ -44,10 +44,10 @@ const AdminPanel = () => {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  const [newDish, setNewDish] = useState({ 
-    name: '', 
-    category: '', 
-    price: '', 
+  const [newDish, setNewDish] = useState({
+    name: '',
+    category: '',
+    price: '',
     description: '',
     image_url: '',
     video_url: ''
@@ -250,8 +250,8 @@ const AdminPanel = () => {
   const handlePrint = (order) => {
     setSelectedOrder(order);
     setTimeout(() => {
-        window.print();
-        setSelectedOrder(null);
+      window.print();
+      setSelectedOrder(null);
     }, 500);
   };
 
@@ -525,8 +525,8 @@ const AdminPanel = () => {
                   {adminUser.role === 'super_admin' && (
                     <div className="branch-selector-toolbar glass-panel">
                       <MapPin size={18} color="var(--accent-color)" />
-                      <select 
-                        value={selectedBranchId || ''} 
+                      <select
+                        value={selectedBranchId || ''}
                         onChange={(e) => {
                           setSelectedBranchId(Number(e.target.value) || null);
                           fetchMenu(Number(e.target.value) || null);
@@ -609,13 +609,13 @@ const AdminPanel = () => {
                           </div>
                         </div>
                         <div className="form-group full-width"><label>Description</label><textarea value={newDish.description} onChange={(e) => setNewDish({ ...newDish, description: e.target.value })} placeholder="Delicious description..."></textarea></div>
-                        
+
                         <div className="form-group"><label>Dish Photography</label>
                           <div className="media-upload-zone">
                             {newDish.image_url ? (
                               <div className="media-preview-container">
                                 <img src={newDish.image_url} alt="Preview" />
-                                <button type="button" className="btn-remove-media" onClick={() => setNewDish({...newDish, image_url: ''})}>×</button>
+                                <button type="button" className="btn-remove-media" onClick={() => setNewDish({ ...newDish, image_url: '' })}>×</button>
                               </div>
                             ) : (
                               <label className="upload-placeholder">
@@ -632,8 +632,8 @@ const AdminPanel = () => {
                             {newDish.video_url ? (
                               <div className="media-preview-container">
                                 <Film size={24} color="var(--accent-color)" />
-                                <span className="text-success" style={{fontSize: '11px'}}>Video Ready</span>
-                                <button type="button" className="btn-remove-media" onClick={() => setNewDish({...newDish, video_url: ''})}>×</button>
+                                <span className="text-success" style={{ fontSize: '11px' }}>Video Ready</span>
+                                <button type="button" className="btn-remove-media" onClick={() => setNewDish({ ...newDish, video_url: '' })}>×</button>
                               </div>
                             ) : (
                               <label className="upload-placeholder">

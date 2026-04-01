@@ -3,7 +3,7 @@ import axios from 'axios';
 import { ChefHat, Lock, Mail, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 import './AdminLogin.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = 'https://robot-restaurant.onrender.com';
 
 const AdminLogin = () => {
     const [email, setEmail] = useState('');

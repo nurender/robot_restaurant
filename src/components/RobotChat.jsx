@@ -3,7 +3,7 @@ import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Vid
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = 'https://robot-restaurant.onrender.com';
 const socket = io(API_URL, { autoConnect: true });
 
 const DIALOGS = {
