@@ -27,8 +27,8 @@ import { io } from 'socket.io-client';
 import axios from 'axios';
 import './AdminPanel.css';
 
-const API_URL = 'http://localhost:3001';
-const socket = io(API_URL);
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const socket = io(API_URL, { autoConnect: true });
 
 const AdminPanel = () => {
   const [adminUser, setAdminUser] = useState(JSON.parse(localStorage.getItem('admin_token')) || {});

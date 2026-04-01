@@ -14,9 +14,33 @@ console.log(ai ? '✅ Sentient Gemini Brain: ACTIVE' : '⚠️  AI Brain: Missin
 
 const app = express();
 const server = http.createServer(app);
+const PORT = process.env.PORT || 3001;
 
-// Setup CORS
-app.use(cors({ origin: '*' }));
+// Production CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"]
+  }
+});
 app.use(express.json());
 
 // Setup Uploads
