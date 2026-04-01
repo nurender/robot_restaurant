@@ -193,10 +193,12 @@ OUTPUT FORMAT (STRICT JSON):
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                    "Content-Type": "application/json"
+                    "HTTP-Referer": "https://robot-restaurant.vercel.app",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://robot-restaurant.vercel.app",
                 },
                 body: JSON.stringify({
-                    model: "google/gemini-2.0-flash-001",
+                    model: "mistralai/mistral-7b-instruct",
                     messages: [{ role: "user", content: prompt }]
                 })
             });
