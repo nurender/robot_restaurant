@@ -249,7 +249,10 @@ const AdminPanel = () => {
 
   const handlePrint = (order) => {
     setSelectedOrder(order);
-    setTimeout(() => window.print(), 500);
+    setTimeout(() => {
+        window.print();
+        setSelectedOrder(null);
+    }, 500);
   };
 
   const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -467,19 +470,44 @@ const AdminPanel = () => {
                 <div className="empty-state glass-panel"><ChefHat size={64} className="mb-4 text-muted" /><h3>No Active Orders</h3><p>Real-time orders will appear here.</p></div>
               ) : (
                 <div className="orders-grid-premium">
-                  {orders.map(order => (
-                    <div key={order.id} className={`p-order-card shadow-premium ${order.status}`}>
-                      <div className="p-card-header"><div className="table-badge">Table {order.tableNumber}</div><span className="p-time"><Clock size={14} /> {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+                  {orders.map((order, index) => (
+                    <div key={order.id} className={`p-order-card shadow-premium ${order.status} animate-fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
+                      <div className="p-card-header">
+                        <div className="p-header-left">
+                          <div className="table-badge">Table {order.tableNumber}</div>
+                          <div className={`status-pill ${order.status}`}>
+                            <span className="status-dot"></span>
+                            {order.status === 'pending' ? 'Awaiting Action' : 'Served'}
+                          </div>
+                        </div>
+                        <span className="p-time"><Clock size={14} /> {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
                       <div className="p-card-body">
                         {(Array.isArray(order.items) ? order.items : []).map((item, idx) => (
-                          <div key={idx} className="p-item-row"><span className="p-qty">{item.qty || 1}x</span><span className="p-name">{item.name || item}</span><span className="p-price">₹{(item.price || 0) * (item.qty || 1)}</span></div>
+                          <div key={idx} className="p-item-row">
+                            <span className="p-qty">{item.qty || 1}x</span>
+                            <div className="p-item-info">
+                              <span className="p-name">{item.name || item}</span>
+                              <span className="p-item-desc">High-fidelity culinary prep</span>
+                            </div>
+                            <span className="p-price">₹{(item.price || 0) * (item.qty || 1)}</span>
+                          </div>
                         ))}
                       </div>
                       <div className="p-card-footer">
-                        <div className="p-total"><span>Total</span><strong>₹{order.total}</strong></div>
+                        <div className="p-total">
+                          <span className="total-label">Total Amount</span>
+                          <strong className="total-val">₹{order.total}</strong>
+                        </div>
                         <div className="p-actions">
-                          {order.status === 'pending' && <button className="btn-action-success" onClick={() => handleStatusChange(order.id, 'completed')}><CheckCircle size={16} /> Serve</button>}
-                          <button className="btn-action-icon" onClick={() => handlePrint(order)}><Printer size={18} /></button>
+                          {order.status === 'pending' && (
+                            <button className="btn-action-success animate-pulse-glow" onClick={() => handleStatusChange(order.id, 'completed')}>
+                              <CheckCircle size={16} /> Serve
+                            </button>
+                          )}
+                          <button className="btn-action-icon" onClick={() => handlePrint(order)} title="Print Reciept">
+                            <Printer size={18} />
+                          </button>
                         </div>
                       </div>
                     </div>

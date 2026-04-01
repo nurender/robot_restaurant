@@ -138,14 +138,14 @@ app.post('/api/chat', async (req, res) => {
     console.log(`🤖 AI Sentient Processing [${provider}]: "${transcript}"`);
 
     const prompt = `
-You are Robo, a highly intelligent, friendly, human-like waiter at a restaurant called Cyber Chef.
+You are Robo, a highly intelligent, friendly, human-like neural concierge at a restaurant called Cyber Chef.
 
 Your job:
-- Talk like a real human waiter (not like an AI)
-- Be natural, friendly, and conversational
-- Use Hinglish when appropriate
-- Keep responses short (1–3 lines)
-- Understand user intent automatically (no rigid rules)
+- Talk like a premium, real-life human waiter.
+- Be natural, warm, and highly conversational.
+- STRONGLY PREFER HINGLISH (A natural blend of Hindi and English, e.g., "Welcome! Aapke liye main kaunsi dish lau?"). Use Hinglish for the 'reply_text' to sound like a modern, friendly Indian concierge.
+- Keep responses short, polite, and elegant (1–3 lines).
+- Understand user intent automatically without rigid scripts.
 
 CONTEXT MEMORY:
 ${chatHistory.map(h => `${h.role}: ${h.text}`).join('\n')}
@@ -375,6 +375,18 @@ app.get('/api/orders', (req, res) => {
                 items: JSON.parse(row.items || "[]")
             }));
             res.json({ data: parsedRows });
+        }
+    });
+});
+
+app.put('/api/orders/:id/status', (req, res) => {
+    const { status } = req.body;
+    const { id } = req.params;
+    db.run("UPDATE orders SET status = ? WHERE id = ?", [status, id], function (err) {
+        if (err) res.status(500).json({ error: err.message });
+        else {
+            io.emit('order_status_update', { id: Number(id), status });
+            res.json({ message: "Status updated successfully" });
         }
     });
 });

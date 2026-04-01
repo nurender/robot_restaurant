@@ -8,22 +8,22 @@ const socket = io(API_URL, { autoConnect: true });
 
 const DIALOGS = {
   hi: {
-    welcome: "नमस्ते! मैं आपका AI वेटर हूँ। आज आप क्या खाना पसंद करेंगे?",
-    menu_title: "हमारा प्रीमियम मेनू",
-    confirm: (total) => `आपका आर्डर बुक हो चुका है! कुल ₹${total}। धन्यवाद!`,
+    welcome: "साइबर शेफ में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ?",
+    menu_title: "हमारा प्रीमियम डिजिटल मेनू",
+    confirm: (total) => `आपका आर्डर सफलतापूर्वक बुक हो चुका है! कुल ₹${total}। साइबर शेफ चुनने के लिए धन्यवाद!`,
     voice_switched: "मेरी आवाज़ अब हिंदी में है।"
   },
   en: {
-    welcome: "Hello! I am your AI waiter. What would you like to order today?",
-    menu_title: "Our Premium Menu",
-    confirm: (total) => `Your order is booked! A total of ₹${total}। Thank you!`,
-    voice_switched: "My voice is now set to English."
+    welcome: "Welcome to Cyber Chef. I am Robo, your neural concierge. How can I elevate your dining experience today?",
+    menu_title: "Our Premium Digital Menu",
+    confirm: (total) => `Order successfully synchronized! Total: ₹${total}. Thank you for choosing Cyber Chef.`,
+    voice_switched: "Neural voice switched to English."
   }
 };
 
 const RobotChat = ({ tableNumber, restaurantId }) => {
-  const [textLanguage, setTextLanguage] = useState('en');
-  const [voiceLanguage, setVoiceLanguage] = useState('hi');
+  const [textLanguage, setTextLanguage] = useState('en'); // Digital UI always English
+  const [voiceLanguage, setVoiceLanguage] = useState('hi'); // Neural Voice can be 'hi' (Hinglish) or 'en'
   const [menuCategories, setMenuCategories] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [showMenuPopup, setShowMenuPopup] = useState(false);
@@ -69,16 +69,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   useEffect(() => {
     fetchMenu();
     socket.on('menu_updated', () => fetchMenu());
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.onstart = () => setIsListening(true);
-      rec.onend = () => setIsListening(false);
-      rec.onspeechend = () => rec.stop();
-      recognitionRef.current = rec;
-    }
     return () => socket.off('menu_updated');
   }, []);
 
@@ -104,23 +94,40 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   }, []);
 
   useEffect(() => {
-    setCurrentSubtitle(DIALOGS[textLanguage].welcome);
-    speak(DIALOGS[voiceLanguage].welcome, voiceLanguage);
+    const handleInitialGreeting = () => {
+      setCurrentSubtitle(DIALOGS['en'].welcome); // Always English text
+      speak(DIALOGS[voiceLanguage].welcome, voiceLanguage); // Hinglish or English voice
+    };
+
+    // Browsers often load voices asynchronously
+    if (synthRef.current.getVoices().length > 0) {
+      handleInitialGreeting();
+    } else {
+      synthRef.current.onvoiceschanged = () => {
+        handleInitialGreeting();
+        synthRef.current.onvoiceschanged = null; // Clean up
+      };
+    }
+
     return () => synthRef.current?.cancel();
   }, []);
 
-  const speak = (text, langToSpeak = voiceLanguage) => {
+  const speak = (text, langToSpeak = textLanguage) => {
     if (synthRef.current) {
       synthRef.current.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = synthRef.current.getVoices();
+
+      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
       let selectedVoice = (langToSpeak === 'hi')
-        ? voices.find(v => v.lang.includes('hi') || v.lang.includes('IN'))
-        : voices.find(v => v.lang.includes('en') || v.lang.includes('US'));
+        ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
+          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
+        : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
+          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
 
       if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.rate = 0.9;
-      utterance.pitch = 1.1;
+      utterance.rate = 0.95; // Elegant concierge rate
+      utterance.pitch = 1.05; // Friendly, professional pitch
       utterance.onstart = () => setIsRobotSpeaking(true);
       utterance.onend = () => setIsRobotSpeaking(false);
       utterance.onerror = () => setIsRobotSpeaking(false);
@@ -128,30 +135,121 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
   };
 
+
   const startListening = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition || isListening) return;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    // ❌ Browser support check
+    if (!SpeechRecognition) {
+      setCurrentSubtitle(
+        textLanguage === "hi"
+          ? "आपका ब्राउज़र माइक सपोर्ट नहीं करता"
+          : "Speech Recognition not supported"
+      );
+      return;
+    }
+
+    // ❌ Already listening
+    if (isListening) return;
+
     try {
-      synthRef.current?.cancel();
+      // 🔴 Stop previous instance
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+
+      // 🔊 Stop TTS if running
+      if (synthRef.current) {
+        synthRef.current.cancel();
+      }
+
       setIsRobotSpeaking(false);
-      setCurrentSubtitle(textLanguage === 'hi' ? "सुन रहा हूँ..." : "Listening...");
-      recognition.lang = voiceLanguage === 'hi' ? 'hi-IN' : 'en-US';
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("🎤 Voice Detected:", transcript);
-        processMockAIResponse(transcript);
+
+      const recognition = new SpeechRecognition();
+
+      recognition.lang = voiceLanguage === "hi" ? "hi-IN" : "en-US";
+      recognition.interimResults = true;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+
+      // 🎤 START
+      recognition.onstart = () => {
+        setIsListening(true);
+        setCurrentSubtitle(
+          textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening..."
+        );
+        console.log("🎤 Listening started");
       };
+
+      // 🎤 RESULT
+      recognition.onresult = (event) => {
+        let transcript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+
+        // Interim text show
+        setCurrentSubtitle(transcript);
+
+        // Final result
+        const last = event.results[event.results.length - 1];
+        if (last.isFinal) {
+          console.log("✅ Final:", transcript);
+          processMockAIResponse(transcript);
+        }
+      };
+
+      // ❌ ERROR HANDLE
       recognition.onerror = (e) => {
-        console.error("🎤 Mic Error:", e.error);
+        console.error("🎤 Error:", e.error);
+
+        let msg = "";
+
+        if (e.error === "not-allowed") {
+          msg =
+            textLanguage === "hi"
+              ? "माइक परमिशन allow करो"
+              : "Allow microphone permission";
+        } else if (e.error === "no-speech") {
+          msg =
+            textLanguage === "hi"
+              ? "कोई आवाज़ नहीं मिली"
+              : "No speech detected";
+        } else if (e.error === "network") {
+          msg =
+            textLanguage === "hi"
+              ? "नेटवर्क समस्या"
+              : "Network error";
+        } else {
+          msg = e.error;
+        }
+
+        setCurrentSubtitle(msg);
         setIsListening(false);
       };
-      recognition.start();
-    } catch (e) {
-      console.error(e);
+
+      // 🔚 END
+      recognition.onend = () => {
+        console.log("🎤 Ended");
+        setIsListening(false);
+      };
+
+      // Save instance
+      recognitionRef.current = recognition;
+
+      // 🔥 Start safely
+      setTimeout(() => {
+        recognition.start();
+      }, 200);
+
+    } catch (err) {
+      console.error("❌ Failed:", err);
       setIsListening(false);
     }
   };
-
   const processMockAIResponse = async (userText) => {
     setIsAiTyping(true);
     setCurrentSubtitle(`${textLanguage === 'hi' ? 'आप' : 'You'}: "${userText}"`);
@@ -407,17 +505,26 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <button onClick={() => setShowSettingsPopup(false)}>×</button>
             </div>
             <div className="settings-group">
-              <label>{textLanguage === 'en' ? 'Subtitle Language' : 'लिखने की भाषा (Text)'}</label>
+              <label>{textLanguage === 'en' ? 'Neural Assistant Voice' : 'रोबो की आवाज़'}</label>
               <div className="toggle-pill">
-                <button className={textLanguage === 'en' ? 'active' : ''} onClick={() => setTextLanguage('en')}>English</button>
-                <button className={textLanguage === 'hi' ? 'active' : ''} onClick={() => setTextLanguage('hi')}>हिंदी</button>
-              </div>
-            </div>
-            <div className="settings-group">
-              <label>{textLanguage === 'en' ? 'Assistant Voice Language' : 'बोलने की भाषा (Voice)'}</label>
-              <div className="toggle-pill">
-                <button className={voiceLanguage === 'en' ? 'active' : ''} onClick={() => { setVoiceLanguage('en'); setCurrentSubtitle("Voice mode set to English."); speak("English mode active.", 'en'); }}>English</button>
-                <button className={voiceLanguage === 'hi' ? 'active' : ''} onClick={() => { setVoiceLanguage('hi'); setCurrentSubtitle("आवाज़ हिंदी में है।"); speak("अब मैं हिंदी में बोलूंगा।", 'hi'); }}>हिंदी</button>
+                <button
+                  className={voiceLanguage === 'en' ? 'active' : ''}
+                  onClick={() => {
+                    setVoiceLanguage('en');
+                    setCurrentSubtitle("Neural voice specialized to English.");
+                    speak("Neural voice specialized to English.", 'en');
+                  }}>
+                  Pure English
+                </button>
+                <button
+                  className={voiceLanguage === 'hi' ? 'active' : ''}
+                  onClick={() => {
+                    setVoiceLanguage('hi');
+                    setCurrentSubtitle("Neural voice localized to Hinglish.");
+                    speak("अब मैं आपसे हिंदी और इंग्लिश दोनों में बात करूँगा।", 'hi');
+                  }}>
+                  Human Hinglish
+                </button>
               </div>
             </div>
           </div>
