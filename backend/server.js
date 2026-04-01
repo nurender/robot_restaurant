@@ -192,7 +192,7 @@ OUTPUT FORMAT (STRICT JSON):
             const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer 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`,
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
