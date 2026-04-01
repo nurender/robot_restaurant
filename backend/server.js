@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
@@ -31,35 +31,39 @@ const upload = multer({ storage });
 // Setup Socket.io
 const io = new Server(server, { cors: { origin: '*' } });
 
-// Open SQLite database connection
-const dbPath = path.resolve(__dirname, 'restaurant.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error("Error opening database " + err.message);
-    else {
-        console.log("Connected to the SQLite database.");
-        db.run(`CREATE TABLE IF NOT EXISTS restaurants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+// PostgreSQL Connection Pool
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false } // Required for Supabase/Neon
+});
+
+const connectDB = async () => {
+    try {
+        await pool.query('SELECT NOW()');
+        console.log("Connected to the PostgreSQL database.");
+
+        await pool.query(`CREATE TABLE IF NOT EXISTS restaurants (
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             location TEXT
-        )`, () => {
-            db.get("SELECT count(*) as count FROM restaurants", (err, row) => {
-                if (row && row.count === 0) {
-                    db.run("INSERT INTO restaurants (name, location) VALUES ('Default Restaurant', 'Downtown')");
-                }
-            });
-        });
+        )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        const restCheck = await pool.query("SELECT count(*) FROM restaurants");
+        if (parseInt(restCheck.rows[0].count) === 0) {
+            await pool.query("INSERT INTO restaurants (name, location) VALUES ($1, $2)", ['Default Restaurant', 'Downtown']);
+        }
+
+        await pool.query(`CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
             restaurant_id INTEGER NOT NULL DEFAULT 1,
             tableNumber INTEGER NOT NULL,
             items TEXT NOT NULL,
             total INTEGER NOT NULL,
-            timestamp INTEGER NOT NULL,
+            timestamp BIGINT NOT NULL,
             status TEXT NOT NULL
         )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS menu (
+        await pool.query(`CREATE TABLE IF NOT EXISTS menu (
             id TEXT PRIMARY KEY,
             restaurant_id INTEGER NOT NULL DEFAULT 1,
             name TEXT NOT NULL,
@@ -68,64 +72,64 @@ const db = new sqlite3.Database(dbPath, (err) => {
             description TEXT,
             image_url TEXT,
             video_url TEXT
-        )`, () => {
-            db.get("SELECT count(*) as count FROM menu", (err, row) => {
-                if (row && row.count === 0) {
-                    const initialMenu = [
-                        ['s1', 1, 'Paneer Tikka', 'Starters', 250, 'Grilled cottage cheese with spices', null, null],
-                        ['s2', 1, 'French Fries', 'Starters', 120, 'Crispy salted potato fries', null, null],
-                        ['s3', 1, 'Manchow Soup', 'Starters', 150, 'Spicy Asian soup with fried noodles', null, null],
-                        ['m1', 1, 'Premium Thali', 'Main Course', 450, 'Dal, Paneer, Naan, Rice, Dessert', null, null],
-                        ['m2', 1, 'Chef Special Pizza', 'Main Course', 399, 'Spicy paneer tikka with mozzarella', null, null],
-                        ['m3', 1, 'Classic Burger', 'Main Course', 150, 'Aloo veg patty with secret sauce', null, null],
-                        ['d1', 1, 'Cold Beverage', 'Drinks & Desserts', 60, 'Chilled soft drink / Cola', null, null],
-                        ['d2', 1, 'Mango Lassi', 'Drinks & Desserts', 100, 'Sweetened mango yogurt drink', null, null],
-                        ['d3', 1, 'Gulab Jamun', 'Drinks & Desserts', 100, '2 pcs warm Indian dessert', null, null]
-                    ];
-                    const stmt = db.prepare("INSERT INTO menu (id, restaurant_id, name, category, price, description, image_url, video_url) VALUES (?,?,?,?,?,?,?,?)");
-                    initialMenu.forEach(item => stmt.run(item));
-                    stmt.finalize();
-                }
-            });
-        });
+        )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        const menuCheck = await pool.query("SELECT count(*) FROM menu");
+        if (parseInt(menuCheck.rows[0].count) === 0) {
+            const initialMenu = [
+                ['s1', 1, 'Paneer Tikka', 'Starters', 250, 'Grilled cottage cheese with spices', null, null],
+                ['s2', 1, 'French Fries', 'Starters', 120, 'Crispy salted potato fries', null, null],
+                ['s3', 1, 'Manchow Soup', 'Starters', 150, 'Spicy Asian soup with fried noodles', null, null],
+                ['m1', 1, 'Premium Thali', 'Main Course', 450, 'Dal, Paneer, Naan, Rice, Dessert', null, null],
+                ['m2', 1, 'Chef Special Pizza', 'Main Course', 399, 'Spicy paneer tikka with mozzarella', null, null],
+                ['m3', 1, 'Classic Burger', 'Main Course', 150, 'Aloo veg patty with secret sauce', null, null],
+                ['d1', 1, 'Cold Beverage', 'Drinks & Desserts', 60, 'Chilled soft drink / Cola', null, null],
+                ['d2', 1, 'Mango Lassi', 'Drinks & Desserts', 100, 'Sweetened mango yogurt drink', null, null],
+                ['d3', 1, 'Gulab Jamun', 'Drinks & Desserts', 100, '2 pcs warm Indian dessert', null, null]
+            ];
+            for (const item of initialMenu) {
+                await pool.query("INSERT INTO menu (id, restaurant_id, name, category, price, description, image_url, video_url) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", item);
+            }
+        }
+
+        await pool.query(`CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
             restaurant_id INTEGER NOT NULL DEFAULT 1,
             name TEXT NOT NULL
-        )`, () => {
-            db.get("SELECT count(*) as count FROM categories", (err, row) => {
-                if (row && row.count === 0) {
-                    const initialCats = ['Starters', 'Main Course', 'Drinks & Desserts', 'Specials'];
-                    const stmt = db.prepare("INSERT INTO categories (restaurant_id, name) VALUES (1, ?)");
-                    initialCats.forEach(cat => stmt.run(cat));
-                    stmt.finalize();
-                }
-            });
-        });
+        )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        const catCheck = await pool.query("SELECT count(*) FROM categories");
+        if (parseInt(catCheck.rows[0].count) === 0) {
+            const initialCats = ['Starters', 'Main Course', 'Drinks & Desserts', 'Specials'];
+            for (const cat of initialCats) {
+                await pool.query("INSERT INTO categories (restaurant_id, name) VALUES (1, $1)", [cat]);
+            }
+        }
+
+        await pool.query(`CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
             restaurant_id INTEGER DEFAULT 1,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             role TEXT NOT NULL,
             name TEXT NOT NULL
-        )`, () => {
-            db.get("SELECT count(*) as count FROM users", (err, row) => {
-                if (row && row.count === 0) {
-                    const users = [
-                        [null, 'super@resto.com', 'super123', 'super_admin', 'Global Master'],
-                        [1, 'admin@resto.com', 'admin123', 'admin', 'Main Manager']
-                    ];
-                    const stmt = db.prepare("INSERT INTO users (restaurant_id, email, password, role, name) VALUES (?,?,?,?,?)");
-                    users.forEach(u => stmt.run(u));
-                    stmt.finalize();
-                }
-            });
-        });
+        )`);
+
+        const userCheck = await pool.query("SELECT count(*) FROM users");
+        if (parseInt(userCheck.rows[0].count) === 0) {
+            const users = [
+                [null, 'super@resto.com', 'super123', 'super_admin', 'Global Master'],
+                [1, 'admin@resto.com', 'admin123', 'admin', 'Main Manager']
+            ];
+            for (const u of users) {
+                await pool.query("INSERT INTO users (restaurant_id, email, password, role, name) VALUES ($1,$2,$3,$4,$5)", u);
+            }
+        }
+    } catch (err) {
+        console.error("Error connecting to PostgreSQL database: " + err.message);
     }
-});
+};
+connectDB();
 
 // REST API Endpoints
 // Sentient Brain Orchestrator
@@ -234,169 +238,182 @@ OUTPUT FORMAT (STRICT JSON):
     }
 });
 
-app.get('/api/restaurants', (req, res) => {
-    db.all("SELECT * FROM restaurants", [], (err, rows) => {
-        if (err) res.status(500).json({ error: err.message });
-        else res.json({ data: rows });
-    });
+app.get('/api/restaurants', async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM restaurants");
+        res.json({ data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/restaurants', (req, res) => {
+app.post('/api/restaurants', async (req, res) => {
     const { name, location } = req.body;
-    db.run("INSERT INTO restaurants (name, location) VALUES (?,?)", [name, location], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else res.json({ id: this.lastID });
-    });
+    try {
+        const result = await pool.query("INSERT INTO restaurants (name, location) VALUES ($1,$2) RETURNING id", [name, location]);
+        res.json({ id: result.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.get('/api/users', (req, res) => {
+app.get('/api/users', async (req, res) => {
     const { restaurant_id } = req.query;
-    let query = "SELECT id, restaurant_id, email, password, role, name FROM users";
+    let query = "SELECT id, restaurant_id, email, role, name FROM users";
     let params = [];
 
     // Clear check for global managers (super_admin) or specific branches
     if (restaurant_id && restaurant_id !== 'null' && restaurant_id !== 'undefined') {
-        query += " WHERE restaurant_id = ?";
+        query += " WHERE restaurant_id = $1";
         params.push(restaurant_id);
     }
 
-    db.all(query, params, (err, rows) => {
-        if (err) res.status(500).json({ error: err.message });
-        else res.json({ data: rows });
-    });
+    try {
+        const result = await pool.query(query, params);
+        res.json({ data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
     const { restaurant_id, email, password, role, name } = req.body;
-    db.run("INSERT INTO users (restaurant_id, email, password, role, name) VALUES (?,?,?,?,?)", [restaurant_id, email, password, role, name], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else res.json({ id: this.lastID });
-    });
+    try {
+        const result = await pool.query("INSERT INTO users (restaurant_id, email, password, role, name) VALUES ($1,$2,$3,$4,$5) RETURNING id", [restaurant_id, email, password, role, name]);
+        res.json({ id: result.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.get('/api/menu', (req, res) => {
+app.get('/api/menu', async (req, res) => {
     const { restaurant_id } = req.query;
     if (!restaurant_id) return res.status(400).json({ error: "Missing restaurant_id" });
-    db.all("SELECT * FROM menu WHERE restaurant_id = ?", [restaurant_id], (err, rows) => {
-        if (err) res.status(500).json({ error: err.message });
-        else res.json({ data: rows });
-    });
+    try {
+        const result = await pool.query("SELECT * FROM menu WHERE restaurant_id = $1", [restaurant_id]);
+        res.json({ data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/menu', (req, res) => {
+app.post('/api/menu', async (req, res) => {
     const { id, restaurant_id, name, category, price, description } = req.body;
-    db.run("INSERT INTO menu (id, restaurant_id, name, category, price, description) VALUES (?,?,?,?,?,?)", [id, restaurant_id, name, category, price, description], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            io.emit('menu_updated');
-            res.json({ id: id });
-        }
-    });
+    try {
+        await pool.query("INSERT INTO menu (id, restaurant_id, name, category, price, description) VALUES ($1,$2,$3,$4,$5,$6)", [id, restaurant_id, name, category, price, description]);
+        io.emit('menu_updated');
+        res.json({ id: id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.put('/api/menu/:id', (req, res) => {
+app.put('/api/menu/:id', async (req, res) => {
     const { name, category, price, description, image_url, video_url } = req.body;
-    db.run(
-        "UPDATE menu SET name = ?, category = ?, price = ?, description = ?, image_url = ?, video_url = ? WHERE id = ?",
-        [name, category, price, description, image_url, video_url, req.params.id],
-        function (err) {
-            if (err) res.status(500).json({ error: err.message });
-            else {
-                io.emit('menu_updated');
-                res.json({ message: "updated" });
-            }
-        }
-    );
+    try {
+        await pool.query(
+            "UPDATE menu SET name = $1, category = $2, price = $3, description = $4, image_url = $5, video_url = $6 WHERE id = $7",
+            [name, category, price, description, image_url, video_url, req.params.id]
+        );
+        io.emit('menu_updated');
+        res.json({ message: "updated" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.delete('/api/menu/:id', (req, res) => {
-    db.run("DELETE FROM menu WHERE id = ?", [req.params.id], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            io.emit('menu_updated');
-            res.json({ message: "deleted" });
-        }
-    });
+app.delete('/api/menu/:id', async (req, res) => {
+    try {
+        await pool.query("DELETE FROM menu WHERE id = $1", [req.params.id]);
+        io.emit('menu_updated');
+        res.json({ message: "deleted" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // CATEGORY ENDPOINTS
-app.get('/api/categories', (req, res) => {
+app.get('/api/categories', async (req, res) => {
     const { restaurant_id } = req.query;
     if (!restaurant_id) return res.status(400).json({ error: "Missing restaurant_id" });
-    db.all("SELECT * FROM categories WHERE restaurant_id = ?", [restaurant_id], (err, rows) => {
-        if (err) res.status(500).json({ error: err.message });
-        else res.json({ data: rows });
-    });
+    try {
+        const result = await pool.query("SELECT * FROM categories WHERE restaurant_id = $1", [restaurant_id]);
+        res.json({ data: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/categories', (req, res) => {
+app.post('/api/categories', async (req, res) => {
     const { name, restaurant_id } = req.body;
-    db.run("INSERT INTO categories (name, restaurant_id) VALUES (?,?)", [name, restaurant_id], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            io.emit('categories_updated');
-            res.json({ id: this.lastID });
-        }
-    });
+    try {
+        const result = await pool.query("INSERT INTO categories (name, restaurant_id) VALUES ($1,$2) RETURNING id", [name, restaurant_id]);
+        io.emit('categories_updated');
+        res.json({ id: result.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.delete('/api/categories/:id', (req, res) => {
-    db.run("DELETE FROM categories WHERE id = ?", [req.params.id], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            io.emit('categories_updated');
-            res.json({ message: "deleted" });
-        }
-    });
+app.delete('/api/categories/:id', async (req, res) => {
+    try {
+        await pool.query("DELETE FROM categories WHERE id = $1", [req.params.id]);
+        io.emit('categories_updated');
+        res.json({ message: "deleted" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
     const { restaurant_id, tableNumber, items, total, timestamp, status } = req.body;
     const finalRestId = restaurant_id || 1; // Safeguard fallback
-    db.run("INSERT INTO orders (restaurant_id, tableNumber, items, total, timestamp, status) VALUES (?,?,?,?,?,?)", [finalRestId, tableNumber, JSON.stringify(items), total, timestamp, status], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            io.emit('new_order', { id: this.lastID, ...req.body });
-            res.json({ id: this.lastID });
-        }
-    });
+    try {
+        const result = await pool.query("INSERT INTO orders (restaurant_id, tableNumber, items, total, timestamp, status) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id", [finalRestId, tableNumber, JSON.stringify(items), total, timestamp, status]);
+        io.emit('new_order', { id: result.rows[0].id, ...req.body });
+        res.json({ id: result.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.get('/api/orders', (req, res) => {
+app.get('/api/orders', async (req, res) => {
     const { restaurant_id } = req.query;
     if (!restaurant_id) return res.status(400).json({ error: "Missing restaurant_id" });
-    db.all("SELECT * FROM orders WHERE restaurant_id = ? ORDER BY timestamp DESC", [restaurant_id], (err, rows) => {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            const parsedRows = rows.map(row => ({
-                ...row,
-                items: JSON.parse(row.items || "[]")
-            }));
-            res.json({ data: parsedRows });
-        }
-    });
+    try {
+        const result = await pool.query("SELECT * FROM orders WHERE restaurant_id = $1 ORDER BY timestamp DESC", [restaurant_id]);
+        const parsedRows = result.rows.map(row => ({
+            ...row,
+            items: JSON.parse(row.items || "[]")
+        }));
+        res.json({ data: parsedRows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.put('/api/orders/:id/status', (req, res) => {
+app.put('/api/orders/:id/status', async (req, res) => {
     const { status } = req.body;
     const { id } = req.params;
-    db.run("UPDATE orders SET status = ? WHERE id = ?", [status, id], function (err) {
-        if (err) res.status(500).json({ error: err.message });
-        else {
-            io.emit('order_status_update', { id: Number(id), status });
-            res.json({ message: "Status updated successfully" });
-        }
-    });
+    try {
+        await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, id]);
+        io.emit('order_status_update', { id: Number(id), status });
+        res.json({ message: "Status updated successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // AUTH ENDPOINTS
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-    db.get("SELECT id, restaurant_id, email, role, name FROM users WHERE email = ? AND password = ?", [email, password], (err, row) => {
-        if (err) res.status(500).json({ error: err.message });
-        else if (row) res.json({ success: true, user: row });
+    try {
+        const result = await pool.query("SELECT id, restaurant_id, email, role, name FROM users WHERE email = $1 AND password = $2", [email, password]);
+        if (result.rows.length > 0) res.json({ success: true, user: result.rows[0] });
         else res.status(401).json({ success: false, message: "Invalid credentials" });
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 3001;
