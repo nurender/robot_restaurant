@@ -28,6 +28,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl });
+});
+
 // Setup Socket.io
 const io = new Server(server, { cors: { origin: '*' } });
 
@@ -134,13 +140,23 @@ connectDB();
 // REST API Endpoints
 // Sentient Brain Orchestrator
 app.post('/api/chat', async (req, res) => {
-    const { transcript, menuContext, cartContext, textLanguage, chatHistory = [] } = req.body;
+    const { transcript, menuContext, cartContext, textLanguage, chatHistory = [], restaurantId } = req.body;
+    let restaurantName = "Cyber Chef";
+
+    if (restaurantId) {
+        try {
+
+            const restRes = await pool.query("SELECT name FROM restaurants WHERE id = $1", [restaurantId]);
+            console.log("Restaurant ID:", restRes.rows[0].name);
+            if (restRes.rows.length > 0) restaurantName = restRes.rows[0].name;
+        } catch (e) { console.error("Rest Name Fetch Error:", e.message); }
+    }
     const provider = process.env.AI_PROVIDER || 'GEMINI';
 
     console.log(`🤖 AI Sentient Processing [${provider}]: "${transcript}"`);
 
     const prompt = `
-You are Robo, a highly intelligent, friendly, human-like neural concierge at a restaurant called Cyber Chef.
+You are Robo, a highly intelligent, friendly, human-like neural concierge at a restaurant called ${restaurantName}.
 
 Your job:
 - Talk like a premium, real-life human waiter.
@@ -164,8 +180,8 @@ INSTRUCTIONS:
 - If user wants food → suggest relevant items dynamically from MENU
 - If user orders → extract item + quantity intelligently
 - If user is confused → guide like a real waiter
-- If item not available → suggest closest match from menu
-- If conversation is casual → respond naturally
+- If item not available or deactivated (is_active: false) → suggest closest match from active menu.
+- NEVER add items to the cart that are deactivated (is_active: false).
 
 - Do NOT follow fixed scripts
 - Do NOT repeat same phrases
@@ -220,7 +236,7 @@ OUTPUT FORMAT (STRICT JSON):
             responseTxt = result.response.text();
         } else {
             return res.json({
-                reply_text: "Welcome to Cyber Chef! My neural link is currently offline, please use the menu buttons while I recalibrate my sensors.",
+                reply_text: `Welcome to ${restaurantName}! My neural link is currently offline, please use the menu buttons while I recalibrate my sensors.`,
                 items_to_add: []
             });
         }
@@ -298,25 +314,28 @@ app.get('/api/menu', async (req, res) => {
 });
 
 app.post('/api/menu', async (req, res) => {
-    const { id, restaurant_id, name, category, price, description } = req.body;
+    const { restaurant_id, name, category, price, description, image_url, video_url, is_active } = req.body;
     try {
-        await pool.query("INSERT INTO menu (id, restaurant_id, name, category, price, description) VALUES ($1,$2,$3,$4,$5,$6)", [id, restaurant_id, name, category, price, description]);
+        const result = await pool.query(
+            "INSERT INTO menu (restaurant_id, name, category, price, description, image_url, video_url, is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
+            [Number(restaurant_id) || 1, name, category, Number(price) || 0, description, image_url, video_url, is_active !== undefined ? is_active : true]
+        );
         io.emit('menu_updated');
-        res.json({ id: id });
+        res.json({ id: result.rows[0].id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 app.put('/api/menu/:id', async (req, res) => {
-    const { name, category, price, description, image_url, video_url } = req.body;
+    const { name, category, price, description, image_url, video_url, is_active } = req.body;
     try {
         await pool.query(
-            "UPDATE menu SET name = $1, category = $2, price = $3, description = $4, image_url = $5, video_url = $6 WHERE id = $7",
-            [name, category, price, description, image_url, video_url, req.params.id]
+            "UPDATE menu SET name = $1, category = $2, price = $3, description = $4, image_url = $5, video_url = $6, is_active = $7 WHERE id = $8",
+            [name, category, Number(price) || 0, description, image_url, video_url, is_active !== undefined ? is_active : true, req.params.id]
         );
         io.emit('menu_updated');
-        res.json({ message: "updated" });
+        res.json({ message: "Item updated successfully" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

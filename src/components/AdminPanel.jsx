@@ -21,13 +21,15 @@ import {
   Image as ImageIcon,
   Film,
   Play,
-  Edit2
+  Edit2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import './AdminPanel.css';
 
-const API_URL = 'https://robot-restaurant.onrender.com';
+import { API_URL } from '../config';
 const socket = io(API_URL, { autoConnect: true });
 
 const AdminPanel = () => {
@@ -50,7 +52,8 @@ const AdminPanel = () => {
     price: '',
     description: '',
     image_url: '',
-    video_url: ''
+    video_url: '',
+    is_active: true
   });
   const [uploading, setUploading] = useState({ image: false, video: false });
   const [editingDishId, setEditingDishId] = useState(null);
@@ -58,6 +61,7 @@ const AdminPanel = () => {
   const [restaurantsList, setRestaurantsList] = useState([]);
   const [newStaffMember, setNewStaffMember] = useState({ email: '', password: '', name: '', role: 'admin', restaurant_id: '' });
   const [newRestaurant, setNewRestaurant] = useState({ name: '', location: '' });
+  const [menuSearchTerm, setMenuSearchTerm] = useState('');
 
   const fetchOrders = async () => {
     try {
@@ -154,6 +158,12 @@ const AdminPanel = () => {
     }
   };
 
+  const getMediaUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+
   const handleEditClick = (item) => {
     setNewDish({
       name: item.name,
@@ -161,7 +171,8 @@ const AdminPanel = () => {
       price: item.price,
       description: item.description || '',
       image_url: item.image_url || '',
-      video_url: item.video_url || ''
+      video_url: item.video_url || '',
+      is_active: item.is_active !== undefined ? item.is_active : true
     });
     setEditingDishId(item.id);
     setShowMenuPopup(true);
@@ -175,7 +186,7 @@ const AdminPanel = () => {
       } else {
         await axios.post(`${API_URL}/api/menu`, { ...newDish, restaurant_id: adminUser.restaurant_id });
       }
-      setNewDish({ name: '', category: '', price: '', description: '', image_url: '', video_url: '' });
+      setNewDish({ name: '', category: '', price: '', description: '', image_url: '', video_url: '', is_active: true });
       setEditingDishId(null);
       setShowMenuPopup(false);
       fetchMenu();
@@ -188,6 +199,13 @@ const AdminPanel = () => {
       await axios.delete(`${API_URL}/api/menu/${id}`);
       fetchMenu();
     } catch (error) { console.error("Delete failed:", error); }
+  };
+
+  const handleToggleStatus = async (item) => {
+    try {
+      await axios.put(`${API_URL}/api/menu/${item.id}`, { ...item, is_active: !item.is_active });
+      fetchMenu();
+    } catch (error) { console.error("Toggle status failed:", error); }
   };
 
   const handleAddCategory = async (e) => {
@@ -614,7 +632,7 @@ const AdminPanel = () => {
                           <div className="media-upload-zone">
                             {newDish.image_url ? (
                               <div className="media-preview-container">
-                                <img src={newDish.image_url} alt="Preview" />
+                                <img src={getMediaUrl(newDish.image_url)} alt="Preview" />
                                 <button type="button" className="btn-remove-media" onClick={() => setNewDish({ ...newDish, image_url: '' })}>×</button>
                               </div>
                             ) : (
@@ -653,37 +671,81 @@ const AdminPanel = () => {
                   <div className="inventory-toolbar-premium animate-fade-in">
                     <div className="search-box-integrated">
                       <Search size={18} className="search-icon-inner" />
-                      <input type="text" placeholder="Search dish name or category..." />
+                      <input 
+                        type="text" 
+                        placeholder="Search dish name or category..." 
+                        value={menuSearchTerm}
+                        onChange={(e) => setMenuSearchTerm(e.target.value)}
+                      />
                     </div>
                     <div className="inventory-meta-badge">
                       <ChefHat size={14} />
-                      <span><strong>{menuItems.length}</strong> Dishes Available</span>
+                      <span><strong>{menuItems.length}</strong> Dishes Registered</span>
                     </div>
                   </div>
-                  <div className="inventory-grid">
-                    {menuItems.map(item => (
-                      <div key={item.id} className="inventory-card glass-panel dish-card-premium animate-fade-in">
-                        {item.image_url ? (
-                          <div className="dish-banner" style={{ backgroundImage: `url("${item.image_url}")` }}>
-                            {item.video_url && <div className="video-badge"><Play size={12} fill="white" /> Video</div>}
-                          </div>
-                        ) : (
-                          <div className="inv-icon-box"><ChefHat size={20} /></div>
-                        )}
-                        <div className="inv-details">
-                          <strong>{item.name}</strong>
-                          <p className="inv-cat-tag">{item.category}</p>
-                          <div className="inv-meta">
-                            <span className="inv-price">₹{item.price}</span>
-                            <div className="inv-actions">
-                              <button className="inv-btn-edit" onClick={() => handleEditClick(item)}><Edit2 size={16} /></button>
-                              <button className="inv-btn-delete" onClick={() => handleDeleteDish(item.id)}><Trash2 size={16} /></button>
+
+                  <div className="inventory-categorized-content">
+                    {/* Get all unique categories present in items plus empty categories */}
+                    {Array.from(new Set([
+                      ...categories.map(c => c.name),
+                      ...menuItems.map(i => i.category)
+                    ])).map(catName => {
+                      const itemsInCat = menuItems.filter(item => 
+                        item.category === catName && 
+                        (item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) || 
+                         item.category.toLowerCase().includes(menuSearchTerm.toLowerCase()))
+                      );
+                      
+                      if (itemsInCat.length === 0 && menuSearchTerm) return null;
+                      if (itemsInCat.length === 0 && !categories.some(c => c.name === catName)) return null;
+
+                      return (
+                        <div key={catName || 'uncategorized'} className="category-inventory-section animate-fade-in mb-5">
+                          <div className="category-section-header">
+                            <div className="header-label-group">
+                              <h3 className="category-label-text">{catName || 'Uncategorized'}</h3>
+                              <span className="category-item-count">{itemsInCat.length} Items</span>
                             </div>
+                            <div className="category-separator"></div>
+                          </div>
+                          
+                          <div className="inventory-grid">
+                            {itemsInCat.map(item => (
+                              <div key={item.id} className={`inventory-card glass-panel dish-card-premium animate-fade-in ${item.is_active === false ? 'inactive-card' : ''}`}>
+                                {item.image_url ? (
+                                  <div className="dish-banner" style={{ backgroundImage: `url("${getMediaUrl(item.image_url)}")` }}>
+                                    {item.video_url && <div className="video-badge"><Play size={12} fill="white" /> Video</div>}
+                                    {item.is_active === false && <div className="hidden-badge">HIDDEN</div>}
+                                  </div>
+                                ) : (
+                                  <div className="inv-icon-box"><ChefHat size={20} /></div>
+                                )}
+                                <div className="inv-details">
+                                  <strong>{item.name}</strong>
+                                  <p className="inv-cat-tag">{item.category}</p>
+                                  <div className="inv-meta">
+                                    <span className="inv-price">₹{item.price}</span>
+                                    <div className="inv-actions">
+                                      <button
+                                        className={`inv-btn-status ${item.is_active ? 'active' : 'inactive'}`}
+                                        onClick={() => handleToggleStatus(item)}
+                                        title={item.is_active ? 'Hide from Menu' : 'Show on Menu'}
+                                      >
+                                        {item.is_active ? <Eye size={16} /> : <EyeOff size={16} />}
+                                      </button>
+                                      <button className="inv-btn-edit" onClick={() => handleEditClick(item)}><Edit2 size={16} /></button>
+                                      <button className="inv-btn-delete" onClick={() => handleDeleteDish(item.id)}><Trash2 size={16} /></button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {menuItems.length === 0 && <div className="empty-inventory full-width"><Search size={40} /><p>No items found.</p></div>}
+                      );
+                    })}
+                    
+                    {menuItems.length === 0 && <div className="empty-inventory full-width"><Search size={40} /><p>Your culinary library is empty. Start by adding a dish above!</p></div>}
                   </div>
                 </div>
               </div>
