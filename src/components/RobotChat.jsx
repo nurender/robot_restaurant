@@ -221,6 +221,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       // High-Fidelity Voice Selection (Prioritize Google, fallback to iOS/Premium)
       let selectedVoice = (langToSpeak === 'hi')
         ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
+          voices.find(v => v.name.toLowerCase().includes('lekha')) ||
           voices.find(v => v.name.includes('Rishi') || v.lang.includes('hi') || v.lang.includes('IN')))
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
           voices.find(v => v.name.includes('Samantha') || v.lang.includes('en') || v.lang.includes('US')));
@@ -243,33 +244,24 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
 
   const startListening = async () => {
-    // 🛡️ MOBILE HANDSHAKE: Resume AudioContext on first tap
+    // 🛡️ MOBILE HANDSHAKE: Play greeting first, but MUST be the VERY FIRST thing for gesture lock
     if (!isSystemActive) {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioContext.state === 'suspended') await audioContext.resume();
-      
-      // Unlock TTS
-      if (synthRef.current) {
-        const u = new SpeechSynthesisUtterance(' ');
-        u.volume = 0;
-        synthRef.current.speak(u);
-      }
-      
-      setIsSystemActive(true);
-      setHasNeuralHandshake(true);
-
-      // 🎙️ MOBILE HANDSHAKE: Play greeting first, then start mic ONLY when finished
       if (!hasGreeted && restaurantName) {
         setIsRobotSpeaking(true);
         setCurrentSubtitle(dialogs['en'].welcome);
-        
-        // Pass startListening as the callback so it triggers AFTER the AI stops talking
+        setHasGreeted(true);
+
+        // SPEAK BEFORE ANY AWAIT (Essential for iPhone gesture lock)
         speak(dialogs[voiceLanguage].welcome, voiceLanguage, () => {
           setIsRobotSpeaking(false);
           startListening(); 
         });
 
-        setHasGreeted(true);
+        // Initialize background audio engine AFTER triggering voice
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') await audioContext.resume();
+        setIsSystemActive(true);
+        setHasNeuralHandshake(true);
         return;
       }
     }
