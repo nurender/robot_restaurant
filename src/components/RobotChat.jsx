@@ -48,6 +48,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [micVolume, setMicVolume] = useState(0);
   const [sensitivity, setSensitivity] = useState(0.05); // Global Sensitivity Threshold
   const [hasNeuralHandshake, setHasNeuralHandshake] = useState(false);
+  const [isSystemActive, setIsSystemActive] = useState(false);
+  const initializationRef = useRef(false); // 🛡️ Sychronous lock for mobile handshake
 
   const videoRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
@@ -227,52 +229,66 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   };
 
 
-  const startListening = () => {
+  const startListening = async () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // ❌ Browser support check
     if (!SpeechRecognition) {
-      setCurrentSubtitle(
-        textLanguage === "hi"
-          ? "आपका ब्राउज़र माइक सपोर्ट नहीं करता"
-          : "Speech Recognition not supported"
-      );
+      setCurrentSubtitle(textLanguage === "hi" ? "आपका ब्राउज़र माइक सपोर्ट नहीं करता" : "Speech Recognition not supported");
       return;
     }
 
-    // ❌ Already listening
-    if (isListening) return;
-
-    try {
-      // 🔴 Stop previous instance
+    // 🛑 TOGGLE OFF: If already listening, stop it
+    if (isListening) {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        recognitionRef.current.stop();
         recognitionRef.current = null;
       }
+      setIsListening(false);
+      setCurrentSubtitle(textLanguage === "hi" ? "माइक बंद है" : "Mic Off");
+      return;
+    }
 
-      // 🔊 Stop TTS if running
-      if (synthRef.current) {
-        synthRef.current.cancel();
+    // 🛡️ MOBILE HANDSHAKE: Play greeting first (only on first-ever tap)
+    if (!initializationRef.current) {
+      initializationRef.current = true;
+      setIsSystemActive(true);
+      
+      if (!hasGreeted && restaurantName) {
+        setIsRobotSpeaking(true);
+        setCurrentSubtitle(dialogs['en'].welcome);
+        setHasGreeted(true);
+
+        speak(dialogs[voiceLanguage].welcome, voiceLanguage, () => {
+          setIsRobotSpeaking(false);
+          startListening(); 
+        });
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') await audioContext.resume();
+        setHasNeuralHandshake(true);
+        return;
+      }
+    }
+
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
       }
 
+      if (synthRef.current) synthRef.current.cancel();
       setIsRobotSpeaking(false);
 
       const recognition = new SpeechRecognition();
-
+      recognitionRef.current = recognition; // Store in Ref for toggling
       recognition.lang = voiceLanguage === "hi" ? "hi-IN" : "en-US";
       recognition.interimResults = true;
       recognition.continuous = false;
-      recognition.maxAlternatives = 1;
 
-      // 🎤 START
       recognition.onstart = () => {
         setIsListening(true);
-        setHasNeuralHandshake(true); // First success activates the sentient tie
-        setCurrentSubtitle(
-          textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening..."
-        );
-        console.log("🎤 Listening started");
+        setHasNeuralHandshake(true);
+        setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening...");
       };
 
       // 🎤 RESULT
