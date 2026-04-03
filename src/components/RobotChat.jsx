@@ -48,7 +48,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [micVolume, setMicVolume] = useState(0);
   const [sensitivity, setSensitivity] = useState(0.05); // Global Sensitivity Threshold
   const [hasNeuralHandshake, setHasNeuralHandshake] = useState(false);
-  const [isSystemActive, setIsSystemActive] = useState(false);
 
   const videoRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
@@ -73,7 +72,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       grouped.sort((a, b) => a.category.localeCompare(b.category));
 
       setMenuCategories(grouped.filter(g => g.items.length > 0));
-      
+
       // Expand all categories by default to show items clearly
       setExpandedCats(prev => {
         const next = new Set(prev);
@@ -129,34 +128,26 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   }, []);
 
   useEffect(() => {
-    return () => { if (synthRef.current) synthRef.current.cancel(); };
-  }, []);
+    if (!restaurantName || hasGreeted) return;
 
-  const handleNeuralHandshake = async () => {
-    // 1. Initialise Audio Engine (unlock mobile)
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume();
-    }
-
-    // 2. Unlock Speech Synthesis (Mobile gesture)
-    if (synthRef.current) {
-      const silentUlterance = new SpeechSynthesisUtterance(' ');
-      silentUlterance.volume = 0;
-      synthRef.current.speak(silentUlterance);
-    }
-
-    // 3. Request Initial Mic Permission & Start Neural Brain
-    setIsSystemActive(true);
-    setHasNeuralHandshake(true);
-    
-    // 4. Initial Greeting (now allowed by user gesture)
-    if (!hasGreeted && restaurantName) {
-      setCurrentSubtitle(dialogs['en'].welcome);
-      speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+    const handleInitialGreeting = () => {
+      setCurrentSubtitle(dialogs['en'].welcome); // Always English text
+      speak(dialogs[voiceLanguage].welcome, voiceLanguage); // Hinglish or English voice
       setHasGreeted(true);
+    };
+
+    // Browsers often load voices asynchronously
+    if (synthRef.current.getVoices().length > 0) {
+      handleInitialGreeting();
+    } else {
+      synthRef.current.onvoiceschanged = () => {
+        handleInitialGreeting();
+        synthRef.current.onvoiceschanged = null; // Clean up
+      };
     }
-  };
+
+    return () => synthRef.current?.cancel();
+  }, [restaurantName, dialogs, voiceLanguage, hasGreeted]);
 
   // --- NEURAL SENTIENT EAR (VAD) ENGINE ---
   useEffect(() => {
@@ -212,63 +203,35 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     };
   }, [isAutoListenEnabled, hasNeuralHandshake, isListening, isRobotSpeaking, sensitivity]);
 
-  const speak = (text, langToSpeak = textLanguage, onEndCallback = null) => {
+  const speak = (text, langToSpeak = textLanguage) => {
     if (synthRef.current) {
       synthRef.current.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = synthRef.current.getVoices();
 
-      // High-Fidelity Voice Selection (Prioritize Google, fallback to iOS/Premium)
+      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
       let selectedVoice = (langToSpeak === 'hi')
         ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-          voices.find(v => v.name.toLowerCase().includes('lekha')) ||
-          voices.find(v => v.name.includes('Rishi') || v.lang.includes('hi') || v.lang.includes('IN')))
+          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-          voices.find(v => v.name.includes('Samantha') || v.lang.includes('en') || v.lang.includes('US')));
+          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
 
       if (selectedVoice) utterance.voice = selectedVoice;
       utterance.rate = 0.95; // Elegant concierge rate
       utterance.pitch = 1.05; // Friendly, professional pitch
       utterance.onstart = () => setIsRobotSpeaking(true);
-      utterance.onend = () => {
-        setIsRobotSpeaking(false);
-        if (onEndCallback) onEndCallback();
-      };
-      utterance.onerror = () => {
-        setIsRobotSpeaking(false);
-        if (onEndCallback) onEndCallback();
-      };
+      utterance.onend = () => setIsRobotSpeaking(false);
+      utterance.onerror = () => setIsRobotSpeaking(false);
       synthRef.current.speak(utterance);
     }
   };
 
 
-  const startListening = async () => {
-    // 🛡️ MOBILE HANDSHAKE: Play greeting first, but MUST be the VERY FIRST thing for gesture lock
-    if (!isSystemActive) {
-      if (!hasGreeted && restaurantName) {
-        setIsRobotSpeaking(true);
-        setCurrentSubtitle(dialogs['en'].welcome);
-        setHasGreeted(true);
-
-        // SPEAK BEFORE ANY AWAIT (Essential for iPhone gesture lock)
-        speak(dialogs[voiceLanguage].welcome, voiceLanguage, () => {
-          setIsRobotSpeaking(false);
-          startListening(); 
-        });
-
-        // Initialize background audio engine AFTER triggering voice
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') await audioContext.resume();
-        setIsSystemActive(true);
-        setHasNeuralHandshake(true);
-        return;
-      }
-    }
-
+  const startListening = () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
+    // ❌ Browser support check
     if (!SpeechRecognition) {
       setCurrentSubtitle(
         textLanguage === "hi"
@@ -544,10 +507,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     const s = (secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
+
   return (
     <div className="avatar-screen animate-fade-in video-call-bg">
       <div className="top-call-gradient"></div>
-
       <div className="avatar-header">
         <div className="header-badge calling">Table {tableNumber} | Order: ₹{getCartTotal()}</div>
         <div className="call-timer-badge"><div className="live-dot"></div>{formatTime(callDuration)}</div>
@@ -658,7 +621,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <h3>{textLanguage === 'en' ? 'Review Your Order' : 'आपका आर्डर'}</h3>
               <button className="close-cart-btn" onClick={() => setShowCartSummary(false)}>×</button>
             </div>
-            
+
             <div className="cart-summary-items scrollbar-hidden">
               {currentCart.map((item) => (
                 <div key={item.id} className="cart-summary-item">
@@ -757,7 +720,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   onClick={() => {
                     setVoiceLanguage('hi');
                     setCurrentSubtitle("Neural voice localized to Hinglish.");
-                    speak("अब मैं आपसे हिंदी और इंग्लिश दोनों में बात करूँगा", 'hi');
+                    speak("अब मैं आपसे हिंदी और इंग्लिश दोनों में बात करूँगा।", 'hi');
                   }}>
                   Human Hinglish
                 </button>
