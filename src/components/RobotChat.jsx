@@ -48,6 +48,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [micVolume, setMicVolume] = useState(0);
   const [sensitivity, setSensitivity] = useState(0.05); // Global Sensitivity Threshold
   const [hasNeuralHandshake, setHasNeuralHandshake] = useState(false);
+  const [isSystemActive, setIsSystemActive] = useState(false);
 
   const videoRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
@@ -147,7 +148,33 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
 
     return () => synthRef.current?.cancel();
-  }, [restaurantName, dialogs, voiceLanguage, hasGreeted]);
+  }, [restaurantName, dialogs, voiceLanguage, hasGreeted, isSystemActive]);
+
+  const handleNeuralHandshake = async () => {
+    // 1. Initialise Audio Engine (unlock mobile)
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+
+    // 2. Unlock Speech Synthesis (Mobile gesture)
+    if (synthRef.current) {
+      const silentUlterance = new SpeechSynthesisUtterance(' ');
+      silentUlterance.volume = 0;
+      synthRef.current.speak(silentUlterance);
+    }
+
+    // 3. Request Initial Mic Permission & Start Neural Brain
+    setIsSystemActive(true);
+    setHasNeuralHandshake(true);
+    
+    // 4. Initial Greeting (now allowed by user gesture)
+    if (!hasGreeted && restaurantName) {
+      setCurrentSubtitle(dialogs['en'].welcome);
+      speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+      setHasGreeted(true);
+    }
+  };
 
   // --- NEURAL SENTIENT EAR (VAD) ENGINE ---
   useEffect(() => {
@@ -227,11 +254,32 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   };
 
 
-  const startListening = () => {
+  const startListening = async () => {
+    // 🛡️ MOBILE HANDSHAKE: Resume AudioContext on first tap
+    if (!isSystemActive) {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') await audioContext.resume();
+      
+      // Unlock TTS
+      if (synthRef.current) {
+        const u = new SpeechSynthesisUtterance(' ');
+        u.volume = 0;
+        synthRef.current.speak(u);
+      }
+      
+      setIsSystemActive(true);
+      setHasNeuralHandshake(true);
+
+      // Play initial greeting if it hasn't happened
+      if (!hasGreeted && restaurantName) {
+        speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+        setHasGreeted(true);
+      }
+    }
+
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // ❌ Browser support check
     if (!SpeechRecognition) {
       setCurrentSubtitle(
         textLanguage === "hi"
@@ -507,10 +555,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     const s = (secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
-
   return (
     <div className="avatar-screen animate-fade-in video-call-bg">
       <div className="top-call-gradient"></div>
+
       <div className="avatar-header">
         <div className="header-badge calling">Table {tableNumber} | Order: ₹{getCartTotal()}</div>
         <div className="call-timer-badge"><div className="live-dot"></div>{formatTime(callDuration)}</div>
@@ -720,7 +768,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   onClick={() => {
                     setVoiceLanguage('hi');
                     setCurrentSubtitle("Neural voice localized to Hinglish.");
-                    speak("अब मैं आपसे हिंदी और इंग्लिश दोनों में बात करूँगा।", 'hi');
+                    speak("अब मैं आपसे हिंदी और इंग्लिश दोनों में बात करूँगा", 'hi');
                   }}>
                   Human Hinglish
                 </button>
