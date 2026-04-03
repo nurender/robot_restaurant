@@ -18,6 +18,8 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
+  Calendar,
+  Filter,
   Image as ImageIcon,
   Film,
   Play,
@@ -62,12 +64,22 @@ const AdminPanel = () => {
   const [newStaffMember, setNewStaffMember] = useState({ email: '', password: '', name: '', role: 'admin', restaurant_id: '' });
   const [newRestaurant, setNewRestaurant] = useState({ name: '', location: '' });
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
+  const [orderFilters, setOrderFilters] = useState({
+    date: '', // Show all by default
+    status: 'all',
+    table: 'all'
+  });
 
   const fetchOrders = async () => {
     try {
       const endpoint = adminUser.role === 'super_admin' ? '/api/orders' : `/api/orders?restaurant_id=${adminUser.restaurant_id}`;
       const response = await axios.get(`${API_URL}${endpoint}`);
-      setOrders(response.data.data);
+      const mappedOrders = (response.data.data || []).map(o => ({
+        ...o,
+        tableNumber: o.tableNumber || o.tablenumber || '?',
+        timestamp: o.timestamp ? (Number(o.timestamp) || o.timestamp) : null
+      }));
+      setOrders(mappedOrders);
     } catch (error) { console.error("Failed to fetch orders:", error); }
   };
 
@@ -481,24 +493,106 @@ const AdminPanel = () => {
           {activeTab === 'orders' && (
             <div className="view-container animate-fade-in">
               <div className="view-header-row">
-                <h2 className="view-title">Live Kitchen Feed</h2>
-                <button className="btn-secondary" onClick={fetchOrders}>Refresh Feed</button>
+                <div className="header-left">
+                  <h2 className="view-title">Live Kitchen Feed</h2>
+                  <p className="view-subtitle">Real-time order management & tracking</p>
+                </div>
+                <button className="btn-secondary" onClick={fetchOrders}><Clock size={16} /> Refresh Feed</button>
               </div>
+
+              {/* FILTER BAR */}
+              <div className="orders-filter-bar glass-panel shadow-premium mb-4">
+                <div className="filter-group">
+                  <label><Calendar size={14} /> Date Filter</label>
+                  <div className="date-input-wrapper">
+                    <input 
+                      type="date" 
+                      className="filter-input"
+                      value={orderFilters.date}
+                      onChange={(e) => setOrderFilters({ ...orderFilters, date: e.target.value })}
+                    />
+                    {orderFilters.date && (
+                      <button className="btn-clear-date" onClick={() => setOrderFilters({ ...orderFilters, date: '' })}>Show All</button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="filter-group">
+                  <label><Filter size={14} /> Status</label>
+                  <div className="filter-pills">
+                    {['all', 'pending', 'served'].map(s => (
+                      <button 
+                        key={s} 
+                        className={`filter-pill ${orderFilters.status === s ? 'active' : ''}`}
+                        onClick={() => setOrderFilters({ ...orderFilters, status: s })}
+                      >
+                        {s === 'all' ? 'All' : s === 'pending' ? 'Awaiting Action' : 'Served'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filter-group">
+                  <label><Users size={14} /> Table</label>
+                  <select 
+                    className="filter-input"
+                    value={orderFilters.table}
+                    onChange={(e) => setOrderFilters({ ...orderFilters, table: e.target.value })}
+                  >
+                    <option value="all">All Tables</option>
+                    {Array.from(new Set(orders.map(o => o.tableNumber))).sort((a, b) => a - b).map(t => (
+                      <option key={t} value={t}>Table {t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-stats">
+                  <span>Showing: <strong>{
+                    orders.filter(o => {
+                      if (!o.timestamp) return false;
+                      try {
+                        const dateObj = new Date(Number(o.timestamp) || o.timestamp);
+                        if (isNaN(dateObj.getTime())) return !orderFilters.date; // Fallback to hide if filtering by date and date is invalid
+                        const orderDate = dateObj.toISOString().split('T')[0];
+                        const dateMatch = !orderFilters.date || orderDate === orderFilters.date;
+                        const statusMatch = orderFilters.status === 'all' || o.status === orderFilters.status;
+                        const tableMatch = orderFilters.table === 'all' || String(o.tableNumber || o.tablenumber) === String(orderFilters.table);
+                        return dateMatch && statusMatch && tableMatch;
+                      } catch (e) { return !orderFilters.date; }
+                    }).length
+                  }</strong> / {orders.length}</span>
+                </div>
+              </div>
+
               {orders.length === 0 ? (
-                <div className="empty-state glass-panel"><ChefHat size={64} className="mb-4 text-muted" /><h3>No Active Orders</h3><p>Real-time orders will appear here.</p></div>
+                <div className="empty-state glass-panel"><ChefHat size={64} className="mb-4 text-muted" /><h3>No Data Found</h3><p>Real-time orders will appear here once guests start culinary sessions.</p></div>
               ) : (
                 <div className="orders-grid-premium">
-                  {orders.map((order, index) => (
+                  {orders.filter(o => {
+                    if (!o.timestamp) return false;
+                    try {
+                      const dateObj = new Date(Number(o.timestamp) || o.timestamp);
+                      if (isNaN(dateObj.getTime())) return !orderFilters.date; 
+                      const orderDate = dateObj.toISOString().split('T')[0];
+                      const dateMatch = !orderFilters.date || orderDate === orderFilters.date;
+                      const statusMatch = orderFilters.status === 'all' || o.status === orderFilters.status;
+                      const tableMatch = orderFilters.table === 'all' || String(o.tableNumber || o.tablenumber) === String(orderFilters.table);
+                      return dateMatch && statusMatch && tableMatch;
+                    } catch (e) { return !orderFilters.date; }
+                  }).map((order, index) => (
                     <div key={order.id} className={`p-order-card shadow-premium ${order.status} animate-fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
                       <div className="p-card-header">
                         <div className="p-header-left">
-                          <div className="table-badge">Table {order.tableNumber}</div>
+                          <div className="table-badge">Table {order.tableNumber || order.tablenumber || '?'}</div>
                           <div className={`status-pill ${order.status}`}>
                             <span className="status-dot"></span>
                             {order.status === 'pending' ? 'Awaiting Action' : 'Served'}
                           </div>
                         </div>
-                        <span className="p-time"><Clock size={14} /> {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="p-time">
+                          <Clock size={14} /> 
+                          {order.timestamp ? new Date(Number(order.timestamp) || order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently'}
+                        </span>
                       </div>
                       <div className="p-card-body">
                         {(Array.isArray(order.items) ? order.items : []).map((item, idx) => (
