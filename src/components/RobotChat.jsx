@@ -129,26 +129,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   }, []);
 
   useEffect(() => {
-    if (!restaurantName || hasGreeted) return;
-
-    const handleInitialGreeting = () => {
-      setCurrentSubtitle(dialogs['en'].welcome); // Always English text
-      speak(dialogs[voiceLanguage].welcome, voiceLanguage); // Hinglish or English voice
-      setHasGreeted(true);
-    };
-
-    // Browsers often load voices asynchronously
-    if (synthRef.current.getVoices().length > 0) {
-      handleInitialGreeting();
-    } else {
-      synthRef.current.onvoiceschanged = () => {
-        handleInitialGreeting();
-        synthRef.current.onvoiceschanged = null; // Clean up
-      };
-    }
-
-    return () => synthRef.current?.cancel();
-  }, [restaurantName, dialogs, voiceLanguage, hasGreeted, isSystemActive]);
+    return () => { if (synthRef.current) synthRef.current.cancel(); };
+  }, []);
 
   const handleNeuralHandshake = async () => {
     // 1. Initialise Audio Engine (unlock mobile)
@@ -230,25 +212,31 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     };
   }, [isAutoListenEnabled, hasNeuralHandshake, isListening, isRobotSpeaking, sensitivity]);
 
-  const speak = (text, langToSpeak = textLanguage) => {
+  const speak = (text, langToSpeak = textLanguage, onEndCallback = null) => {
     if (synthRef.current) {
       synthRef.current.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = synthRef.current.getVoices();
 
-      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
+      // High-Fidelity Voice Selection (Prioritize Google, fallback to iOS/Premium)
       let selectedVoice = (langToSpeak === 'hi')
         ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
+          voices.find(v => v.name.includes('Rishi') || v.lang.includes('hi') || v.lang.includes('IN')))
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
+          voices.find(v => v.name.includes('Samantha') || v.lang.includes('en') || v.lang.includes('US')));
 
       if (selectedVoice) utterance.voice = selectedVoice;
       utterance.rate = 0.95; // Elegant concierge rate
       utterance.pitch = 1.05; // Friendly, professional pitch
       utterance.onstart = () => setIsRobotSpeaking(true);
-      utterance.onend = () => setIsRobotSpeaking(false);
-      utterance.onerror = () => setIsRobotSpeaking(false);
+      utterance.onend = () => {
+        setIsRobotSpeaking(false);
+        if (onEndCallback) onEndCallback();
+      };
+      utterance.onerror = () => {
+        setIsRobotSpeaking(false);
+        if (onEndCallback) onEndCallback();
+      };
       synthRef.current.speak(utterance);
     }
   };
@@ -270,10 +258,19 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setIsSystemActive(true);
       setHasNeuralHandshake(true);
 
-      // Play initial greeting if it hasn't happened
+      // 🎙️ MOBILE HANDSHAKE: Play greeting first, then start mic ONLY when finished
       if (!hasGreeted && restaurantName) {
-        speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+        setIsRobotSpeaking(true);
+        setCurrentSubtitle(dialogs['en'].welcome);
+        
+        // Pass startListening as the callback so it triggers AFTER the AI stops talking
+        speak(dialogs[voiceLanguage].welcome, voiceLanguage, () => {
+          setIsRobotSpeaking(false);
+          startListening(); 
+        });
+
         setHasGreeted(true);
+        return;
       }
     }
 
