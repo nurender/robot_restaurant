@@ -218,6 +218,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       // const utterance = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
       if (isIOS) {
+        utterance.rate = 0.95; // Elegant concierge rate
+        utterance.pitch = 1.05; // Friendly, professional pitch
         utterance.lang = langToSpeak === "hi" ? "hi-IN" : "en-US";
         window.speechSynthesis.speak(utterance);
       } else {
