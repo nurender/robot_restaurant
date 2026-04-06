@@ -8,6 +8,8 @@ const multer = require('multer');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const textToSpeech = require('@google-cloud/text-to-speech');
+const axios = require('axios');
 
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 console.log(ai ? '✅ Sentient Gemini Brain: ACTIVE' : '⚠️  AI Brain: Missing Key (Limited Experience)');
@@ -37,7 +39,7 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
 
     try {
         console.log(`🎙️ Incoming Transcription: ${req.file.originalname} (${req.file.size} bytes, ${req.file.mimetype})`);
-        
+
         const audioBase64 = fs.readFileSync(req.file.path).toString('base64');
         const mimeType = req.file.mimetype === 'audio/octet-stream' ? 'audio/webm' : req.file.mimetype;
 
@@ -88,12 +90,12 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
     } catch (error) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         console.error("❌ Native Gemini Transcription ERROR:", error.message);
-        
+
         let userMsg = "Transcription failed.";
         if (error.message.includes("400")) userMsg += " (Invalid Audio Format)";
         if (error.message.includes("403")) userMsg += " (API Key Issue)";
         if (error.message.includes("429")) userMsg += " (Rate Limit - Slow down)";
-        
+
         res.status(500).json({ error: userMsg, technical: error.message });
     }
 });
@@ -207,10 +209,34 @@ const connectDB = async () => {
 };
 connectDB();
 
-// REST API Endpoints
+// 🎙️ Official Google Neural TTS Engine (Using your Service Account JSON)
+const ttsClient = new textToSpeech.TextToSpeechClient({
+    keyFilename: JSON.parse(process.env.GOOGLE_TTS_KEY),
+
+});
+
+async function generateNeuralTTS(text, lang) {
+    try {
+        const request = {
+            input: { text },
+            voice: {
+                languageCode: 'hi-IN',
+                name: 'hi-IN-Neural2-A', // Premium Neural2 voices
+                ssmlGender: 'FEMALE'
+            },
+            audioConfig: { audioEncoding: 'MP3' },
+        };
+        const [response] = await ttsClient.synthesizeSpeech(request);
+        return response.audioContent.toString('base64');
+    } catch (e) {
+        console.error("Neural TTS Helper Error:", e.message);
+        return null;
+    }
+}
+
 // Sentient Brain Orchestrator
 app.post('/api/chat', async (req, res) => {
-    const { transcript, menuContext, cartContext, textLanguage, chatHistory = [], restaurantId } = req.body;
+    const { transcript, menuContext, cartContext, textLanguage, chatHistory = [], restaurantId, isIOS } = req.body;
     let restaurantName = "Cyber Chef";
 
     if (restaurantId) {
@@ -313,6 +339,15 @@ OUTPUT FORMAT (STRICT JSON):
 
         const jsonMatch = responseTxt.match(/\{[\s\S]*\}/);
         const answer = JSON.parse(jsonMatch ? jsonMatch[0] : responseTxt);
+
+        // 🔊 Step 3: Optional Neural TTS for iOS (Premium Voice)
+        if (isIOS === true || isIOS === 'true') {
+            console.log("🔊 Generating Premium Neural Voice for iOS...", answer.reply_text);
+            const audioData = await generateNeuralTTS(answer.reply_text, textLanguage);
+
+            if (audioData) answer.audio_response = audioData;
+        }
+
         return res.json(answer);
 
     } catch (error) {
