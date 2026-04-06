@@ -11,6 +11,7 @@ const test = () => {
 const unlockSpeech = () => {
   const synth = window.speechSynthesis;
   const utter = new SpeechSynthesisUtterance(" ");
+  utter.lang = "hi-IN";
   synth.speak(utter);
 };
 
@@ -84,7 +85,7 @@ const ScannerScreen = ({ onTableDetected }) => {
 
       <div className="manual-entry">
         <p>Or tap below to start a demo session directly</p>
-        <button className="button-primary-luxury" onClick={() => onTableDetected(5, 4)}>
+        <button className="button-primary-luxury" onClick={() => { onTableDetected(5, 4); unlockSpeech(); }}>
           Skip & Demo (Table 5)
         </button>
         {/* <button onClick={unlockSpeech}>Start</button>
@@ -92,7 +93,7 @@ const ScannerScreen = ({ onTableDetected }) => {
           Speak
         </button> */}
       </div>
-    </div>
+    </div >
   );
 };
 
