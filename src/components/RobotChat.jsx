@@ -226,7 +226,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
           voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
       if (isIOS) {
-        utterance.lang = selectedVoice.lang;
+        utterance.lang = 'hi-IN';
         window.speechSynthesis.speak(utterance);
       } else {
         if (selectedVoice) utterance.voice = selectedVoice;
