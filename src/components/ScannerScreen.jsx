@@ -5,7 +5,7 @@ import './Scanner.css'; // Component specific styling
 
 const test = () => {
   const u = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
-  u.lang = "en-US";
+  u.lang = "hi-IN";
   window.speechSynthesis.speak(u);
 };
 const unlockSpeech = () => {
