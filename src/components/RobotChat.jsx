@@ -212,36 +212,57 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
 
   const speak = (text, langToSpeak = textLanguage, callback) => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      const voices = synthRef.current.getVoices();
+    const synth = window.speechSynthesis;
 
-      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
-      let selectedVoice = (langToSpeak === 'hi')
-        ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
-        : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
-      if (isIOS) {
-        utterance.lang = selectedVoice.lang;
-        window.speechSynthesis.speak(utterance);
-      } else {
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.rate = 0.95; // Elegant concierge rate
-        utterance.pitch = 1.05; // Friendly, professional pitch
-        utterance.onstart = () => setIsRobotSpeaking(true);
-        utterance.onend = () => {
-          setIsRobotSpeaking(false);
-          if (callback) callback();
-        };
-        utterance.onerror = () => {
-          setIsRobotSpeaking(false);
-          if (callback) callback();
-        };
-        synthRef.current.speak(utterance);
-      }
+    if (!synth) return;
+
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // 🔥 Always set language (VERY IMPORTANT for iPhone)
+    utterance.lang = langToSpeak === "hi" ? "hi-IN" : "en-US";
+
+    // 🔥 Voice selection (safe)
+    const voices = synth.getVoices();
+
+    let selectedVoice;
+
+    if (langToSpeak === "hi") {
+      selectedVoice = voices.find(v => v.lang === "hi-IN")
+        || voices.find(v => v.lang.includes("hi"));
+    } else {
+      selectedVoice = voices.find(v => v.lang === "en-US")
+        || voices.find(v => v.lang.includes("en"));
     }
+
+    // ✅ only set if exists (important)
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    // 🎚️ natural tuning
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+
+    // 🎯 events
+    utterance.onstart = () => setIsRobotSpeaking(true);
+
+    utterance.onend = () => {
+      setIsRobotSpeaking(false);
+      callback && callback();
+    };
+
+    utterance.onerror = (e) => {
+      console.error("TTS Error:", e);
+      setIsRobotSpeaking(false);
+      callback && callback();
+    };
+
+    // 🔥 iPhone FIX: small delay
+    setTimeout(() => {
+      synth.speak(utterance);
+    }, 150);
   };
 
 
