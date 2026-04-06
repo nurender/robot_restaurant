@@ -237,6 +237,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         if (callback) callback();
       };
       synthRef.current.speak(utterance);
+      if (isIOS) window.speechSynthesis.speak(utterance);
     }
   };
 
