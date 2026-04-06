@@ -223,7 +223,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
           voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
-      if (isIOS) u.lang = "hi-IN";
+      if (isIOS) utterance.lang = "hi-IN";
       if (selectedVoice) utterance.voice = selectedVoice;
       utterance.rate = 0.95; // Elegant concierge rate
       utterance.pitch = 1.05; // Friendly, professional pitch
