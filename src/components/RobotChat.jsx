@@ -215,6 +215,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     if (synthRef.current) {
       synthRef.current.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'hi-IN';
+      window.speechSynthesis.speak(utterance);
       const voices = synthRef.current.getVoices();
 
       // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
