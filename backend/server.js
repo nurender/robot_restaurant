@@ -28,6 +28,76 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// 🎙️ Secure Cloud Transcription Endpoint (Native Google Gemini - FREE)
+app.post('/api/transcribe', upload.single('file'), async (req, res) => {
+    if (!req.file || !ai) {
+        console.error("❌ Transcription blocked: Missing file or Gemini key");
+        return res.status(400).json({ error: "No file or Gemini key missing" });
+    }
+
+    try {
+        console.log(`🎙️ Incoming Transcription: ${req.file.originalname} (${req.file.size} bytes, ${req.file.mimetype})`);
+        
+        const audioBase64 = fs.readFileSync(req.file.path).toString('base64');
+        const mimeType = req.file.mimetype === 'audio/octet-stream' ? 'audio/webm' : req.file.mimetype;
+
+        // 🧠 Neural Fallback Strategy: Try multiple models if one fails (Resolves 404s)
+        const modelsToTry = [
+            process.env.GEMINI_API_MODEL || "gemini-1.5-flash",
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-flash-8b",
+            "gemini-pro"
+        ];
+
+        let lastError = null;
+        let transcript = "";
+
+        for (const modelId of modelsToTry) {
+            try {
+                console.log(`🧠 Attempting Transcription with: ${modelId}`);
+                const model = ai.getGenerativeModel({ model: modelId });
+
+                const result = await model.generateContent([
+                    "Transcribe the following audio precisely. Only return the transcribed text, nothing else.",
+                    {
+                        inlineData: {
+                            data: audioBase64,
+                            mimeType: mimeType
+                        },
+                    },
+                ]);
+
+                transcript = result.response.text();
+                if (transcript) {
+                    console.log(`✅ Transcription SUCCESS using ${modelId}:`, transcript);
+                    break;
+                }
+            } catch (err) {
+                lastError = err.message;
+                console.warn(`⚠️ Model ${modelId} failed: ${err.message}`);
+                // Continue to next model if it was a 404/not found
+                if (!err.message.includes("404") && !err.message.includes("not found")) break;
+            }
+        }
+
+        if (!transcript) throw new Error(lastError || "All models failed to transcribe.");
+
+        // Cleanup temp file
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.json({ text: transcript });
+    } catch (error) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        console.error("❌ Native Gemini Transcription ERROR:", error.message);
+        
+        let userMsg = "Transcription failed.";
+        if (error.message.includes("400")) userMsg += " (Invalid Audio Format)";
+        if (error.message.includes("403")) userMsg += " (API Key Issue)";
+        if (error.message.includes("429")) userMsg += " (Rate Limit - Slow down)";
+        
+        res.status(500).json({ error: userMsg, technical: error.message });
+    }
+});
+
 app.post('/api/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     const fileUrl = `/uploads/${req.file.filename}`;

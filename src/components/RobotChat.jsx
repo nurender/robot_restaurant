@@ -49,11 +49,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [sensitivity, setSensitivity] = useState(0.05); // Global Sensitivity Threshold
   const [hasNeuralHandshake, setHasNeuralHandshake] = useState(false);
   const [isSystemActive, setIsSystemActive] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const initializationRef = useRef(false); // 🛡️ Sychronous lock for mobile handshake
 
   const videoRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
   const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const fetchMenu = async () => {
     if (!restaurantId) return;
@@ -205,7 +210,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     };
   }, [isAutoListenEnabled, hasNeuralHandshake, isListening, isRobotSpeaking, sensitivity]);
 
-  const speak = (text, langToSpeak = textLanguage) => {
+  const speak = (text, langToSpeak = textLanguage, callback) => {
     if (synthRef.current) {
       synthRef.current.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -222,8 +227,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       utterance.rate = 0.95; // Elegant concierge rate
       utterance.pitch = 1.05; // Friendly, professional pitch
       utterance.onstart = () => setIsRobotSpeaking(true);
-      utterance.onend = () => setIsRobotSpeaking(false);
-      utterance.onerror = () => setIsRobotSpeaking(false);
+      utterance.onend = () => {
+        setIsRobotSpeaking(false);
+        if (callback) callback();
+      };
+      utterance.onerror = () => {
+        setIsRobotSpeaking(false);
+        if (callback) callback();
+      };
       synthRef.current.speak(utterance);
     }
   };
@@ -233,16 +244,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
-      setCurrentSubtitle(textLanguage === "hi" ? "आपका ब्राउज़र माइक सपोर्ट नहीं करता" : "Speech Recognition not supported");
-      return;
-    }
-
-    // 🛑 TOGGLE OFF: If already listening, stop it
+    // 🛑 TOGGLE OFF logic for both flows
     if (isListening) {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
       }
       setIsListening(false);
       setCurrentSubtitle(textLanguage === "hi" ? "माइक बंद है" : "Mic Off");
@@ -253,7 +262,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     if (!initializationRef.current) {
       initializationRef.current = true;
       setIsSystemActive(true);
-      
+
       if (!hasGreeted && restaurantName) {
         setIsRobotSpeaking(true);
         setCurrentSubtitle(dialogs['en'].welcome);
@@ -261,7 +270,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
         speak(dialogs[voiceLanguage].welcome, voiceLanguage, () => {
           setIsRobotSpeaking(false);
-          startListening(); 
+          startListening();
         });
 
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -271,16 +280,85 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       }
     }
 
-    try {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
+    // --- CASE 1: IPHONE / IOS (FREE NATIVE GEMINI FLOW) ---
+    if (isIOS) {
+      try {
+        if (synthRef.current) synthRef.current.cancel();
+        setIsRobotSpeaking(false);
 
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: 128000
+        });
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstart = () => {
+          setIsListening(true);
+          setHasNeuralHandshake(true);
+          setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening...");
+        };
+
+        mediaRecorder.onstop = async () => {
+          setIsListening(false);
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+
+          // 🚀 Backend-to-Cloud Neural Ear (Secure Flow)
+          setIsTranscribing(true);
+          setCurrentSubtitle(textLanguage === "hi" ? "प्रोसेसिंग..." : "Processing...");
+
+          const formData = new FormData();
+          formData.append('file', audioBlob, 'recording.webm');
+          if (voiceLanguage) formData.append('language', voiceLanguage);
+
+          try {
+            const resp = await fetch(`${API_URL}/api/transcribe`, {
+              method: 'POST',
+              body: formData
+            });
+            const data = await resp.json();
+            if (data.text) {
+              console.log("✅ Secure Backend Whisper:", data.text);
+              setCurrentSubtitle(data.text);
+              processMockAIResponse(data.text);
+            } else {
+              throw new Error(data.error || "Transcription failed");
+            }
+          } catch (err) {
+            console.error("Transcription Error:", err);
+            setCurrentSubtitle(textLanguage === "hi" ? "त्रुटि: आवाज़ नहीं समझ पाया" : "Error: Could not process audio");
+          } finally {
+            setIsTranscribing(false);
+            stream.getTracks().forEach(t => t.stop());
+          }
+        };
+
+        mediaRecorder.start();
+      } catch (err) {
+        console.error("iOS Audio Error:", err);
+        setCurrentSubtitle(textLanguage === "hi" ? "माइक परमिशन allow करो" : "Grant mic permission to speak");
+      }
+      return;
+    }
+
+    // --- CASE 2: ANDROID / DESKTOP (BROWSER SPEECH RECOGNITION) ---
+    if (!SpeechRecognition) {
+      setCurrentSubtitle(textLanguage === "hi" ? "आपका ब्राउज़र माइक सपोर्ट नहीं करता" : "Speech Recognition not supported");
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) recognitionRef.current.abort();
       if (synthRef.current) synthRef.current.cancel();
       setIsRobotSpeaking(false);
 
       const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition; // Store in Ref for toggling
+      recognitionRef.current = recognition;
       recognition.lang = voiceLanguage === "hi" ? "hi-IN" : "en-US";
       recognition.interimResults = true;
       recognition.continuous = false;
@@ -288,70 +366,32 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       recognition.onstart = () => {
         setIsListening(true);
         setHasNeuralHandshake(true);
-        setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening...");
+        setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ (Web)..." : "Listening (Web)...");
       };
 
-      // 🎤 RESULT
       recognition.onresult = (event) => {
         let transcript = "";
-
         for (let i = event.resultIndex; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
-
-        // Interim text show
         setCurrentSubtitle(transcript);
-
-        // Final result
         const last = event.results[event.results.length - 1];
         if (last.isFinal) {
-          console.log("✅ Final:", transcript);
+          console.log("✅ Standard Speech:", transcript);
           processMockAIResponse(transcript);
         }
       };
 
-      // ❌ ERROR HANDLE
       recognition.onerror = (e) => {
-        console.error("🎤 Error:", e.error);
-
-        let msg = "";
-
-        if (e.error === "not-allowed") {
-          msg =
-            textLanguage === "hi"
-              ? "माइक परमिशन allow करो"
-              : "Allow microphone permission";
-        } else if (e.error === "no-speech") {
-          msg =
-            textLanguage === "hi"
-              ? "कोई आवाज़ नहीं मिली"
-              : "No speech detected";
-        } else if (e.error === "network") {
-          msg =
-            textLanguage === "hi"
-              ? "नेटवर्क समस्या"
-              : "Network error";
-        } else {
-          msg = e.error;
-        }
-
+        console.error("🎤 recognition Error:", e.error);
+        let msg = (e.error === "not-allowed") ? (textLanguage === "hi" ? "माइक परमिशन allow करो" : "Allow microphone permission") : e.error;
         setCurrentSubtitle(msg);
         setIsListening(false);
       };
 
-      // 🔚 END
-      recognition.onend = () => {
-        console.log("🎤 Ended");
-        setIsListening(false);
-      };
+      recognition.onend = () => setIsListening(false);
 
-      // Save instance
-      recognitionRef.current = recognition;
-
-      // 🔥 Start safely
-      setTimeout(() => {
-        recognition.start();
-      }, 200);
+      setTimeout(() => recognition.start(), 200);
 
     } catch (err) {
       console.error("❌ Failed:", err);
