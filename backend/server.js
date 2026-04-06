@@ -210,9 +210,13 @@ const connectDB = async () => {
 connectDB();
 
 // 🎙️ Official Google Neural TTS Engine (Using your Service Account JSON)
-const ttsClient = new textToSpeech.TextToSpeechClient({
-    keyFilename: JSON.parse(process.env.GOOGLE_TTS_KEY),
+const credentials = JSON.parse(process.env.GOOGLE_TTS_KEY);
 
+// 🔥 VERY IMPORTANT (private key fix)
+credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+
+const ttsClient = new textToSpeech.TextToSpeechClient({
+    credentials: credentials,
 });
 
 async function generateNeuralTTS(text, lang) {
