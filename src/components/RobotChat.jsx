@@ -223,21 +223,24 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
           voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
-      if (isIOS) utterance.lang = "hi-IN";
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.rate = 0.95; // Elegant concierge rate
-      utterance.pitch = 1.05; // Friendly, professional pitch
-      utterance.onstart = () => setIsRobotSpeaking(true);
-      utterance.onend = () => {
-        setIsRobotSpeaking(false);
-        if (callback) callback();
-      };
-      utterance.onerror = () => {
-        setIsRobotSpeaking(false);
-        if (callback) callback();
-      };
-      synthRef.current.speak(utterance);
-      if (isIOS) window.speechSynthesis.speak(utterance);
+      if (isIOS) {
+        utterance.lang = "hi-IN";
+        window.speechSynthesis.speak(utterance);
+      } else {
+        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.rate = 0.95; // Elegant concierge rate
+        utterance.pitch = 1.05; // Friendly, professional pitch
+        utterance.onstart = () => setIsRobotSpeaking(true);
+        utterance.onend = () => {
+          setIsRobotSpeaking(false);
+          if (callback) callback();
+        };
+        utterance.onerror = () => {
+          setIsRobotSpeaking(false);
+          if (callback) callback();
+        };
+        synthRef.current.speak(utterance);
+      }
     }
   };
 
