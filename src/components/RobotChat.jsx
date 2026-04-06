@@ -214,7 +214,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const speak = (text, langToSpeak = textLanguage, callback) => {
     if (synthRef.current) {
       synthRef.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+      // const utterance = new SpeechSynthesisUtterance(text);
+
+      const utterance = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
       const voices = synthRef.current.getVoices();
 
       // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
