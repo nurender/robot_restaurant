@@ -221,11 +221,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         utterance.rate = 0.95; // Elegant concierge rate
         utterance.pitch = 1.05; // Friendly, professional pitch
         utterance.lang = langToSpeak === "hi" ? "hi-IN" : "en-US";
-        utterance.voice = {
-          lang: "hi-IN",
-          name: "Google हिन्दी",
-          voiceURI: "Google हिन्दी"
-        }
         window.speechSynthesis.speak(utterance);
       } else {
         const voices = synthRef.current.getVoices();
