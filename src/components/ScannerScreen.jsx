@@ -4,7 +4,7 @@ import { QrCode, Utensils } from 'lucide-react';
 import './Scanner.css'; // Component specific styling
 
 const test = () => {
-  const u = new SpeechSynthesisUtterance("Hello bhai test");
+  const u = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
   u.lang = "en-US";
   window.speechSynthesis.speak(u);
 };
