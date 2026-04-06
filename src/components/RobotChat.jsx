@@ -297,7 +297,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setIsRobotSpeaking(false);
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
+
         // 🎙️ Neural Silence Watcher (Auto-Stop Engine)
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const analyser = audioContext.createAnalyser();
@@ -349,7 +349,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         mediaRecorder.onstop = async () => {
           clearInterval(silenceCheckInterval);
           if (audioContext.state !== 'closed') audioContext.close();
-          
+
           setIsListening(false);
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
 
@@ -443,6 +443,32 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setIsListening(false);
     }
   };
+
+  const playBase64Audio = async (base64String) => {
+    try {
+      const binaryString = window.atob(base64String);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+
+      source.onended = () => setIsRobotSpeaking(false);
+      setIsRobotSpeaking(true);
+      source.start(0);
+    } catch (e) {
+      console.error("🔊 Base64 Audio Error:", e);
+      // Fallback to basic synthesis if neural fails
+      speak(currentSubtitle, voiceLanguage);
+    }
+  };
+
   const processMockAIResponse = async (userText) => {
     setIsAiTyping(true);
     setCurrentSubtitle(`${textLanguage === 'hi' ? 'आप' : 'You'}: "${userText}"`);
@@ -461,7 +487,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           cartContext: currentCart,
           textLanguage: textLanguage,
           chatHistory: updatedHistory,
-          restaurantId: restaurantId
+          restaurantId: restaurantId,
+          isIOS: isIOS
         })
       });
       const data = await response.json();
@@ -499,7 +526,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       setIsRobotSpeaking(true);
       setCurrentSubtitle(`Robo: ${data.reply_text}`);
-      speak(data.reply_text, voiceLanguage);
+      if (isIOS) {
+        playBase64Audio(data.audio_response);
+      } else {
+        speak(data.reply_text, voiceLanguage);
+      }
       setTimeout(() => setIsRobotSpeaking(false), 3000);
 
       if (data.action === 'EXPAND_CATEGORY' && data.category) {
