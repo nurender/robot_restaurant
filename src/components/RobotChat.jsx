@@ -297,6 +297,18 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setIsRobotSpeaking(false);
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // 🎙️ Neural Silence Watcher (Auto-Stop Engine)
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const microphone = audioContext.createMediaStreamSource(stream);
+        analyser.fftSize = 512;
+        microphone.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let silenceStart = Date.now();
+        let silenceCheckInterval = null;
+
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType: 'audio/webm;codecs=opus',
           audioBitsPerSecond: 128000
@@ -312,9 +324,32 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           setIsListening(true);
           setHasNeuralHandshake(true);
           setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening...");
+          silenceStart = Date.now();
+
+          // 🧠 Silence Monitor Loop
+          silenceCheckInterval = setInterval(() => {
+            analyser.getByteFrequencyData(dataArray);
+            let values = 0;
+            for (let i = 0; i < dataArray.length; i++) values += dataArray[i];
+            const average = values / dataArray.length;
+            const vol = average / 255;
+            setMicVolume(vol);
+
+            if (vol > sensitivity) {
+              silenceStart = Date.now(); // 🔊 Sound detected, reset timer
+            } else if (Date.now() - silenceStart > 1500) {
+              // 🔇 Silence detected for 1.5s -> Auto stop
+              console.log("🤫 Silence Detected: Auto-processing...");
+              if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+              clearInterval(silenceCheckInterval);
+            }
+          }, 100);
         };
 
         mediaRecorder.onstop = async () => {
+          clearInterval(silenceCheckInterval);
+          if (audioContext.state !== 'closed') audioContext.close();
+          
           setIsListening(false);
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
 
