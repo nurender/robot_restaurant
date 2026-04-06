@@ -211,31 +211,51 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   }, [isAutoListenEnabled, hasNeuralHandshake, isListening, isRobotSpeaking, sensitivity]);
 
   const speak = (text, langToSpeak = textLanguage, callback) => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      const voices = synthRef.current.getVoices();
+    const synth = window.speechSynthesis;
 
-      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
-      let selectedVoice = (langToSpeak === 'hi')
-        ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
-        : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
+    if (!synth) return;
+
+    const speakNow = () => {
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      const voices = synth.getVoices();
+
+      // ✅ iPhone safe voice selection
+      let selectedVoice;
+
+      if (langToSpeak === "hi") {
+        selectedVoice = voices.find(v => v.lang === "hi-IN")
+          || voices.find(v => v.lang.includes("hi"));
+      } else {
+        selectedVoice = voices.find(v => v.lang === "en-US")
+          || voices.find(v => v.lang.includes("en"));
+      }
 
       if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.rate = 0.95; // Elegant concierge rate
-      utterance.pitch = 1.05; // Friendly, professional pitch
+
+      utterance.rate = 0.95;
+      utterance.pitch = 1.05;
+
       utterance.onstart = () => setIsRobotSpeaking(true);
       utterance.onend = () => {
         setIsRobotSpeaking(false);
-        if (callback) callback();
+        callback && callback();
       };
+
       utterance.onerror = () => {
         setIsRobotSpeaking(false);
-        if (callback) callback();
+        callback && callback();
       };
-      synthRef.current.speak(utterance);
+
+      synth.cancel(); // 🔥 important
+      synth.speak(utterance);
+    };
+
+    // 🔥 iPhone fix: wait for voices
+    if (speechSynthesis.getVoices().length === 0) {
+      speechSynthesis.onvoiceschanged = speakNow;
+    } else {
+      speakNow();
     }
   };
 
