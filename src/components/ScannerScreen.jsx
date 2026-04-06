@@ -87,10 +87,10 @@ const ScannerScreen = ({ onTableDetected }) => {
         <button className="button-primary-luxury" onClick={() => onTableDetected(5, 4)}>
           Skip & Demo (Table 5)
         </button>
-        <button onClick={unlockSpeech}>Start</button>
+        {/* <button onClick={unlockSpeech}>Start</button>
         <button onClick={() => test("Hello sir")}>
           Speak
-        </button>
+        </button> */}
       </div>
     </div>
   );
