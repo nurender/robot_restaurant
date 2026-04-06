@@ -212,27 +212,21 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
 
   const speak = (text, langToSpeak = textLanguage, callback) => {
-    if (isIOS) {
-      // const utterance = new SpeechSynthesisUtterance(text);
-      // utterance.lang = 'hi-IN';
-      // window.speechSynthesis.speak(utterance);
-      const u = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
-      u.lang = "hi-IN";
-      window.speechSynthesis.speak(u);
-    } else {
-      if (synthRef.current) {
-        synthRef.current.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
+    if (synthRef.current) {
+      synthRef.current.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = synthRef.current.getVoices();
 
-        const voices = synthRef.current.getVoices();
-
-        // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
-        let selectedVoice = (langToSpeak === 'hi')
-          ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-            voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
-          : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-            voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
-
+      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
+      let selectedVoice = (langToSpeak === 'hi')
+        ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
+          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
+        : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
+          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
+      if (isIOS) {
+        utterance.lang = selectedVoice.lang;
+        window.speechSynthesis.speak(utterance);
+      } else {
         if (selectedVoice) utterance.voice = selectedVoice;
         utterance.rate = 0.95; // Elegant concierge rate
         utterance.pitch = 1.05; // Friendly, professional pitch
