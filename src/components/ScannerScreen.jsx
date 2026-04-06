@@ -10,7 +10,7 @@ const test = () => {
 };
 const unlockSpeech = () => {
   const synth = window.speechSynthesis;
-  const utter = new SpeechSynthesisUtterance(" ");
+  const utter = new SpeechSynthesisUtterance("Hi");
   utter.lang = "hi-IN";
   synth.speak(utter);
 };
