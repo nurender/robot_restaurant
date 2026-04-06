@@ -214,9 +214,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const speak = (text, langToSpeak = textLanguage, callback) => {
     if (synthRef.current) {
       synthRef.current.cancel();
-      // const utterance = new SpeechSynthesisUtterance(text);
-
-      const utterance = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
+      const utterance = new SpeechSynthesisUtterance(text);
       const voices = synthRef.current.getVoices();
 
       // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
@@ -226,7 +224,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
           voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
       if (isIOS) {
-        utterance.lang = 'hi-IN';
+        utterance.lang = selectedVoice.lang;
         window.speechSynthesis.speak(utterance);
       } else {
         if (selectedVoice) utterance.voice = selectedVoice;
