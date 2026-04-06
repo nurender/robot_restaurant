@@ -3,11 +3,18 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { QrCode, Utensils } from 'lucide-react';
 import './Scanner.css'; // Component specific styling
 
-const ScannerScreen = ({ onTableDetected }) => {
-
+const test = () => {
+  const u = new SpeechSynthesisUtterance("Hello bhai test");
+  u.lang = "en-US";
+  window.speechSynthesis.speak(u);
+};
+const unlockSpeech = () => {
   const synth = window.speechSynthesis;
   const utter = new SpeechSynthesisUtterance(" ");
   synth.speak(utter);
+};
+
+const ScannerScreen = ({ onTableDetected }) => {
 
   const [error, setError] = useState(null);
   const scannerRef = useRef(null);
@@ -79,6 +86,10 @@ const ScannerScreen = ({ onTableDetected }) => {
         <p>Or tap below to start a demo session directly</p>
         <button className="button-primary-luxury" onClick={() => onTableDetected(5, 4)}>
           Skip & Demo (Table 5)
+        </button>
+        <button onClick={unlockSpeech}>Start</button>
+        <button onClick={() => test("Hello sir")}>
+          Speak
         </button>
       </div>
     </div>
