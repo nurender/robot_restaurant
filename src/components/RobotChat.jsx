@@ -212,23 +212,24 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
 
   const speak = (text, langToSpeak = textLanguage, callback) => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
+    if (isIOS) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'hi-IN';
       window.speechSynthesis.speak(utterance);
-      const voices = synthRef.current.getVoices();
+    } else {
+      if (synthRef.current) {
+        synthRef.current.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
 
-      // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
-      let selectedVoice = (langToSpeak === 'hi')
-        ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-          voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
-        : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-          voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
-      if (isIOS) {
-        utterance.lang = selectedVoice.lang;
-        window.speechSynthesis.speak(utterance);
-      } else {
+        const voices = synthRef.current.getVoices();
+
+        // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
+        let selectedVoice = (langToSpeak === 'hi')
+          ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
+            voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
+          : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
+            voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
+
         if (selectedVoice) utterance.voice = selectedVoice;
         utterance.rate = 0.95; // Elegant concierge rate
         utterance.pitch = 1.05; // Friendly, professional pitch
