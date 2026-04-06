@@ -48,7 +48,8 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
             process.env.GEMINI_API_MODEL || "gemini-1.5-flash",
             "gemini-1.5-flash-latest",
             "gemini-1.5-flash-8b",
-            "gemini-pro"
+            "gemini-pro",
+            "gemini-2.5-flash"
         ];
 
         let lastError = null;
