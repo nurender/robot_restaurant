@@ -52,7 +52,8 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
             console.log("🧠 Using OpenAI Whisper for transcription...");
             const transcription = await openai.audio.transcriptions.create({
                 file: fs.createReadStream(req.file.path),
-                model: "whisper-1",
+                model: "gpt-4o-mini-transcribe",
+                temperature: 0,
             });
             transcript = transcription.text;
             console.log("✅ Whisper Transcription SUCCESS:", transcript);
@@ -252,6 +253,20 @@ async function generateNeuralTTS(text, lang) {
     }
 }
 
+// 🧠 Zero-Hallucination Menu Pre-Processor (With Images)
+function flattenMenu(categories) {
+    if (!Array.isArray(categories)) return "Menu not available.";
+    let menuList = "";
+    categories.forEach(cat => {
+        if (cat.items && Array.isArray(cat.items)) {
+            cat.items.filter(item => item.is_active !== false).forEach(item => {
+                menuList += `- ${item.name} (Price: ₹${item.price}, ID: ${item.id}, Image: ${item.image_url || 'No Image'})\n`;
+            });
+        }
+    });
+    return menuList || "Menu is empty.";
+}
+
 // Sentient Brain Orchestrator
 app.post('/api/chat', async (req, res) => {
     const { transcript, menuContext, cartContext, textLanguage, chatHistory = [], restaurantId, isIOS } = req.body;
@@ -259,57 +274,47 @@ app.post('/api/chat', async (req, res) => {
 
     if (restaurantId) {
         try {
-
             const restRes = await pool.query("SELECT name FROM restaurants WHERE id = $1", [restaurantId]);
-            console.log("Restaurant ID:", restRes.rows[0].name);
             if (restRes.rows.length > 0) restaurantName = restRes.rows[0].name;
+            console.log(`🔍 AI for ${restaurantName} (ID: ${restaurantId})`);
         } catch (e) { console.error("Rest Name Fetch Error:", e.message); }
     }
-    const provider = process.env.AI_PROVIDER || 'GEMINI';
 
-    console.log(`🤖 AI Sentient Processing [${provider}]: "${transcript}"`);
+    const provider = process.env.AI_PROVIDER || 'GEMINI';
+    const flatMenu = flattenMenu(menuContext);
+    console.log(`🤖 AI Processing [${provider}]: "${transcript}"`);
 
     const prompt = `
-You are Robo, a highly intelligent, friendly, human-like neural concierge at a restaurant called ${restaurantName}.
+You are Robo, a highly intelligent, premium neural concierge at ${restaurantName}.
 
-Your job:
-- Talk like a premium, real-life human waiter.
-- Be natural, warm, and highly conversational.
-- STRONGLY PREFER HINGLISH (A natural blend of Hindi and English, e.g., "Welcome! Aapke liye main kaunsi dish lau?"). Use Hinglish for the 'reply_text' to sound like a modern, friendly Indian concierge.
-- Keep responses short, polite, and elegant (1–3 lines).
-- Understand user intent automatically without rigid scripts.
+YOUR PERSONALITY:
+- Warm, professional, human-like (no robot talk, no Sir, no excessive emojis).
+- STRONGLY PREFER HINGLISH (Natural mix of Hindi & English).
 
-CONTEXT MEMORY:
+THE MENU (GROUND TRUTH - ONLY ORDER FROM HERE):
+${flatMenu}
+
+🚨 STRICT ORDERING RULES:
+- YOU ARE FORBIDDEN FROM ADDING ANY ITEM NOT ON THE LIST ABOVE.
+- Example: If a user asks for "Chai" but it is NOT in the list → You MUST say it's not available. DO NOT ADD IT.
+- INTERNAL VERIFICATION: Before responding, ask yourself: "Is this item exactly in the bulleted list?" If NO → items_to_add MUST be [].
+
+YOUR PERSONALITY:
+- Warm, professional neural concierge (no robot talk, no Sir, no excessive emojis).
+- STRONGLY PREFER HINGLISH.
+- If an item is missing, say: "Maafi chahta hoon, ye item hamare menu mein nahi hai. Aap [Suggestion from Menu] try karna chahenge?"
+
+CONTEXT:
 ${chatHistory.map(h => `${h.role}: ${h.text}`).join('\n')}
 
-USER MESSAGE:
+USER REQUEST:
 "${transcript}"
-
-MENU DATA:
-${JSON.stringify(menuContext)}
-
-INSTRUCTIONS:
-
-- Understand what the user wants (order, browse, ask, casual talk)
-- If user wants food → suggest relevant items dynamically from MENU
-- If user orders → extract item + quantity intelligently
-- If user is confused → guide like a real waiter
-- If item not available or deactivated (is_active: false) → suggest closest match from active menu.
-- NEVER add items to the cart that are deactivated (is_active: false).
-
-- Do NOT follow fixed scripts
-- Do NOT repeat same phrases
-- Always sound fresh and human
-
-SMART BEHAVIOR:
-- Recommend items based on keywords (spicy, veg, drink, etc.)
-- Upsell naturally (combo, drinks, sides)
-- Remember previous conversation
 
 OUTPUT FORMAT (STRICT JSON):
 {
-  "reply_text": "natural human-like response",
-  "items_to_add": [{ "id": number, "qty": number,"price": number }],
+  "reply_text": "natural human-like Hinglish response",
+  "items_to_add": [{ "id": number, "qty": number, "price": number }],
+  "image_url": "string or null",
   "action": "EXPAND_CATEGORY" | "PLACE_ORDER" | null,
   "category": "string or null"
 }
