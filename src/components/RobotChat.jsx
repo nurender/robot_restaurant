@@ -50,6 +50,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [hasNeuralHandshake, setHasNeuralHandshake] = useState(false);
   const [isSystemActive, setIsSystemActive] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const initializationRef = useRef(false); // 🛡️ Sychronous lock for mobile handshake
 
   const videoRef = useRef(null);
@@ -526,12 +527,18 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       setIsRobotSpeaking(true);
       setCurrentSubtitle(`Robo: ${data.reply_text}`);
+      setCurrentImageUrl(data.image_url || null);
+
       if (isIOS) {
         playBase64Audio(data.audio_response);
       } else {
         speak(data.reply_text, voiceLanguage);
       }
-      setTimeout(() => setIsRobotSpeaking(false), 3000);
+
+      setTimeout(() => {
+        setIsRobotSpeaking(false);
+        setCurrentImageUrl(null);
+      }, 5000);
 
       if (data.action === 'EXPAND_CATEGORY' && data.category) {
         setShowMenuPopup(true);
@@ -621,7 +628,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       const msg = dialogs[textLanguage].confirm(total);
       setCurrentSubtitle(msg);
       speak(dialogs[voiceLanguage].confirm(total), voiceLanguage);
-      setTimeout(() => setOrderConfirmedUI(false), 3000);
+      setTimeout(() => setOrderConfirmedUI(false), 9000);
     } catch (err) { console.error(err); }
   };
 
@@ -660,6 +667,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           <div className="order-success-overlay scale-in">
             <CheckCircle size={48} color="white" fill="var(--success)" />
             <p>{textLanguage === 'hi' ? 'आर्डर कन्फर्म हो चुका है!' : 'Order Confirmed!'}</p>
+          </div>
+        )}
+
+        {currentImageUrl && (
+          <div className="neural-image-preview scale-in">
+            <img src={getMediaUrl(currentImageUrl)} alt="Dish Preview" />
+            <div className="neural-scan-line"></div>
           </div>
         )}
       </div>
