@@ -10,6 +10,9 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const axios = require('axios');
+const OpenAI = require('openai');
+
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 console.log(ai ? '✅ Sentient Gemini Brain: ACTIVE' : '⚠️  AI Brain: Missing Key (Limited Experience)');
@@ -43,47 +46,57 @@ app.post('/api/transcribe', upload.single('file'), async (req, res) => {
         const audioBase64 = fs.readFileSync(req.file.path).toString('base64');
         const mimeType = req.file.mimetype === 'audio/octet-stream' ? 'audio/webm' : req.file.mimetype;
 
-        // 🧠 Neural Fallback Strategy: Try multiple models if one fails (Resolves 404s)
-        const modelsToTry = [
-            process.env.GEMINI_API_MODEL || "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-flash-8b",
-            "gemini-pro",
-            "gemini-2.5-flash"
-        ];
-
-        let lastError = null;
         let transcript = "";
 
-        for (const modelId of modelsToTry) {
-            try {
-                console.log(`🧠 Attempting Transcription with: ${modelId}`);
-                const model = ai.getGenerativeModel({ model: modelId });
+        if (process.env.TRANSCRIPTION_PROVIDER === 'WHISPER' && openai) {
+            console.log("🧠 Using OpenAI Whisper for transcription...");
+            const transcription = await openai.audio.transcriptions.create({
+                file: fs.createReadStream(req.file.path),
+                model: "whisper-1",
+            });
+            transcript = transcription.text;
+            console.log("✅ Whisper Transcription SUCCESS:", transcript);
+        } else {
+            console.log("🧠 Using Google Gemini for transcription...");
+            // 🧠 Neural Fallback Strategy: Try multiple models if one fails (Resolves 404s)
+            const modelsToTry = [
+                process.env.GEMINI_API_MODEL || "gemini-1.5-flash",
+                "gemini-1.5-flash-latest",
+                "gemini-1.5-flash-8b",
+                "gemini-pro",
+                "gemini-2.5-flash"
+            ];
 
-                const result = await model.generateContent([
-                    "Transcribe the following audio precisely. Only return the transcribed text, nothing else.",
-                    {
-                        inlineData: {
-                            data: audioBase64,
-                            mimeType: mimeType
+            let lastError = null;
+
+            for (const modelId of modelsToTry) {
+                try {
+                    console.log(`🧠 Attempting Transcription with: ${modelId}`);
+                    const model = ai.getGenerativeModel({ model: modelId });
+
+                    const result = await model.generateContent([
+                        "Transcribe the following audio precisely. Only return the transcribed text, nothing else.",
+                        {
+                            inlineData: {
+                                data: audioBase64,
+                                mimeType: mimeType
+                            },
                         },
-                    },
-                ]);
+                    ]);
 
-                transcript = result.response.text();
-                if (transcript) {
-                    console.log(`✅ Transcription SUCCESS using ${modelId}:`, transcript);
-                    break;
+                    transcript = result.response.text();
+                    if (transcript) {
+                        console.log(`✅ Transcription SUCCESS using ${modelId}:`, transcript);
+                        break;
+                    }
+                } catch (err) {
+                    lastError = err.message;
+                    console.warn(`⚠️ Model ${modelId} failed: ${err.message}`);
+                    if (!err.message.includes("404") && !err.message.includes("not found")) break;
                 }
-            } catch (err) {
-                lastError = err.message;
-                console.warn(`⚠️ Model ${modelId} failed: ${err.message}`);
-                // Continue to next model if it was a 404/not found
-                if (!err.message.includes("404") && !err.message.includes("not found")) break;
             }
+            if (!transcript) throw new Error(lastError || "All Gemini models failed to transcribe.");
         }
-
-        if (!transcript) throw new Error(lastError || "All models failed to transcribe.");
 
         // Cleanup temp file
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
