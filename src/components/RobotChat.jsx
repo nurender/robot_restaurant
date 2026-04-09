@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Video, VideoOff, Settings, Plus, Minus, ShoppingCart, CheckCircle, ChefHat, Play } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Video, VideoOff, Settings, Plus, Minus, ShoppingCart, CheckCircle, ChefHat, Play, Search } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 
@@ -51,6 +51,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [isSystemActive, setIsSystemActive] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [menuSearchTerm, setMenuSearchTerm] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
   const initializationRef = useRef(false); // 🛡️ Sychronous lock for mobile handshake
 
   const videoRef = useRef(null);
@@ -503,22 +505,30 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           const newCart = [...prevCart];
           data.items_to_add.forEach(itm => {
             const itmId = itm.id?.toString();
-            if (!itmId) return;
+            const itmName = itm.name?.toLowerCase();
+            const itmDelta = Number(itm.qty) || 0;
 
-            // Lookup full item details from menuCategories to prevent NaN
-            let foundItem = null;
+            // 1. Find the official item from the menu (either by ID or Name)
+            let officialItem = null;
             for (const cat of menuCategories) {
-              const match = cat.items.find(i => i.id.toString() === itmId);
-              if (match) { foundItem = match; break; }
+              const match = cat.items.find(i => 
+                (itmId && i.id.toString() === itmId) || 
+                (itmName && i.name.toLowerCase() === itmName)
+              );
+              if (match) { officialItem = match; break; }
             }
 
-            const existingIdx = newCart.findIndex(i => i.id.toString() === itmId);
+            if (!officialItem) return;
+
+            // 2. Find if it's already in the cart
+            const existingIdx = newCart.findIndex(i => i.id.toString() === officialItem.id.toString());
+            
             if (existingIdx > -1) {
-              const updatedItem = { ...newCart[existingIdx], qty: newCart[existingIdx].qty + itm.qty };
+              const updatedItem = { ...newCart[existingIdx], qty: newCart[existingIdx].qty + itmDelta };
               if (updatedItem.qty <= 0) newCart.splice(existingIdx, 1);
               else newCart[existingIdx] = updatedItem;
-            } else if (itm.qty > 0 && foundItem) {
-              newCart.push({ ...foundItem, qty: itm.qty });
+            } else if (itmDelta > 0) {
+              newCart.push({ ...officialItem, qty: itmDelta });
             }
           });
           return newCart;
@@ -542,6 +552,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       if (data.action === 'EXPAND_CATEGORY' && data.category) {
         setShowMenuPopup(true);
+        setActiveCategory(data.category);
         setExpandedCats(prev => new Set(prev).add(data.category));
       }
 
@@ -681,17 +692,65 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       {showMenuPopup && (
         <div className="premium-menu-panel slide-up">
           <div className="menu-header">
-            <div>
-              <h4>{textLanguage === 'en' ? 'Our Menu' : 'हमारा मेनू'}</h4>
-              <span className="menu-subtitle">{textLanguage === 'en' ? 'Select your favorite dishes' : 'अपनी पसंदीदा डिश चुनें'}</span>
+            <div className="menu-header-top">
+              <div className="menu-title-area">
+                <h4>{textLanguage === 'en' ? 'Our Menu' : 'हमारा मेनू'}</h4>
+                <span className="menu-subtitle">{textLanguage === 'en' ? 'Select your favorite dishes' : 'अपनी पसंदीदा डिश चुनें'}</span>
+              </div>
+              <button className="close-menu-btn" onClick={() => setShowMenuPopup(false)}>×</button>
             </div>
-            <button onClick={() => setShowMenuPopup(false)}>×</button>
+
+            <div className="menu-search-wrapper">
+              <Search size={18} className="search-icon" />
+              <input
+                type="text"
+                className="menu-search-input"
+                placeholder={textLanguage === 'en' ? 'Search for dishes or ingredients...' : 'डिश या सामग्री सर्च करें...'}
+                value={menuSearchTerm}
+                onChange={(e) => setMenuSearchTerm(e.target.value)}
+              />
+              {menuSearchTerm && (
+                <button className="clear-search-btn" onClick={() => setMenuSearchTerm('')}>×</button>
+              )}
+            </div>
+
+            <div className="category-quick-links scrollbar-hidden">
+              <button
+                className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
+                onClick={() => setActiveCategory('All')}
+              >
+                {textLanguage === 'en' ? 'All' : 'सभी'}
+              </button>
+              {menuCategories.map((cat) => (
+                <button
+                  key={cat.category}
+                  className={`category-chip ${activeCategory === cat.category ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(cat.category)}
+                >
+                  {cat.category}
+                </button>
+              ))}
+            </div>
           </div>
+
           <div className="menu-content scrollbar-hidden">
-            {menuCategories.map((category, catIdx) => {
-              const isExpanded = expandedCats.has(category.category);
+            {menuCategories.map((category) => {
+              // 1. Filter by Active Category
+              if (activeCategory !== 'All' && category.category !== activeCategory) return null;
+
+              // 2. Filter by Search Term
+              const matchingItems = category.items.filter(item =>
+                item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) ||
+                (item.description && item.description.toLowerCase().includes(menuSearchTerm.toLowerCase()))
+              );
+
+              if (matchingItems.length === 0) return null;
+
+              // Auto-expand everything if we are searching or filtering by category
+              const isExpanded = menuSearchTerm.length > 0 || activeCategory !== 'All' || expandedCats.has(category.category);
+
               return (
-                <div key={catIdx} className={`menu-category ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                <div key={category.category} className={`menu-category ${isExpanded ? 'expanded' : 'collapsed'}`}>
                   <div className="category-header-row" onClick={() => toggleCategory(category.category)}>
                     <h5 className="category-title">{category.category}</h5>
                     {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
@@ -699,7 +758,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
                   {isExpanded && (
                     <div className="category-items animate-fade-in">
-                      {category.items.map((item) => {
+                      {matchingItems.map((item) => {
                         const qty = getItemQty(item.id);
                         const isUnavailable = item.is_active === false;
                         return (
