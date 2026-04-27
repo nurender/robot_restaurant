@@ -146,7 +146,35 @@ const connectDB = async () => {
 
         const restCheck = await pool.query("SELECT count(*) FROM restaurants");
         if (parseInt(restCheck.rows[0].count) === 0) {
-            await pool.query("INSERT INTO restaurants (name, location) VALUES ($1, $2)", ['Default Restaurant', 'Downtown']);
+            await pool.query("INSERT INTO restaurants (id, name, location) VALUES (1, $1, $2)", ['Default Restaurant', 'Downtown']);
+        }
+        // Ensure Restaurant 4 exists for Demo
+        await pool.query("INSERT INTO restaurants (id, name, location) VALUES (4, $1, $2) ON CONFLICT (id) DO NOTHING", ['Cyber Chef', 'Jaipur']);
+
+        // 5. Tables & Secure Tokens (FINAL RESET)
+        await pool.query(`DROP TABLE IF EXISTS tables CASCADE;`);
+        await pool.query(`
+            CREATE TABLE tables (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                table_number TEXT NOT NULL,
+                secret_token TEXT UNIQUE NOT NULL
+            );
+        `);
+
+        // Seed some tables for testing (Restaurant 4)
+        const testTables = [
+            [4, '1', 'T1-R4-SECRET'],
+            [4, '2', 'T2-R4-SECRET'],
+            [4, '3', 'T3-R4-SECRET'],
+            [4, '4', 'T4-R4-SECRET'],
+            [4, '5', 'T5-R4-SECRET']
+        ];
+        for (const t of testTables) {
+            await pool.query(`
+                INSERT INTO tables (restaurant_id, table_number, secret_token) 
+                VALUES ($1, $2, $3)
+            `, t);
         }
 
         await pool.query(`CREATE TABLE IF NOT EXISTS orders (
@@ -271,7 +299,9 @@ const connectDB = async () => {
             `, item);
         }
 
-        await pool.query(`CREATE TABLE IF NOT EXISTS categories (
+        // Ensure Categories table has correct constraints
+        await pool.query(`DROP TABLE IF EXISTS categories CASCADE`);
+        await pool.query(`CREATE TABLE categories (
             id SERIAL PRIMARY KEY,
             restaurant_id INTEGER NOT NULL DEFAULT 1,
             name TEXT NOT NULL,
@@ -296,7 +326,8 @@ const connectDB = async () => {
             `, [cat]);
         }
 
-        await pool.query(`CREATE TABLE IF NOT EXISTS users (
+        await pool.query(`DROP TABLE IF EXISTS users CASCADE`);
+        await pool.query(`CREATE TABLE users (
             id SERIAL PRIMARY KEY,
             restaurant_id INTEGER DEFAULT 4,
             email TEXT UNIQUE NOT NULL,
@@ -616,6 +647,21 @@ OUTPUT FORMAT (STRICT JSON):
 });
 
 // --- Realtime OpenAI Session ---
+// 🔒 Secure Token Verification
+app.get('/api/verify-token/:token', async (req, res) => {
+    const { token } = req.params;
+    try {
+        const result = await pool.query("SELECT restaurant_id, table_number FROM tables WHERE secret_token = $1", [token]);
+        if (result.rows.length > 0) {
+            res.json({ success: true, ...result.rows[0] });
+        } else {
+            res.status(404).json({ success: false, message: "Invalid or Expired Token" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/session', async (req, res) => {
     try {
         if (!OPENAI_REALTIME_API_KEY || OPENAI_REALTIME_API_KEY === 'your_OPENAI_REALTIME_API_KEY_here') {

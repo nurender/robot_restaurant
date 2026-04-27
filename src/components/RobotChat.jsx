@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Video, VideoOff, Settings, Plus, Minus, ShoppingCart, CheckCircle, ChefHat, Play, Search } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Video, VideoOff, Settings, Plus, Minus, ShoppingCart, CheckCircle, ChefHat, Play, Search, X } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 
@@ -54,6 +54,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [zoomedImage, setZoomedImage] = useState(null); // Added for image zoom
   const initializationRef = useRef(false); // 🛡️ Sychronous lock for mobile handshake
 
   const videoRef = useRef(null);
@@ -913,7 +914,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                           <div key={item.id} className={`premium-menu-item animate-slide-up ${isUnavailable ? 'unavailable' : ''}`}>
                             <div className="item-media">
                               {item.image_url ? (
-                                <img src={getMediaUrl(item.image_url)} alt={item.name} className="item-thumb" />
+                                <img 
+                                  src={getMediaUrl(item.image_url)} 
+                                  alt={item.name} 
+                                  className="item-thumb" 
+                                  onClick={() => setZoomedImage(getMediaUrl(item.image_url))}
+                                  style={{ cursor: 'pointer' }}
+                                />
                               ) : (
                                 <div className="item-thumb-placeholder"><ChefHat size={24} /></div>
                               )}
@@ -978,6 +985,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <div className="cart-summary-items scrollbar-hidden">
               {currentCart.map((item) => (
                 <div key={item.id} className="cart-summary-item">
+                  <div className="cart-item-photo" onClick={() => item.image_url && setZoomedImage(getMediaUrl(item.image_url))}>
+                    {item.image_url ? (
+                      <img src={getMediaUrl(item.image_url)} alt={item.name} />
+                    ) : (
+                      <div className="cart-item-placeholder"><ChefHat size={20} /></div>
+                    )}
+                  </div>
                   <div className="cart-item-info">
                     <span className="cart-item-name">{item.name}</span>
                     <span className="cart-item-price">₹{item.price} each</span>
@@ -1107,15 +1121,36 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           <button className={`call-btn secondary-btn ${!isCameraOn ? 'muted' : ''}`} onClick={toggleCamera} title="Camera">
             {isCameraOn ? <Video size={24} /> : <VideoOff size={24} />}
           </button>
+          
           <button className={`call-btn active-call-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`} onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening} title="Speak" disabled={isConnecting}>
             {isConnecting ? <div className="hud-loader"></div> : isListening ? <Mic size={28} /> : <MicOff size={28} />}
           </button>
+
+          <button className="call-btn secondary-btn cart-btn-deck" onClick={() => setShowCartSummary(true)} title="Cart" style={{ position: 'relative' }}>
+            <ShoppingCart size={24} />
+            {currentCart.reduce((acc, item) => acc + item.qty, 0) > 0 && (
+              <span className="deck-cart-badge">
+                {currentCart.reduce((acc, item) => acc + item.qty, 0)}
+              </span>
+            )}
+          </button>
+
           {!IS_OPENAI_REALTIME &&
             <button className="call-btn secondary-btn" onClick={() => setShowSettingsPopup(true)} title="Settings"><Settings size={22} /></button>
           }
           <button className="call-btn danger-btn end-call-btn" onClick={() => window.location.reload()}><PhoneOff size={28} /></button>
         </div>
       </div>
+
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div className="image-zoom-overlay" onClick={() => setZoomedImage(null)}>
+          <button className="close-zoom-btn" onClick={() => setZoomedImage(null)}>
+            <X size={30} />
+          </button>
+          <img src={zoomedImage} alt="Zoomed Item" className="zoomed-image-view" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 };

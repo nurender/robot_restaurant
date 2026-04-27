@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import ScannerScreen from './components/ScannerScreen';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
 import RobotChat from './components/RobotChat';
 import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
-import { Navigate } from 'react-router-dom';
+import { API_URL } from './config';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -43,19 +43,53 @@ function ProtectedRoute({ children }) {
 
 function CustomerApp() {
   const [session, setSession] = useState(null);
+
+  // 🔎 Secure Token se Auto-Login
+  React.useEffect(() => {
+    const fetchTokenDetails = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const secretToken = params.get('s');
+
+      if (secretToken) {
+        try {
+          const response = await fetch(`${API_URL}/api/verify-token/${secretToken}`);
+          const data = await response.json();
+          if (data.success) {
+            setSession({ table: data.table_number, restaurant: data.restaurant_id });
+          } else {
+            alert("Invalid or Expired QR Code");
+          }
+        } catch (err) {
+          console.error("Token verification failed", err);
+        }
+      }
+    };
+    fetchTokenDetails();
+  }, []);
   
-  const handleTableDetected = (tableNum, restaurantId = 1) => {
-    setSession({ table: tableNum, restaurant: restaurantId });
+  const navigate = useNavigate();
+
+  const handleStartDemo = () => {
+    window.location.href = '/?s=T5-R4-SECRET';
+  };
+
+  const handleAdminLogin = () => {
+    navigate('/admin/login');
   };
 
   return (
-    <div className="app-container">
+    <>
       {!session ? (
-        <ScannerScreen onTableDetected={handleTableDetected} />
+        <LandingPage 
+          onStartDemo={handleStartDemo} 
+          onAdminLogin={handleAdminLogin} 
+        />
       ) : (
-        <RobotChat tableNumber={session.table} restaurantId={session.restaurant} />
+        <div className="app-container">
+          <RobotChat tableNumber={session.table} restaurantId={session.restaurant} />
+        </div>
       )}
-    </div>
+    </>
   );
 }
 

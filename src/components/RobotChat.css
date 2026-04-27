@@ -107,6 +107,45 @@
   overflow: hidden;
 }
 
+.active-call-btn {
+  background: var(--accent-color);
+  color: #000;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+}
+
+.active-call-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.listening {
+  background: #ff4757;
+  color: white;
+  box-shadow: 0 0 30px rgba(255, 71, 87, 0.6);
+  animation: pulseCall 2s infinite;
+}
+
+.deck-cart-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff4757;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  box-shadow: 0 4px 10px rgba(255, 71, 87, 0.5);
+}
+
 .avatar-pulse-ring {
   position: absolute;
   width: 280px;
@@ -381,6 +420,65 @@
   }
 }
 
+@keyframes pulseCall {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+}
+
+/* Image Zoom Modal */
+.image-zoom-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.close-zoom-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.3s;
+  z-index: 10;
+}
+
+.close-zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.zoomed-image-view {
+  max-width: 90%;
+  max-height: 80%;
+  object-fit: contain;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes scaleUp {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .danger-btn {
   background: var(--danger);
   color: white;
@@ -575,7 +673,7 @@
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 14px;
   padding-bottom: 100px;
   /* Space for Cart Footer */
 }
@@ -610,7 +708,7 @@
 .category-items {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* gap: 16px; */
   overflow: hidden;
   position: relative;
   flex-shrink: 0;
@@ -994,8 +1092,9 @@
 
 .cart-summary-item {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
   background: rgba(255, 255, 255, 0.03);
   padding: 16px;
   border-radius: 16px;
@@ -1006,23 +1105,26 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
 }
 
 .cart-item-name {
   font-size: 16px;
   font-weight: 600;
   color: white;
+  line-height: 1.2;
 }
 
 .cart-item-price {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.5);
 }
 
 .cart-item-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .cart-item-subtotal {
@@ -1347,4 +1449,36 @@
     transform: scale(1);
     opacity: 1;
   }
+}
+
+.cart-item-photo {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.cart-item-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+
+.cart-item-photo:hover img {
+  transform: scale(1.1);
+}
+
+.cart-item-placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
