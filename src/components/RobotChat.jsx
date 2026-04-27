@@ -618,6 +618,41 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
   };
 
+  const { isSessionActive, isConnecting, startSession, stopSession, analyzer, sendEvent } = useRealtime();
+
+  // 🛒 Sync Cart changes with AI Context
+  useEffect(() => {
+    // Send update whenever cart changes OR when session starts
+    if (isSessionActive) {
+      const cartSummary = currentCart.map(i => `${i.qty}x ${i.name}`).join(', ');
+      const syncEvent = {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'system',
+          content: [{
+            type: 'text',
+            text: `CRITICAL CONTEXT: The user's current cart has: [${cartSummary || 'Nothing'}]. Always refer to this list when asked about the cart.`
+          }]
+        }
+      };
+      
+      // Data channel open hone me thoda waqt lag sakta hai
+      const timer = setTimeout(() => {
+        sendEvent?.(syncEvent);
+        // Also update session instructions for global context
+        sendEvent?.({
+          type: 'session.update',
+          session: {
+            instructions: `Current Cart Context: ${cartSummary || 'Empty'}. Please maintain this state.`
+          }
+        });
+      }, 1000); 
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSessionActive, currentCart, sendEvent]);
+
   const completeOrderProcess = useCallback(async () => {
     if (currentCart.length === 0) {
       console.warn("Attempted to confirm an empty cart.");
@@ -641,14 +676,21 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setCurrentCart([]);
       setShowMenuPopup(false);
       setOrderConfirmedUI(true);
+
+      // Stop Voice Session Automatically after AI finishes speaking
+      if (IS_OPENAI_REALTIME) {
+        setTimeout(() => {
+          stopSession();
+          setIsListening(false);
+        }, 5000); // 5 second delay taaki AI apni baat puri kar sake
+      }
+
       const msg = dialogs[textLanguage].confirm(total);
       setCurrentSubtitle(msg);
       speak(dialogs[voiceLanguage].confirm(total), voiceLanguage);
       setTimeout(() => setOrderConfirmedUI(false), 9000);
     } catch (err) { console.error(err); }
-  }, [currentCart, restaurantId, tableNumber, textLanguage, voiceLanguage]);
-
-  const { isSessionActive, isConnecting, startSession, stopSession, analyzer } = useRealtime();
+  }, [currentCart, restaurantId, tableNumber, textLanguage, voiceLanguage, stopSession]);
 
   const latestRealtimeHandler = useRef(null);
 
@@ -687,8 +729,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             let officialItem = null;
             // First try exact match, then fuzzy match
             for (const cat of menuCategories) {
-              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase()) 
-                         || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
+              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase())
+                || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
               if (match) { officialItem = match; break; }
             }
             if (officialItem) handleManualCartUpdate(officialItem, quantity || 1);
@@ -697,7 +739,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             let officialItem = null;
             for (const cat of menuCategories) {
               const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase())
-                         || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
+                || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
               if (match) { officialItem = match; break; }
             }
             if (officialItem) handleManualCartUpdate(officialItem, -(quantity || 1));
@@ -738,6 +780,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setIsListening(false);
     } else {
       setIsListening(true);
+      setCurrentSubtitle(''); // Clear old messages
+      setOrderConfirmedUI(false); // Clear confirmation popup if it's still there
       try {
         await startSession((ev) => latestRealtimeHandler.current?.(ev), restaurantId);
       } catch (err) {
