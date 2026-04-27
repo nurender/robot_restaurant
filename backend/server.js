@@ -17,6 +17,9 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPE
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 console.log(ai ? '✅ Sentient Gemini Brain: ACTIVE' : '⚠️  AI Brain: Missing Key (Limited Experience)');
 
+const OPENAI_REALTIME_API_KEY = process.env.OPENAI_REALTIME_API_KEY;
+
+
 const app = express();
 const server = http.createServer(app);
 app.use(cors({ origin: '*' }));
@@ -609,6 +612,162 @@ OUTPUT FORMAT (STRICT JSON):
             reply_text: "Brain glitch! I'm recalibrating... try saying that again!",
             items_to_add: []
         });
+    }
+});
+
+// --- Realtime OpenAI Session ---
+app.post('/api/session', async (req, res) => {
+    try {
+        if (!OPENAI_REALTIME_API_KEY || OPENAI_REALTIME_API_KEY === 'your_OPENAI_REALTIME_API_KEY_here') {
+            console.error("❌ OPENAI_REALTIME_API_KEY is missing");
+            return res.status(500).json({ error: 'OPENAI_REALTIME_API_KEY is not set' });
+        }
+
+        const { restaurantId } = req.query;
+        if (!restaurantId) return res.status(400).json({ error: "Missing restaurantId" });
+
+        const menuResult = await pool.query('SELECT name, description, price FROM menu WHERE restaurant_id = $1', [restaurantId]);
+        const menu = menuResult.rows;
+        const flatMenu = menu.map(m => `- ${m.name} (₹${m.price}): ${m.description || 'No description'}`).join('\n');
+
+        const restaurantName = "Cyber Chef"; // You can also fetch this from DB if needed
+
+        const response = await axios.post(
+            'https://api.openai.com/v1/realtime/sessions',
+            {
+                model: 'gpt-realtime-1.5',
+                voice: 'shimmer',
+                modalities: ['audio', 'text'],
+                instructions: `
+You are Robo, a highly intelligent, premium neural concierge at ${restaurantName}.
+
+YOUR PERSONALITY:
+- Warm, professional, human-like (no robot talk, no Sir, no excessive emojis).
+- STRONGLY PREFER HINGLISH (Natural mix of Hindi & English).
+
+THE MENU (GROUND TRUTH - ONLY ORDER FROM HERE):
+${flatMenu}
+
+🚨 STRICT ORDERING RULES:
+- YOU ARE FORBIDDEN FROM ADDING ANY ITEM NOT ON THE LIST ABOVE.
+- If a user asks for something NOT in the list → You MUST say it's not available. DO NOT ADD IT.
+- Before responding, ask yourself: "Is this item exactly in the list?" If NO → do not use the add_item tool.
+
+YOUR PERSONALITY:
+- Warm, professional neural concierge.
+- STRONGLY PREFER HINGLISH.
+- If an item is missing, say: "Maafi chahta hoon, ye item hamare menu mein nahi hai. Aap [Suggestion from Menu] try karna chahenge?"
+
+🧾 KNOWLEDGE RULE:
+- You are allowed to explain general cooking process of items present in menu.
+- Keep explanation short (2–4 lines max).
+- Friendly Hinglish tone.
+
+🧠 ORDER CONFIRMATION INTENT:
+Treat phrases like "order le aao", "le aao", "confirm kar do", "place order" as FINAL confirmation.
+👉 Use the confirm_order tool in these cases.
+
+🛒 CART AWARENESS:
+- If user asks "kya kya add hua hai" → Show current cart.
+- If user adds same item again → increase quantity.
+- To remove items, use the remove_item_from_cart tool with the correct name.
+
+💵 BILLING SUPPORT:
+- If user asks for bill/total → Show short summary (item names + total). Do not add items.
+
+📂 CATEGORY HANDLING:
+- If user says "menu dikhao" or asks for a category → Use the show_menu tool.
+
+🔎 SMART MATCHING:
+- Handle variations like "chai"/"tea".
+- If confidence low → ask clarification.
+
+🗣️ HUMAN TONE:
+- Vary replies: "Add kar diya hai", "Ho gaya", "Done".
+- Avoid repeating same sentence.
+
+🧹 RESPONSE CLEANLINESS:
+- Max 1–2 lines for order responses.
+- No unnecessary explanation.
+
+**CRITICAL: You MUST ALWAYS speak and respond strictly in HINGLISH.**`,
+                input_audio_format: 'pcm16',
+                output_audio_format: 'pcm16',
+                input_audio_transcription: { model: 'whisper-1' },
+                turn_detection: { type: 'server_vad' },
+                tools: [
+                    {
+                        type: 'function',
+                        name: 'add_item_to_cart',
+                        description: 'Adds a food item to the user\'s shopping cart.',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' },
+                                quantity: { type: 'integer', default: 1 }
+                            },
+                            required: ['name']
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'remove_item_from_cart',
+                        description: 'Removes a specific food item from the user\'s shopping cart.',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' },
+                                quantity: { type: 'integer', default: 1 }
+                            },
+                            required: ['name']
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'show_item_photo',
+                        description: 'Displays a high-quality photograph of a menu item to the user.',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' }
+                            },
+                            required: ['name']
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'show_menu',
+                        description: 'Opens the menu popup to browse categories.',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                category: { type: 'string' }
+                            }
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'confirm_order',
+                        description: 'Confirms and places the order.',
+                        parameters: {
+                            type: 'object',
+                            properties: {}
+                        }
+                    }
+                ],
+                tool_choice: 'auto',
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${OPENAI_REALTIME_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+        res.json(response.data);
+    } catch (error) {
+        console.error("❌ Session Error:", error.response?.data || error.message);
+        res.status(500).json({ error: 'Failed to initialize session' });
     }
 });
 

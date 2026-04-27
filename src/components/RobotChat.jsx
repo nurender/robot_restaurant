@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Video, VideoOff, Settings, Plus, Minus, ShoppingCart, CheckCircle, ChefHat, Play, Search } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 
-import { API_URL } from '../config';
+import { API_URL, IS_OPENAI_REALTIME } from '../config';
+import useRealtime from '../hooks/useRealtime';
 const socket = io(API_URL, { autoConnect: true });
 
 const getDialogs = (restaurantName) => ({
@@ -147,15 +148,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     };
 
     // Browsers often load voices asynchronously
-    if (synthRef.current.getVoices().length > 0) {
-      handleInitialGreeting();
-    } else {
-      synthRef.current.onvoiceschanged = () => {
+    if (!IS_OPENAI_REALTIME) {
+      if (synthRef.current.getVoices().length > 0) {
         handleInitialGreeting();
-        synthRef.current.onvoiceschanged = null; // Clean up
-      };
+      } else {
+        synthRef.current.onvoiceschanged = () => {
+          handleInitialGreeting();
+          synthRef.current.onvoiceschanged = null; // Clean up
+        };
+      }
     }
-
     return () => synthRef.current?.cancel();
   }, [restaurantName, dialogs, voiceLanguage, hasGreeted]);
 
@@ -511,8 +513,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             // 1. Find the official item from the menu (either by ID or Name)
             let officialItem = null;
             for (const cat of menuCategories) {
-              const match = cat.items.find(i => 
-                (itmId && i.id.toString() === itmId) || 
+              const match = cat.items.find(i =>
+                (itmId && i.id.toString() === itmId) ||
                 (itmName && i.name.toLowerCase() === itmName)
               );
               if (match) { officialItem = match; break; }
@@ -522,7 +524,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
             // 2. Find if it's already in the cart
             const existingIdx = newCart.findIndex(i => i.id.toString() === officialItem.id.toString());
-            
+
             if (existingIdx > -1) {
               const updatedItem = { ...newCart[existingIdx], qty: newCart[existingIdx].qty + itmDelta };
               if (updatedItem.qty <= 0) newCart.splice(existingIdx, 1);
@@ -616,8 +618,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
   };
 
-  const completeOrderProcess = async () => {
-    if (currentCart.length === 0) return;
+  const completeOrderProcess = useCallback(async () => {
+    if (currentCart.length === 0) {
+      console.warn("Attempted to confirm an empty cart.");
+      return;
+    }
     const total = getCartTotal();
     const newOrder = {
       restaurant_id: Number(restaurantId),
@@ -641,6 +646,105 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       speak(dialogs[voiceLanguage].confirm(total), voiceLanguage);
       setTimeout(() => setOrderConfirmedUI(false), 9000);
     } catch (err) { console.error(err); }
+  }, [currentCart, restaurantId, tableNumber, textLanguage, voiceLanguage]);
+
+  const { isSessionActive, isConnecting, startSession, stopSession, analyzer } = useRealtime();
+
+  const latestRealtimeHandler = useRef(null);
+
+  const handleRealtimeEvent = useCallback((event) => {
+    console.log('🤖 Realtime Event:', event.type, event);
+    // 1. Handle AI Text Transcription (Subtitles)
+    if (event.type === 'response.audio_transcription.delta') {
+      setCurrentSubtitle(prev => prev + event.delta);
+    }
+    if (event.type === 'response.audio_transcription.done') {
+      const text = event.transcript;
+      setCurrentSubtitle(text);
+      setChatHistory(prev => [...prev, { role: 'robot', text: text }]);
+    }
+
+    if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      const text = event.transcript;
+      setChatHistory(prev => [...prev, { role: 'user', text: text }]);
+    }
+
+    // 3. Reset subtitles when new response starts
+    if (event.type === 'response.created') {
+      setCurrentSubtitle('');
+    }
+
+    // 4. Handle Tool Calls
+    if (event.type === 'response.done' && event.response?.output) {
+      event.response.output.forEach(output => {
+        if (output.type === 'function_call') {
+          const { name, arguments: argsString } = output;
+          const args = JSON.parse(argsString);
+          console.log(`Realtime Tool Call: ${name}`, args);
+
+          if (name === 'add_item_to_cart') {
+            const { name: itemName, quantity = 1 } = args;
+            let officialItem = null;
+            // First try exact match, then fuzzy match
+            for (const cat of menuCategories) {
+              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase()) 
+                         || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
+              if (match) { officialItem = match; break; }
+            }
+            if (officialItem) handleManualCartUpdate(officialItem, quantity || 1);
+          } else if (name === 'remove_item_from_cart') {
+            const { name: itemName, quantity = 1 } = args;
+            let officialItem = null;
+            for (const cat of menuCategories) {
+              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase())
+                         || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
+              if (match) { officialItem = match; break; }
+            }
+            if (officialItem) handleManualCartUpdate(officialItem, -(quantity || 1));
+          } else if (name === 'show_item_photo') {
+            const { name: itemName } = args;
+            let officialItem = null;
+            for (const cat of menuCategories) {
+              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+              if (match) { officialItem = match; break; }
+            }
+            if (officialItem && officialItem.image_url) {
+              setCurrentImageUrl(officialItem.image_url);
+              setTimeout(() => setCurrentImageUrl(null), 5000);
+            }
+          } else if (name === 'show_menu') {
+            const { category = 'All' } = args;
+            setShowMenuPopup(true);
+            setActiveCategory(category);
+            if (category !== 'All') {
+              setExpandedCats(prev => new Set(prev).add(category));
+            }
+          } else if (name === 'confirm_order') {
+            completeOrderProcess();
+          }
+        }
+      });
+    }
+  }, [menuCategories, completeOrderProcess]);
+
+  // Always sync the ref with the latest handler
+  useEffect(() => {
+    latestRealtimeHandler.current = handleRealtimeEvent;
+  }, [handleRealtimeEvent]);
+
+  const handleToggleSession = async () => {
+    if (isSessionActive) {
+      stopSession();
+      setIsListening(false);
+    } else {
+      setIsListening(true);
+      try {
+        await startSession((ev) => latestRealtimeHandler.current?.(ev), restaurantId);
+      } catch (err) {
+        setIsListening(false);
+        console.error("Session failed:", err);
+      }
+    }
   };
 
   const toggleCategory = (catName) => {
@@ -863,7 +967,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       )}
 
 
-      {showSettingsPopup && (
+      {showSettingsPopup && !IS_OPENAI_REALTIME && (
         <div className="settings-overlay animate-fade-in">
           <div className="settings-modal scale-in">
             <div className="settings-header">
@@ -936,8 +1040,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       )}
 
       <div className={`call-action-deck ${(showMenuPopup || showSettingsPopup) ? 'hidden-deck' : ''}`}>
-        <div className="subtitle-area">
-          {isAiTyping ? (
+        {(currentSubtitle != '' || isConnecting) && <div className="subtitle-area">
+          {isConnecting ? (
+            <span className="subtitle-text animate-pulse">Neural Handshake...</span>
+          ) : isAiTyping ? (
             <span className="subtitle-text animate-pulse italic">
               {textLanguage === 'hi' ? 'रोबो टाइप कर रहा है...' : 'Robo is typing...'}
             </span>
@@ -945,19 +1051,24 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <span className="subtitle-text">{currentSubtitle}</span>
           )}
         </div>
-        <form className="fallback-form" onSubmit={handleFallbackSubmit}>
-          <input type="text" placeholder={textLanguage === 'hi' ? "यहाँ टाइप करें..." : "Type here..."} value={fallbackText} onChange={(e) => setFallbackText(e.target.value)} />
-          <button type="submit" disabled={!fallbackText.trim()}>Send</button>
-        </form>
+        }
+        {!IS_OPENAI_REALTIME &&
+          <form className="fallback-form" onSubmit={handleFallbackSubmit}>
+            <input type="text" placeholder={textLanguage === 'hi' ? "यहाँ टाइप करें..." : "Type here..."} value={fallbackText} onChange={(e) => setFallbackText(e.target.value)} />
+            <button type="submit" disabled={!fallbackText.trim()}>Send</button>
+          </form>
+        }
         <div className="call-buttons-row">
           <button className="call-btn secondary-btn" onClick={() => setShowMenuPopup(true)} title="Menu"><MenuIcon size={24} /></button>
           <button className={`call-btn secondary-btn ${!isCameraOn ? 'muted' : ''}`} onClick={toggleCamera} title="Camera">
             {isCameraOn ? <Video size={24} /> : <VideoOff size={24} />}
           </button>
-          <button className={`call-btn active-call-btn ${isListening ? 'listening' : ''}`} onClick={startListening} title="Speak">
-            {isListening ? <Mic size={28} /> : <MicOff size={28} />}
+          <button className={`call-btn active-call-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`} onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening} title="Speak" disabled={isConnecting}>
+            {isConnecting ? <div className="hud-loader"></div> : isListening ? <Mic size={28} /> : <MicOff size={28} />}
           </button>
-          <button className="call-btn secondary-btn" onClick={() => setShowSettingsPopup(true)} title="Settings"><Settings size={22} /></button>
+          {!IS_OPENAI_REALTIME &&
+            <button className="call-btn secondary-btn" onClick={() => setShowSettingsPopup(true)} title="Settings"><Settings size={22} /></button>
+          }
           <button className="call-btn danger-btn end-call-btn" onClick={() => window.location.reload()}><PhoneOff size={28} /></button>
         </div>
       </div>
