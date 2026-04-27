@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, PhoneOff, Menu as MenuIcon, ChevronRight, ChevronDown, Video, VideoOff, Settings, Plus, Minus, ShoppingCart, CheckCircle, ChefHat, Play, Search, X } from 'lucide-react';
+import { VideoOff, CheckCircle, X } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 
 import { API_URL, IS_OPENAI_REALTIME } from '../config';
 import useRealtime from '../hooks/useRealtime';
+
+// Sub-components
+import MenuSystem from './MenuSystem';
+import CartOverlay from './CartOverlay';
+import SettingsModal from './SettingsModal';
+import CallControls from './CallControls';
+
 const socket = io(API_URL, { autoConnect: true });
 
 const getDialogs = (restaurantName) => ({
@@ -27,8 +34,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [hasGreeted, setHasGreeted] = useState(false);
   const dialogs = getDialogs(restaurantName || 'Cyber Chef');
   const [showCartSummary, setShowCartSummary] = useState(false);
-  const [textLanguage, setTextLanguage] = useState('en'); // Digital UI always English
-  const [voiceLanguage, setVoiceLanguage] = useState('hi'); // Neural Voice can be 'hi' (Hinglish) or 'en'
+  const [textLanguage, setTextLanguage] = useState('en'); 
+  const [voiceLanguage, setVoiceLanguage] = useState('hi'); 
   const [menuCategories, setMenuCategories] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
   const [showMenuPopup, setShowMenuPopup] = useState(false);
@@ -41,544 +48,20 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [stream, setStream] = useState(null);
   const [hasCameraError, setHasCameraError] = useState(false);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [chatHistory, setChatHistory] = useState([]);
   const [currentCart, setCurrentCart] = useState([]);
   const [orderConfirmedUI, setOrderConfirmedUI] = useState(false);
   const [expandedCats, setExpandedCats] = useState(new Set());
   const [isAutoListenEnabled, setIsAutoListenEnabled] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
-  const [sensitivity, setSensitivity] = useState(0.05); // Global Sensitivity Threshold
-  const [hasNeuralHandshake, setHasNeuralHandshake] = useState(false);
-  const [isSystemActive, setIsSystemActive] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sensitivity, setSensitivity] = useState(0.05); 
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [zoomedImage, setZoomedImage] = useState(null); // Added for image zoom
-  const initializationRef = useRef(false); // 🛡️ Sychronous lock for mobile handshake
+  const [zoomedImage, setZoomedImage] = useState(null); 
+  const initializationRef = useRef(false);
 
   const videoRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
-  const recognitionRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-  const fetchMenu = async () => {
-    if (!restaurantId) return;
-    try {
-      const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
-      const menuData = await menuRes.json();
-      const allItems = menuData.data || [];
-
-      // Get ALL unique categories from the items themselves to ensure nothing is missed
-      const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
-
-      const grouped = uniqueCategoryNames.map(catName => ({
-        category: catName,
-        items: allItems.filter(item => (item.category || 'Other') === catName)
-      }));
-
-      // Sort categories so they look organized
-      grouped.sort((a, b) => a.category.localeCompare(b.category));
-
-      setMenuCategories(grouped.filter(g => g.items.length > 0));
-
-      // Expand all categories by default to show items clearly
-      setExpandedCats(prev => {
-        const next = new Set(prev);
-        grouped.forEach(g => next.add(g.category));
-        return next;
-      });
-    } catch (error) {
-      console.error("Menu fetch failed:", error);
-    }
-  };
-
-  useEffect(() => {
-    const fetchRestaurantInfo = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/restaurants`);
-        const data = await res.json();
-        const currentRes = data.data.find(r => Number(r.id) === Number(restaurantId));
-        if (currentRes) {
-          setRestaurantName(currentRes.name);
-        }
-      } catch (err) {
-        console.error("Failed to fetch restaurant info:", err);
-      }
-    };
-    fetchRestaurantInfo();
-  }, [restaurantId]);
-
-  useEffect(() => {
-    fetchMenu();
-    socket.on('menu_updated', fetchMenu);
-    return () => socket.off('menu_updated');
-  }, [restaurantId]);
-
-  useEffect(() => {
-    async function setupCamera() {
-      try {
-        const str = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        if (videoRef.current) videoRef.current.srcObject = str;
-        setStream(str);
-        setHasCameraError(false);
-      } catch (err) {
-        setHasCameraError(true);
-        setIsCameraOn(false);
-      }
-    }
-    setupCamera();
-    return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCallDuration(prev => prev + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!restaurantName || hasGreeted) return;
-
-    const handleInitialGreeting = () => {
-      setCurrentSubtitle(dialogs['en'].welcome); // Always English text
-      speak(dialogs[voiceLanguage].welcome, voiceLanguage); // Hinglish or English voice
-      setHasGreeted(true);
-    };
-
-    // Browsers often load voices asynchronously
-    if (!IS_OPENAI_REALTIME) {
-      if (synthRef.current.getVoices().length > 0) {
-        handleInitialGreeting();
-      } else {
-        synthRef.current.onvoiceschanged = () => {
-          handleInitialGreeting();
-          synthRef.current.onvoiceschanged = null; // Clean up
-        };
-      }
-    }
-    return () => synthRef.current?.cancel();
-  }, [restaurantName, dialogs, voiceLanguage, hasGreeted]);
-
-  // --- NEURAL SENTIENT EAR (VAD) ENGINE ---
-  useEffect(() => {
-    let audioContext;
-    let analyser;
-    let microphone;
-    let javascriptNode;
-
-    if (isAutoListenEnabled && hasNeuralHandshake && !isListening && !isRobotSpeaking) {
-      async function setupSentientEar() {
-        try {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          analyser = audioContext.createAnalyser();
-          microphone = audioContext.createMediaStreamSource(stream);
-          javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
-
-          analyser.smoothingTimeConstant = 0.8;
-          analyser.fftSize = 1024;
-
-          microphone.connect(analyser);
-          analyser.connect(javascriptNode);
-          javascriptNode.connect(audioContext.destination);
-
-          javascriptNode.onaudioprocess = () => {
-            const array = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(array);
-            let values = 0;
-            const length = array.length;
-            for (let i = 0; i < length; i++) values += array[i];
-            const average = values / length;
-            const normalizedVol = average / 255;
-            setMicVolume(normalizedVol);
-
-            // NEURAL TRIGGER: High volume detected? -> WAKE UP ROBO
-            if (normalizedVol > sensitivity) {
-              console.log("⚡ Sentient Ear Triggered!");
-              startListening();
-              // Clean up self to avoid multi-trigger
-              javascriptNode.onaudioprocess = null;
-            }
-          };
-        } catch (err) {
-          console.error("Sentient Ear Error:", err);
-        }
-      }
-      setupSentientEar();
-    }
-
-    return () => {
-      if (javascriptNode) javascriptNode.onaudioprocess = null;
-      if (audioContext) audioContext.close();
-    };
-  }, [isAutoListenEnabled, hasNeuralHandshake, isListening, isRobotSpeaking, sensitivity]);
-
-
-  const speak = (text, langToSpeak = textLanguage, callback) => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      // const utterance = new SpeechSynthesisUtterance("Robo Jaipur में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ ? ");
-      if (isIOS) {
-        utterance.rate = 0.95; // Elegant concierge rate
-        utterance.pitch = 1.05; // Friendly, professional pitch
-        utterance.lang = langToSpeak === "hi" ? "hi-IN" : "en-US";
-        window.speechSynthesis.speak(utterance);
-      } else {
-        const voices = synthRef.current.getVoices();
-
-        // High-Fidelity Voice Selection (Prioritize Google/Premium voices)
-        let selectedVoice = (langToSpeak === 'hi')
-          ? (voices.find(v => v.name.includes('Google') && v.lang.includes('hi')) ||
-            voices.find(v => v.lang.includes('hi') || v.lang.includes('IN')))
-          : (voices.find(v => v.name.includes('Google') && v.lang.includes('en')) ||
-            voices.find(v => v.lang.includes('en') || v.lang.includes('US')));
-
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.rate = 0.95; // Elegant concierge rate
-        utterance.pitch = 1.05; // Friendly, professional pitch
-        utterance.onstart = () => setIsRobotSpeaking(true);
-        utterance.onend = () => {
-          setIsRobotSpeaking(false);
-          if (callback) callback();
-        };
-        utterance.onerror = () => {
-          setIsRobotSpeaking(false);
-          if (callback) callback();
-        };
-        synthRef.current.speak(utterance);
-      }
-    }
-  };
-
-
-  const startListening = async () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    // 🛑 TOGGLE OFF logic for both flows
-    if (isListening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsListening(false);
-      setCurrentSubtitle(textLanguage === "hi" ? "माइक बंद है" : "Mic Off");
-      return;
-    }
-
-    // 🛡️ MOBILE HANDSHAKE: Play greeting first (only on first-ever tap)
-    if (!initializationRef.current) {
-      initializationRef.current = true;
-      setIsSystemActive(true);
-
-      if (!hasGreeted && restaurantName) {
-        setIsRobotSpeaking(true);
-        setCurrentSubtitle(dialogs['en'].welcome);
-        setHasGreeted(true);
-
-        speak(dialogs[voiceLanguage].welcome, voiceLanguage, () => {
-          setIsRobotSpeaking(false);
-          startListening();
-        });
-
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') await audioContext.resume();
-        setHasNeuralHandshake(true);
-        return;
-      }
-    }
-
-    // --- CASE 1: IPHONE / IOS (FREE NATIVE GEMINI FLOW) ---
-    if (isIOS) {
-      try {
-        if (synthRef.current) synthRef.current.cancel();
-        setIsRobotSpeaking(false);
-
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        // 🎙️ Neural Silence Watcher (Auto-Stop Engine)
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        const microphone = audioContext.createMediaStreamSource(stream);
-        analyser.fftSize = 512;
-        microphone.connect(analyser);
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        let silenceStart = Date.now();
-        let silenceCheckInterval = null;
-
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus',
-          audioBitsPerSecond: 128000
-        });
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstart = () => {
-          setIsListening(true);
-          setHasNeuralHandshake(true);
-          setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ..." : "Listening...");
-          silenceStart = Date.now();
-
-          // 🧠 Silence Monitor Loop
-          silenceCheckInterval = setInterval(() => {
-            analyser.getByteFrequencyData(dataArray);
-            let values = 0;
-            for (let i = 0; i < dataArray.length; i++) values += dataArray[i];
-            const average = values / dataArray.length;
-            const vol = average / 255;
-            setMicVolume(vol);
-
-            if (vol > sensitivity) {
-              silenceStart = Date.now(); // 🔊 Sound detected, reset timer
-            } else if (Date.now() - silenceStart > 1500) {
-              // 🔇 Silence detected for 1.5s -> Auto stop
-              console.log("🤫 Silence Detected: Auto-processing...");
-              if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-              clearInterval(silenceCheckInterval);
-            }
-          }, 100);
-        };
-
-        mediaRecorder.onstop = async () => {
-          clearInterval(silenceCheckInterval);
-          if (audioContext.state !== 'closed') audioContext.close();
-
-          setIsListening(false);
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-          // 🚀 Backend-to-Cloud Neural Ear (Secure Flow)
-          setIsTranscribing(true);
-          setCurrentSubtitle(textLanguage === "hi" ? "प्रोसेसिंग..." : "Processing...");
-
-          const formData = new FormData();
-          formData.append('file', audioBlob, 'recording.webm');
-          if (voiceLanguage) formData.append('language', voiceLanguage);
-
-          try {
-            const resp = await fetch(`${API_URL}/api/transcribe`, {
-              method: 'POST',
-              body: formData
-            });
-            const data = await resp.json();
-            if (data.text) {
-              console.log("✅ Secure Backend Whisper:", data.text);
-              setCurrentSubtitle(data.text);
-              processMockAIResponse(data.text);
-            } else {
-              throw new Error(data.error || "Transcription failed");
-            }
-          } catch (err) {
-            console.error("Transcription Error:", err);
-            setCurrentSubtitle(textLanguage === "hi" ? "त्रुटि: आवाज़ नहीं समझ पाया" : "Error: Could not process audio");
-          } finally {
-            setIsTranscribing(false);
-            stream.getTracks().forEach(t => t.stop());
-          }
-        };
-
-        mediaRecorder.start();
-      } catch (err) {
-        console.error("iOS Audio Error:", err);
-        setCurrentSubtitle(textLanguage === "hi" ? "माइक परमिशन allow करो" : "Grant mic permission to speak");
-      }
-      return;
-    }
-
-    // --- CASE 2: ANDROID / DESKTOP (BROWSER SPEECH RECOGNITION) ---
-    if (!SpeechRecognition) {
-      setCurrentSubtitle(textLanguage === "hi" ? "आपका ब्राउज़र माइक सपोर्ट नहीं करता" : "Speech Recognition not supported");
-      return;
-    }
-
-    try {
-      if (recognitionRef.current) recognitionRef.current.abort();
-      if (synthRef.current) synthRef.current.cancel();
-      setIsRobotSpeaking(false);
-
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.lang = voiceLanguage === "hi" ? "hi-IN" : "en-US";
-      recognition.interimResults = true;
-      recognition.continuous = false;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setHasNeuralHandshake(true);
-        setCurrentSubtitle(textLanguage === "hi" ? "सुन रहा हूँ (Web)..." : "Listening (Web)...");
-      };
-
-      recognition.onresult = (event) => {
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setCurrentSubtitle(transcript);
-        const last = event.results[event.results.length - 1];
-        if (last.isFinal) {
-          console.log("✅ Standard Speech:", transcript);
-          processMockAIResponse(transcript);
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.error("🎤 recognition Error:", e.error);
-        let msg = (e.error === "not-allowed") ? (textLanguage === "hi" ? "माइक परमिशन allow करो" : "Allow microphone permission") : e.error;
-        setCurrentSubtitle(msg);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => setIsListening(false);
-
-      setTimeout(() => recognition.start(), 200);
-
-    } catch (err) {
-      console.error("❌ Failed:", err);
-      setIsListening(false);
-    }
-  };
-
-  const playBase64Audio = async (base64String) => {
-    try {
-      const binaryString = window.atob(base64String);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-
-      source.onended = () => setIsRobotSpeaking(false);
-      setIsRobotSpeaking(true);
-      source.start(0);
-    } catch (e) {
-      console.error("🔊 Base64 Audio Error:", e);
-      // Fallback to basic synthesis if neural fails
-      speak(currentSubtitle, voiceLanguage);
-    }
-  };
-
-  const processMockAIResponse = async (userText) => {
-    setIsAiTyping(true);
-    setCurrentSubtitle(`${textLanguage === 'hi' ? 'आप' : 'You'}: "${userText}"`);
-
-    // Update local history immediately
-    const updatedHistory = [...chatHistory, { role: 'user', text: userText }];
-    setChatHistory(updatedHistory);
-
-    try {
-      const response = await fetch(`${API_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript: userText,
-          menuContext: menuCategories,
-          cartContext: currentCart,
-          textLanguage: textLanguage,
-          chatHistory: updatedHistory,
-          restaurantId: restaurantId,
-          isIOS: isIOS
-        })
-      });
-      const data = await response.json();
-      setIsAiTyping(false);
-
-      // Update history with robot reply
-      setChatHistory(prev => [...prev, { role: 'robot', text: data.reply_text }]);
-
-      if (data.items_to_add && data.items_to_add.length > 0) {
-        setCurrentCart(prevCart => {
-          const newCart = [...prevCart];
-          data.items_to_add.forEach(itm => {
-            const itmId = itm.id?.toString();
-            const itmName = itm.name?.toLowerCase();
-            const itmDelta = Number(itm.qty) || 0;
-
-            // 1. Find the official item from the menu (either by ID or Name)
-            let officialItem = null;
-            for (const cat of menuCategories) {
-              const match = cat.items.find(i =>
-                (itmId && i.id.toString() === itmId) ||
-                (itmName && i.name.toLowerCase() === itmName)
-              );
-              if (match) { officialItem = match; break; }
-            }
-
-            if (!officialItem) return;
-
-            // 2. Find if it's already in the cart
-            const existingIdx = newCart.findIndex(i => i.id.toString() === officialItem.id.toString());
-
-            if (existingIdx > -1) {
-              const updatedItem = { ...newCart[existingIdx], qty: newCart[existingIdx].qty + itmDelta };
-              if (updatedItem.qty <= 0) newCart.splice(existingIdx, 1);
-              else newCart[existingIdx] = updatedItem;
-            } else if (itmDelta > 0) {
-              newCart.push({ ...officialItem, qty: itmDelta });
-            }
-          });
-          return newCart;
-        });
-      }
-
-      setIsRobotSpeaking(true);
-      setCurrentSubtitle(`Robo: ${data.reply_text}`);
-      setCurrentImageUrl(data.image_url || null);
-
-      if (isIOS) {
-        playBase64Audio(data.audio_response);
-      } else {
-        speak(data.reply_text, voiceLanguage);
-      }
-
-      setTimeout(() => {
-        setIsRobotSpeaking(false);
-        setCurrentImageUrl(null);
-      }, 5000);
-
-      if (data.action === 'EXPAND_CATEGORY' && data.category) {
-        setShowMenuPopup(true);
-        setActiveCategory(data.category);
-        setExpandedCats(prev => new Set(prev).add(data.category));
-      }
-
-      if (data.action === 'PLACE_ORDER') {
-        setTimeout(() => completeOrderProcess(), 1000);
-      }
-
-      // if (userText.toLowerCase().includes('menu') || userText.includes('मेनू')) setShowMenuPopup(true);
-    } catch (err) {
-      setIsAiTyping(false);
-      console.error("AI Response Error:", err);
-    }
-  };
-
-  const toggleCamera = () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsCameraOn(videoTrack.enabled);
-      }
-    }
-  };
 
   const getMediaUrl = (url) => {
     if (!url) return '';
@@ -586,219 +69,152 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     return `${API_URL}${url}`;
   };
 
+  const fetchMenu = async () => {
+    if (!restaurantId) return;
+    try {
+      const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
+      const menuData = await menuRes.json();
+      const allItems = menuData.data || [];
+      const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
+      const grouped = uniqueCategoryNames.map(catName => ({
+        category: catName,
+        items: allItems.filter(item => (item.category || 'Other') === catName)
+      }));
+      grouped.sort((a, b) => a.category.localeCompare(b.category));
+      setMenuCategories(grouped.filter(g => g.items.length > 0));
+      setExpandedCats(new Set(uniqueCategoryNames));
+    } catch (error) { console.error("Menu fetch failed:", error); }
+  };
+
+  useEffect(() => {
+    const fetchRestaurantInfo = async () => {
+      if (!restaurantId) return;
+      try {
+        const res = await fetch(`${API_URL}/api/restaurants`);
+        const data = await res.json();
+        const mine = (data.data || []).find(r => String(r.id) === String(restaurantId));
+        if (mine) setRestaurantName(mine.name);
+      } catch (e) { console.error("Rest Info Error:", e); }
+    };
+    fetchRestaurantInfo();
+    fetchMenu();
+  }, [restaurantId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCallDuration(prev => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const speak = (text, lang, callback) => {
+    if (!synthRef.current) return;
+    synthRef.current.cancel();
+    const ut = new SpeechSynthesisUtterance(text);
+    ut.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
+    ut.rate = 0.95;
+    ut.onstart = () => setIsRobotSpeaking(true);
+    ut.onend = () => {
+        setIsRobotSpeaking(false);
+        if (callback) callback();
+    };
+    synthRef.current.speak(ut);
+  };
+
+  const getCartTotal = () => currentCart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const getCartCount = () => currentCart.reduce((acc, item) => acc + item.qty, 0);
+  const getItemQty = (id) => currentCart.find(i => String(i.id) === String(id))?.qty || 0;
+
   const handleManualCartUpdate = (item, delta) => {
-    if (!item || !item.id) return;
-    setCurrentCart(prevCart => {
-      const newCart = [...prevCart];
-      const existingIdx = newCart.findIndex(i => String(i.id) === String(item.id));
-      if (existingIdx > -1) {
-        const updatedItem = { ...newCart[existingIdx], qty: newCart[existingIdx].qty + delta };
-        if (updatedItem.qty <= 0) newCart.splice(existingIdx, 1);
-        else newCart[existingIdx] = updatedItem;
-      } else if (delta > 0) {
-        newCart.push({ ...item, qty: delta });
-      }
-      return newCart;
+    setCurrentCart(prev => {
+        const existing = prev.find(i => String(i.id) === String(item.id));
+        if (existing) {
+            const newQty = existing.qty + delta;
+            if (newQty <= 0) return prev.filter(i => String(i.id) !== String(item.id));
+            return prev.map(i => String(i.id) === String(item.id) ? { ...existing, qty: newQty } : i);
+        }
+        if (delta > 0) return [...prev, { ...item, qty: delta }];
+        return prev;
     });
   };
 
-  const getItemQty = (id) => {
-    if (id === undefined || id === null) return 0;
-    const itm = currentCart.find(i => String(i.id) === String(id));
-    return itm ? itm.qty : 0;
-  };
-
-  const getCartTotal = () => currentCart.reduce((sum, item) => sum + ((Number(item.price) || 0) * item.qty), 0);
-  const getCartCount = () => currentCart.reduce((sum, item) => sum + item.qty, 0);
-
-  const handleFallbackSubmit = (e) => {
-    e.preventDefault();
-    if (fallbackText.trim()) {
-      processMockAIResponse(fallbackText);
-      setFallbackText('');
-    }
-  };
-
-  const { isSessionActive, isConnecting, startSession, stopSession, analyzer, sendEvent } = useRealtime();
-
-  // 🛒 Sync Cart changes with AI Context
-  useEffect(() => {
-    // Send update whenever cart changes OR when session starts
-    if (isSessionActive) {
-      const cartSummary = currentCart.map(i => `${i.qty}x ${i.name}`).join(', ');
-      const syncEvent = {
-        type: 'conversation.item.create',
-        item: {
-          type: 'message',
-          role: 'system',
-          content: [{
-            type: 'text',
-            text: `CRITICAL CONTEXT: The user's current cart has: [${cartSummary || 'Nothing'}]. Always refer to this list when asked about the cart.`
-          }]
-        }
-      };
-      
-      // Data channel open hone me thoda waqt lag sakta hai
-      const timer = setTimeout(() => {
-        sendEvent?.(syncEvent);
-        // Also update session instructions for global context
-        sendEvent?.({
-          type: 'session.update',
-          session: {
-            instructions: `Current Cart Context: ${cartSummary || 'Empty'}. Please maintain this state.`
-          }
-        });
-      }, 1000); 
-
-      return () => clearTimeout(timer);
-    }
-  }, [isSessionActive, currentCart, sendEvent]);
-
-  const completeOrderProcess = useCallback(async () => {
-    if (currentCart.length === 0) {
-      console.warn("Attempted to confirm an empty cart.");
-      return;
-    }
-    const total = getCartTotal();
-    const newOrder = {
-      restaurant_id: Number(restaurantId),
-      tableNumber: tableNumber,
-      items: currentCart,
-      total: total,
-      timestamp: Date.now(),
-      status: 'pending'
-    };
+  const completeOrderProcess = async () => {
+    if (getCartCount() === 0) return;
     try {
-      await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOrder)
-      });
-      setCurrentCart([]);
-      setShowMenuPopup(false);
-      setOrderConfirmedUI(true);
-
-      // Stop Voice Session Automatically after AI finishes speaking
-      if (IS_OPENAI_REALTIME) {
-        setTimeout(() => {
-          stopSession();
-          setIsListening(false);
-        }, 5000); // 5 second delay taaki AI apni baat puri kar sake
-      }
-
-      const msg = dialogs[textLanguage].confirm(total);
-      setCurrentSubtitle(msg);
-      speak(dialogs[voiceLanguage].confirm(total), voiceLanguage);
-      setTimeout(() => setOrderConfirmedUI(false), 9000);
-    } catch (err) { console.error(err); }
-  }, [currentCart, restaurantId, tableNumber, textLanguage, voiceLanguage, stopSession]);
-
-  const latestRealtimeHandler = useRef(null);
-
-  const handleRealtimeEvent = useCallback((event) => {
-    console.log('🤖 Realtime Event:', event.type, event);
-    // 1. Handle AI Text Transcription (Subtitles)
-    if (event.type === 'response.audio_transcription.delta') {
-      setCurrentSubtitle(prev => prev + event.delta);
-    }
-    if (event.type === 'response.audio_transcription.done') {
-      const text = event.transcript;
-      setCurrentSubtitle(text);
-      setChatHistory(prev => [...prev, { role: 'robot', text: text }]);
-    }
-
-    if (event.type === 'conversation.item.input_audio_transcription.completed') {
-      const text = event.transcript;
-      setChatHistory(prev => [...prev, { role: 'user', text: text }]);
-    }
-
-    // 3. Reset subtitles when new response starts
-    if (event.type === 'response.created') {
-      setCurrentSubtitle('');
-    }
-
-    // 4. Handle Tool Calls
-    if (event.type === 'response.done' && event.response?.output) {
-      event.response.output.forEach(output => {
-        if (output.type === 'function_call') {
-          const { name, arguments: argsString } = output;
-          const args = JSON.parse(argsString);
-          console.log(`Realtime Tool Call: ${name}`, args);
-
-          if (name === 'add_item_to_cart') {
-            const { name: itemName, quantity = 1 } = args;
-            let officialItem = null;
-            // First try exact match, then fuzzy match
-            for (const cat of menuCategories) {
-              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase())
-                || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
-              if (match) { officialItem = match; break; }
-            }
-            if (officialItem) handleManualCartUpdate(officialItem, quantity || 1);
-          } else if (name === 'remove_item_from_cart') {
-            const { name: itemName, quantity = 1 } = args;
-            let officialItem = null;
-            for (const cat of menuCategories) {
-              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase())
-                || cat.items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
-              if (match) { officialItem = match; break; }
-            }
-            if (officialItem) handleManualCartUpdate(officialItem, -(quantity || 1));
-          } else if (name === 'show_item_photo') {
-            const { name: itemName } = args;
-            let officialItem = null;
-            for (const cat of menuCategories) {
-              const match = cat.items.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-              if (match) { officialItem = match; break; }
-            }
-            if (officialItem && officialItem.image_url) {
-              setCurrentImageUrl(officialItem.image_url);
-              setTimeout(() => setCurrentImageUrl(null), 5000);
-            }
-          } else if (name === 'show_menu') {
-            const { category = 'All' } = args;
-            setShowMenuPopup(true);
-            setActiveCategory(category);
-            if (category !== 'All') {
-              setExpandedCats(prev => new Set(prev).add(category));
-            }
-          } else if (name === 'confirm_order') {
-            completeOrderProcess();
-          }
+        const orderData = {
+            restaurant_id: restaurantId,
+            tableNumber,
+            items: currentCart,
+            total: getCartTotal(),
+            timestamp: Date.now(),
+            status: 'pending'
+        };
+        const res = await fetch(`${API_URL}/api/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+        });
+        if (res.ok) {
+            setOrderConfirmedUI(true);
+            setCurrentCart([]);
+            speak(dialogs[voiceLanguage].confirm(orderData.total), voiceLanguage);
+            setTimeout(() => setOrderConfirmedUI(false), 5000);
+            if (IS_OPENAI_REALTIME) stopSession();
         }
-      });
-    }
-  }, [menuCategories, completeOrderProcess]);
-
-  // Always sync the ref with the latest handler
-  useEffect(() => {
-    latestRealtimeHandler.current = handleRealtimeEvent;
-  }, [handleRealtimeEvent]);
-
-  const handleToggleSession = async () => {
-    if (isSessionActive) {
-      stopSession();
-      setIsListening(false);
-    } else {
-      setIsListening(true);
-      setCurrentSubtitle(''); // Clear old messages
-      setOrderConfirmedUI(false); // Clear confirmation popup if it's still there
-      try {
-        await startSession((ev) => latestRealtimeHandler.current?.(ev), restaurantId);
-      } catch (err) {
-        setIsListening(false);
-        console.error("Session failed:", err);
-      }
-    }
+    } catch (e) { console.error("Order Failed:", e); }
   };
 
-  const toggleCategory = (catName) => {
+  const { 
+    isConnecting, 
+    handleToggleSession,
+    isSessionActive,
+    stopSession
+  } = useRealtime(restaurantId, tableNumber, {
+    onCartUpdate: (items) => {
+        setCurrentCart(items);
+        if (items.length > 0) setShowMenuPopup(true);
+    },
+    onShowMenu: (category) => {
+        if (category) setActiveCategory(category);
+        setShowMenuPopup(true);
+    },
+    onConfirmOrder: () => completeOrderProcess(),
+    onResponse: (text) => {
+        setCurrentSubtitle(text);
+        setIsRobotSpeaking(true);
+        setTimeout(() => setIsRobotSpeaking(false), text.length * 50);
+    }
+  });
+
+  const toggleCategory = (cat) => {
     setExpandedCats(prev => {
       const next = new Set(prev);
-      if (next.has(catName)) next.delete(catName);
-      else next.add(catName);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
       return next;
     });
+  };
+
+  const toggleCamera = async () => {
+    if (isCameraOn) {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsCameraOn(false);
+    } else {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(s);
+        if (videoRef.current) videoRef.current.srcObject = s;
+        setIsCameraOn(true);
+      } catch (e) { setHasCameraError(true); }
+    }
+  };
+
+  const startListening = () => {
+    if (!initializationRef.current) {
+        initializationRef.current = true;
+        speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+        setHasGreeted(true);
+    }
+    setIsListening(!isListening);
   };
 
   const formatTime = (secs) => {
@@ -814,15 +230,18 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         <div className="header-badge calling">Table {tableNumber} | Order: ₹{getCartTotal()}</div>
         <div className="call-timer-badge"><div className="live-dot"></div>{formatTime(callDuration)}</div>
       </div>
+
       <div className="avatar-container">
-        <div className={`avatar-pulse-ring ${isRobotSpeaking ? 'speaking' : ''} ${isListening ? 'listening-ring' : ''} ${micVolume > sensitivity ? 'vocal-spike' : ''}`}></div>
-        <img src="/avatar.png" alt="AI Waiter Avatar" className={`waiter-avatar breathing-idle ${isRobotSpeaking ? 'animate-talk' : ''} ${micVolume > sensitivity ? 'listening-pulse' : ''}`} />
+        <div className={`avatar-pulse-ring ${isRobotSpeaking ? 'speaking' : ''} ${isListening ? 'listening-ring' : ''}`}></div>
+        <img src="/avatar.png" alt="AI Waiter Avatar" className={`waiter-avatar breathing-idle ${isRobotSpeaking ? 'animate-talk' : ''}`} />
+        
         {!hasCameraError && (
           <div className="user-camera-pip">
             <video ref={videoRef} autoPlay playsInline muted className={`pip-video ${!isCameraOn ? 'muted-video' : ''}`} />
             {!isCameraOn && <div className="pip-overlay"><VideoOff size={24} color="white" /></div>}
           </div>
         )}
+
         {orderConfirmedUI && (
           <div className="order-success-overlay scale-in">
             <CheckCircle size={48} color="white" fill="var(--success)" />
@@ -839,316 +258,83 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       </div>
 
       {showMenuPopup && (
-        <div className="premium-menu-panel slide-up">
-          <div className="menu-header">
-            <div className="menu-header-top">
-              <div className="menu-title-area">
-                <h4>{textLanguage === 'en' ? 'Our Menu' : 'हमारा मेनू'}</h4>
-                <span className="menu-subtitle">{textLanguage === 'en' ? 'Select your favorite dishes' : 'अपनी पसंदीदा डिश चुनें'}</span>
-              </div>
-              <button className="close-menu-btn" onClick={() => setShowMenuPopup(false)}>×</button>
-            </div>
-
-            <div className="menu-search-wrapper">
-              <Search size={18} className="search-icon" />
-              <input
-                type="text"
-                className="menu-search-input"
-                placeholder={textLanguage === 'en' ? 'Search for dishes or ingredients...' : 'डिश या सामग्री सर्च करें...'}
-                value={menuSearchTerm}
-                onChange={(e) => setMenuSearchTerm(e.target.value)}
-              />
-              {menuSearchTerm && (
-                <button className="clear-search-btn" onClick={() => setMenuSearchTerm('')}>×</button>
-              )}
-            </div>
-
-            <div className="category-quick-links scrollbar-hidden">
-              <button
-                className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
-                onClick={() => setActiveCategory('All')}
-              >
-                {textLanguage === 'en' ? 'All' : 'सभी'}
-              </button>
-              {menuCategories.map((cat) => (
-                <button
-                  key={cat.category}
-                  className={`category-chip ${activeCategory === cat.category ? 'active' : ''}`}
-                  onClick={() => setActiveCategory(cat.category)}
-                >
-                  {cat.category}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="menu-content scrollbar-hidden">
-            {menuCategories.map((category) => {
-              // 1. Filter by Active Category
-              if (activeCategory !== 'All' && category.category !== activeCategory) return null;
-
-              // 2. Filter by Search Term
-              const matchingItems = category.items.filter(item =>
-                item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) ||
-                (item.description && item.description.toLowerCase().includes(menuSearchTerm.toLowerCase()))
-              );
-
-              if (matchingItems.length === 0) return null;
-
-              // Auto-expand everything if we are searching or filtering by category
-              const isExpanded = menuSearchTerm.length > 0 || activeCategory !== 'All' || expandedCats.has(category.category);
-
-              return (
-                <div key={category.category} className={`menu-category ${isExpanded ? 'expanded' : 'collapsed'}`}>
-                  <div className="category-header-row" onClick={() => toggleCategory(category.category)}>
-                    <h5 className="category-title">{category.category}</h5>
-                    {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                  </div>
-
-                  {isExpanded && (
-                    <div className="category-items animate-fade-in">
-                      {matchingItems.map((item) => {
-                        const qty = getItemQty(item.id);
-                        const isUnavailable = item.is_active === false;
-                        return (
-                          <div key={item.id} className={`premium-menu-item animate-slide-up ${isUnavailable ? 'unavailable' : ''}`}>
-                            <div className="item-media">
-                              {item.image_url ? (
-                                <img 
-                                  src={getMediaUrl(item.image_url)} 
-                                  alt={item.name} 
-                                  className="item-thumb" 
-                                  onClick={() => setZoomedImage(getMediaUrl(item.image_url))}
-                                  style={{ cursor: 'pointer' }}
-                                />
-                              ) : (
-                                <div className="item-thumb-placeholder"><ChefHat size={24} /></div>
-                              )}
-                              {isUnavailable && <div className="unavailable-overlay">SOLD OUT</div>}
-                              {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
-                            </div>
-
-                            <div className="item-details">
-                              <div className="item-header">
-                                <h6 className="item-name">{item.name}</h6>
-                                <span className="item-price">₹{item.price}</span>
-                              </div>
-                              <p className="item-description">{item.description || item.desc || "Delicately crafted for your tech palate."}</p>
-                              <div className="item-actions-row">
-                                {isUnavailable ? (
-                                  <button className="add-btn-disabled" disabled>Unavailable</button>
-                                ) : qty === 0 ? (
-                                  <button className="add-btn-primary" onClick={() => handleManualCartUpdate(item, 1)}>
-                                    <Plus size={14} /> ADD
-                                  </button>
-                                ) : (
-                                  <div className="qty-controls-premium">
-                                    <button onClick={() => handleManualCartUpdate(item, -1)}><Minus size={14} /></button>
-                                    <span className="qty-val">{qty}</span>
-                                    <button onClick={() => handleManualCartUpdate(item, 1)}><Plus size={14} /></button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {getCartCount() > 0 && (
-            <div className="menu-cart-footer slide-up">
-              <div className="cart-total" onClick={() => setShowCartSummary(true)} style={{ cursor: 'pointer' }}>
-                <ShoppingCart size={20} />
-                <span>₹{getCartTotal()}</span>
-                <span className="cart-view-hint">View Cart</span>
-              </div>
-              <button className="confirm-btn-footer" onClick={() => completeOrderProcess()}>
-                {textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'} <ChevronRight size={18} />
-              </button>
-            </div>
-          )}
-        </div>
+        <MenuSystem 
+          menuCategories={menuCategories}
+          textLanguage={textLanguage}
+          menuSearchTerm={menuSearchTerm}
+          setMenuSearchTerm={setMenuSearchTerm}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          toggleCategory={toggleCategory}
+          expandedCats={expandedCats}
+          getItemQty={getItemQty}
+          handleManualCartUpdate={handleManualCartUpdate}
+          getCartTotal={getCartTotal}
+          getCartCount={getCartCount}
+          setShowCartSummary={setShowCartSummary}
+          completeOrderProcess={completeOrderProcess}
+          setShowMenuPopup={setShowMenuPopup}
+          getMediaUrl={getMediaUrl}
+          setZoomedImage={setZoomedImage}
+        />
       )}
 
       {showCartSummary && (
-        <div className="cart-summary-overlay animate-fade-in" onClick={() => setShowCartSummary(false)}>
-          <div className="cart-summary-modal slide-up" onClick={e => e.stopPropagation()}>
-            <div className="cart-summary-header">
-              <h3>{textLanguage === 'en' ? 'Review Your Order' : 'आपका आर्डर'}</h3>
-              <button className="close-cart-btn" onClick={() => setShowCartSummary(false)}>×</button>
-            </div>
-
-            <div className="cart-summary-items scrollbar-hidden">
-              {currentCart.map((item) => (
-                <div key={item.id} className="cart-summary-item">
-                  <div className="cart-item-photo" onClick={() => item.image_url && setZoomedImage(getMediaUrl(item.image_url))}>
-                    {item.image_url ? (
-                      <img src={getMediaUrl(item.image_url)} alt={item.name} />
-                    ) : (
-                      <div className="cart-item-placeholder"><ChefHat size={20} /></div>
-                    )}
-                  </div>
-                  <div className="cart-item-info">
-                    <span className="cart-item-name">{item.name}</span>
-                    <span className="cart-item-price">₹{item.price} each</span>
-                  </div>
-                  <div className="cart-item-actions">
-                    <div className="qty-controls-premium">
-                      <button onClick={() => handleManualCartUpdate(item, -1)}><Minus size={14} /></button>
-                      <span className="qty-val">{item.qty}</span>
-                      <button onClick={() => handleManualCartUpdate(item, 1)}><Plus size={14} /></button>
-                    </div>
-                    <span className="cart-item-subtotal">₹{item.price * item.qty}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="cart-summary-footer">
-              <div className="cart-final-total">
-                <span>{textLanguage === 'en' ? 'Total Amount' : 'कुल राशि'}</span>
-                <strong>₹{getCartTotal()}</strong>
-              </div>
-              <button className="final-checkout-btn" onClick={() => {
-                completeOrderProcess();
-                setShowCartSummary(false);
-              }}>
-                {textLanguage === 'en' ? 'Finalize & Book Order' : 'आर्डर बुक करें'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CartOverlay 
+          currentCart={currentCart}
+          textLanguage={textLanguage}
+          setShowCartSummary={setShowCartSummary}
+          getMediaUrl={getMediaUrl}
+          setZoomedImage={setZoomedImage}
+          handleManualCartUpdate={handleManualCartUpdate}
+          getCartTotal={getCartTotal}
+          completeOrderProcess={completeOrderProcess}
+        />
       )}
-
 
       {showSettingsPopup && !IS_OPENAI_REALTIME && (
-        <div className="settings-overlay animate-fade-in">
-          <div className="settings-modal scale-in">
-            <div className="settings-header">
-              <h4>{textLanguage === 'en' ? 'Settings' : 'सेटिंग्स'}</h4>
-              <button onClick={() => setShowSettingsPopup(false)}>×</button>
-            </div>
-            <div className="settings-group">
-              <label>{textLanguage === 'en' ? 'Sentient Ear (Auto-Mic)' : 'ऑटो-मिक (सेंटिएंट मोड)'}</label>
-              <div className="toggle-pill">
-                <button
-                  className={!isAutoListenEnabled ? 'active' : ''}
-                  onClick={() => setIsAutoListenEnabled(false)}>
-                  Manual Click
-                </button>
-                <button
-                  className={isAutoListenEnabled ? 'active' : ''}
-                  onClick={() => setIsAutoListenEnabled(true)}>
-                  Hands-Free
-                </button>
-              </div>
-              <p className="settings-desc">
-                {textLanguage === 'en'
-                  ? "AI will automatically start listening when you speak."
-                  : "जब आप बोलेंगे, रोबो अपने आप सुनना शुरू कर देगा।"}
-              </p>
-            </div>
-            {isAutoListenEnabled && (
-              <div className="settings-group">
-                <label>{textLanguage === 'en' ? 'Ear Sensitivity' : 'माइक सेंसिटिविटी'}</label>
-                <input
-                  type="range"
-                  min="0.01"
-                  max="0.2"
-                  step="0.01"
-                  value={sensitivity}
-                  onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-                  className="sensitivity-slider"
-                />
-                <div className="slider-labels">
-                  <span>Quiet</span>
-                  <span>Loud</span>
-                </div>
-              </div>
-            )}
-            <div className="settings-group">
-              <label>{textLanguage === 'en' ? 'Neural Assistant Voice' : 'रोबो की आवाज़'}</label>
-              <div className="toggle-pill">
-                <button
-                  className={voiceLanguage === 'en' ? 'active' : ''}
-                  onClick={() => {
-                    setVoiceLanguage('en');
-                    setCurrentSubtitle("Neural voice specialized to English.");
-                    speak("Neural voice specialized to English.", 'en');
-                  }}>
-                  Pure English
-                </button>
-                <button
-                  className={voiceLanguage === 'hi' ? 'active' : ''}
-                  onClick={() => {
-                    setVoiceLanguage('hi');
-                    setCurrentSubtitle("Neural voice localized to Hinglish.");
-                    speak("अब मैं आपसे हिंदी और इंग्लिश दोनों में बात करूँगा।", 'hi');
-                  }}>
-                  Human Hinglish
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SettingsModal 
+          textLanguage={textLanguage}
+          setShowSettingsPopup={setShowSettingsPopup}
+          isAutoListenEnabled={isAutoListenEnabled}
+          setIsAutoListenEnabled={setIsAutoListenEnabled}
+          sensitivity={sensitivity}
+          setSensitivity={setSensitivity}
+          voiceLanguage={voiceLanguage}
+          setVoiceLanguage={setVoiceLanguage}
+          setCurrentSubtitle={setCurrentSubtitle}
+          speak={speak}
+        />
       )}
 
-      <div className={`call-action-deck ${(showMenuPopup || showSettingsPopup) ? 'hidden-deck' : ''}`}>
-        {(currentSubtitle != '' || isConnecting) && <div className="subtitle-area">
-          {isConnecting ? (
-            <span className="subtitle-text animate-pulse">Neural Handshake...</span>
-          ) : isAiTyping ? (
-            <span className="subtitle-text animate-pulse italic">
-              {textLanguage === 'hi' ? 'रोबो टाइप कर रहा है...' : 'Robo is typing...'}
-            </span>
-          ) : (
-            <span className="subtitle-text">{currentSubtitle}</span>
-          )}
-        </div>
-        }
-        {!IS_OPENAI_REALTIME &&
-          <form className="fallback-form" onSubmit={handleFallbackSubmit}>
-            <input type="text" placeholder={textLanguage === 'hi' ? "यहाँ टाइप करें..." : "Type here..."} value={fallbackText} onChange={(e) => setFallbackText(e.target.value)} />
-            <button type="submit" disabled={!fallbackText.trim()}>Send</button>
-          </form>
-        }
-        <div className="call-buttons-row">
-          <button className="call-btn secondary-btn" onClick={() => setShowMenuPopup(true)} title="Menu"><MenuIcon size={24} /></button>
-          <button className={`call-btn secondary-btn ${!isCameraOn ? 'muted' : ''}`} onClick={toggleCamera} title="Camera">
-            {isCameraOn ? <Video size={24} /> : <VideoOff size={24} />}
-          </button>
-          
-          <button className={`call-btn active-call-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`} onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening} title="Speak" disabled={isConnecting}>
-            {isConnecting ? <div className="hud-loader"></div> : isListening ? <Mic size={28} /> : <MicOff size={28} />}
-          </button>
+      <CallControls 
+        showMenuPopup={showMenuPopup}
+        showSettingsPopup={showSettingsPopup}
+        currentSubtitle={currentSubtitle}
+        isConnecting={isConnecting}
+        isAiTyping={isAiTyping}
+        textLanguage={textLanguage}
+        IS_OPENAI_REALTIME={IS_OPENAI_REALTIME}
+        handleFallbackSubmit={(e) => { e.preventDefault(); setFallbackText(''); }}
+        fallbackText={fallbackText}
+        setFallbackText={setFallbackText}
+        setShowMenuPopup={setShowMenuPopup}
+        isCameraOn={isCameraOn}
+        toggleCamera={toggleCamera}
+        isListening={isListening || isSessionActive}
+        handleToggleSession={handleToggleSession}
+        startListening={startListening}
+        setShowCartSummary={setShowCartSummary}
+        currentCart={currentCart}
+        setShowSettingsPopup={setShowSettingsPopup}
+      />
 
-          <button className="call-btn secondary-btn cart-btn-deck" onClick={() => setShowCartSummary(true)} title="Cart" style={{ position: 'relative' }}>
-            <ShoppingCart size={24} />
-            {currentCart.reduce((acc, item) => acc + item.qty, 0) > 0 && (
-              <span className="deck-cart-badge">
-                {currentCart.reduce((acc, item) => acc + item.qty, 0)}
-              </span>
-            )}
-          </button>
-
-          {!IS_OPENAI_REALTIME &&
-            <button className="call-btn secondary-btn" onClick={() => setShowSettingsPopup(true)} title="Settings"><Settings size={22} /></button>
-          }
-          <button className="call-btn danger-btn end-call-btn" onClick={() => window.location.reload()}><PhoneOff size={28} /></button>
-        </div>
-      </div>
-
-      {/* Image Zoom Modal */}
       {zoomedImage && (
         <div className="image-zoom-overlay" onClick={() => setZoomedImage(null)}>
           <button className="close-zoom-btn" onClick={() => setZoomedImage(null)}>
             <X size={30} />
           </button>
-          <img src={zoomedImage} alt="Zoomed Item" className="zoomed-image-view" onClick={(e) => e.stopPropagation()} />
+          <img src={zoomedImage} alt="Zoomed" className="zoomed-image-view" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
     </div>

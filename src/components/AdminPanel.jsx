@@ -1,37 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LayoutDashboard,
-  UtensilsCrossed,
-  ListTodo,
-  ChefHat,
-  Plus,
-  Trash2,
-  CheckCircle,
-  Printer,
   Search,
   Settings,
-  UserCircle,
-  LogOut,
-  Users,
-  Store,
-  Copy,
+  ChefHat,
+  Calendar,
   DollarSign,
   TrendingUp,
+  ListTodo,
+  UtensilsCrossed,
   Clock,
-  Calendar,
-  Filter,
-  Image as ImageIcon,
-  Film,
-  Play,
+  Printer,
+  CheckCircle,
+  Plus,
+  Trash2,
   Edit2,
+  Users,
+  Store,
+  Bot,
+  Filter,
   Eye,
-  EyeOff
+  EyeOff,
+  LogOut,
+  Image as ImageIcon,
+  AlertCircle,
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import './AdminPanel.css';
-
+import PromptManager from './PromptManager';
+import AdminSidebar from './AdminSidebar';
 import { API_URL } from '../config';
+
 const socket = io(API_URL, { autoConnect: true });
 
 const AdminPanel = () => {
@@ -39,237 +40,78 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [showMenuPopup, setShowMenuPopup] = useState(false);
-  const [showCategoriesPopup, setShowCategoriesPopup] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [newCatName, setNewCatName] = useState('');
-  const [selectedBranchId, setSelectedBranchId] = useState(null);
-  const [copiedId, setCopiedId] = useState(null);
-
+  const [staffList, setStaffList] = useState([]);
+  const [restaurantsList, setRestaurantsList] = useState([]);
+  
+  // UI States
+  const [showMenuPopup, setShowMenuPopup] = useState(false);
+  const [editingDishId, setEditingDishId] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [formError, setFormError] = useState('');
   const [newDish, setNewDish] = useState({
     name: '',
     category: '',
     price: '',
     description: '',
     image_url: '',
-    video_url: '',
     is_active: true
   });
-  const [uploading, setUploading] = useState({ image: false, video: false });
-  const [editingDishId, setEditingDishId] = useState(null);
-  const [staffList, setStaffList] = useState([]);
-  const [restaurantsList, setRestaurantsList] = useState([]);
-  const [newStaffMember, setNewStaffMember] = useState({ email: '', password: '', name: '', role: 'admin', restaurant_id: '' });
-  const [newRestaurant, setNewRestaurant] = useState({ name: '', location: '' });
-  const [menuSearchTerm, setMenuSearchTerm] = useState('');
-  const [orderFilters, setOrderFilters] = useState({
-    date: '', // Show all by default
-    status: 'all',
-    table: 'all'
-  });
 
-  const fetchOrders = async () => {
-    try {
-      const endpoint = adminUser.role === 'super_admin' ? '/api/orders' : `/api/orders?restaurant_id=${adminUser.restaurant_id}`;
-      const response = await axios.get(`${API_URL}${endpoint}`);
-      const mappedOrders = (response.data.data || []).map(o => ({
-        ...o,
-        tableNumber: o.tableNumber || o.tablenumber || '?',
-        timestamp: o.timestamp ? (Number(o.timestamp) || o.timestamp) : null
-      }));
-      setOrders(mappedOrders);
-    } catch (error) { console.error("Failed to fetch orders:", error); }
-  };
+  // Category Management
+  const [showCatPopup, setShowCatPopup] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
 
-  const fetchMenu = async () => {
-    try {
-      const endpoint = adminUser.role === 'super_admin' ? '/api/menu' : `/api/menu?restaurant_id=${adminUser.restaurant_id}`;
-      const response = await axios.get(`${API_URL}${endpoint}`);
-      setMenuItems(response.data.data);
-    } catch (error) { console.error("Failed to fetch menu:", error); }
-  };
+  // Staff & Node Management
+  const [showStaffPopup, setShowStaffPopup] = useState(false);
+  const [showNodePopup, setShowNodePopup] = useState(false);
+  const [newStaff, setNewStaff] = useState({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
+  const [newNode, setNewNode] = useState({ name: '', location: '' });
 
-  const fetchCategories = async () => {
+  const formatDate = (dateStr) => {
     try {
-      const endpoint = adminUser.role === 'super_admin' ? '/api/categories' : `/api/categories?restaurant_id=${adminUser.restaurant_id}`;
-      const response = await axios.get(`${API_URL}${endpoint}`);
-      setCategories(response.data.data);
-    } catch (error) { console.error("Failed to fetch categories:", error); }
-  };
-
-  const fetchStaff = async () => {
-    try {
-      const endpoint = adminUser.role === 'super_admin' ? '/api/users' : `/api/users?restaurant_id=${adminUser.restaurant_id}`;
-      const response = await axios.get(`${API_URL}${endpoint}`);
-      setStaffList(response.data.data);
-    } catch (error) { console.error("Failed to fetch staff:", error); }
-  };
-
-  const fetchRestaurants = async () => {
-    if (adminUser.role !== 'super_admin') return;
-    try {
-      const response = await axios.get(`${API_URL}/api/restaurants`);
-      setRestaurantsList(response.data.data);
-    } catch (error) { console.error("Failed to fetch restaurants:", error); }
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return "Just now";
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return "Recent"; }
   };
 
   useEffect(() => {
-    fetchOrders();
-    fetchMenu();
-    fetchCategories();
-    fetchStaff();
-    fetchRestaurants();
+    if (!adminUser.id) {
+        window.location.href = '/admin/login';
+        return;
+    }
+    fetchData();
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
-    socket.on('new_order', (newOrder) => {
-      if (newOrder.restaurant_id === adminUser.restaurant_id) {
-        setOrders((prev) => [newOrder, ...prev]);
-      }
+    socket.on('new_order', (order) => {
+        setOrders(prev => [order, ...prev]);
+        new Audio('/order-alert.mp3').play().catch(() => {});
     });
-    socket.on('order_status_update', ({ id, status }) => {
-      setOrders((prev) => prev.map(o => o.id === id ? { ...o, status } : o));
-    });
-    socket.on('menu_updated', () => fetchMenu());
-    socket.on('categories_updated', () => fetchCategories());
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('new_order');
-      socket.off('order_status_update');
-      socket.off('menu_updated');
-      socket.off('categories_updated');
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('new_order');
     };
-  }, [adminUser]);
+  }, []);
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const fetchData = async () => {
     try {
-      await axios.put(`${API_URL}/api/orders/${orderId}/status`, { status: newStatus });
-    } catch (error) { console.error("Status update failed:", error); }
-  };
-
-  const handleFileUpload = async (e, type) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    setUploading({ ...uploading, [type]: true });
-    try {
-      const response = await axios.post(`${API_URL}/api/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setNewDish({ ...newDish, [`${type}_url`]: response.data.url });
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert(`${type} upload failed. Check server connection.`);
-    } finally {
-      setUploading({ ...uploading, [type]: false });
-    }
-  };
-
-  const getMediaUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return `${API_URL}${url}`;
-  };
-
-  const handleEditClick = (item) => {
-    setNewDish({
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      description: item.description || '',
-      image_url: item.image_url || '',
-      video_url: item.video_url || '',
-      is_active: item.is_active !== undefined ? item.is_active : true
-    });
-    setEditingDishId(item.id);
-    setShowMenuPopup(true);
-  };
-
-  const handleAddDish = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingDishId) {
-        await axios.put(`${API_URL}/api/menu/${editingDishId}`, newDish);
-      } else {
-        await axios.post(`${API_URL}/api/menu`, { ...newDish, restaurant_id: adminUser.restaurant_id });
-      }
-      setNewDish({ name: '', category: '', price: '', description: '', image_url: '', video_url: '', is_active: true });
-      setEditingDishId(null);
-      setShowMenuPopup(false);
-      fetchMenu();
-    } catch (error) { console.error("Save/Update dish failed:", error); }
-  };
-
-  const handleDeleteDish = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this dish?")) return;
-    try {
-      await axios.delete(`${API_URL}/api/menu/${id}`);
-      fetchMenu();
-    } catch (error) { console.error("Delete failed:", error); }
-  };
-
-  const handleToggleStatus = async (item) => {
-    try {
-      await axios.put(`${API_URL}/api/menu/${item.id}`, { ...item, is_active: !item.is_active });
-      fetchMenu();
-    } catch (error) { console.error("Toggle status failed:", error); }
-  };
-
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-    if (!newCatName.trim()) return;
-    try {
-      await axios.post(`${API_URL}/api/categories`, { name: newCatName, restaurant_id: adminUser.restaurant_id });
-      setNewCatName('');
-      fetchCategories();
-    } catch (error) { console.error("Add category failed:", error); }
-  };
-
-  const handleAddStaff = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...newStaffMember,
-        // Force restaurant_id for admins, use selected for super_admin
-        restaurant_id: adminUser.role === 'super_admin' ? newStaffMember.restaurant_id : adminUser.restaurant_id
-      };
-      await axios.post(`${API_URL}/api/users`, payload);
-      setNewStaffMember({ email: '', password: '', name: '', role: 'kitchen_staff', restaurant_id: '' });
-      fetchStaff();
-    } catch (error) { console.error("Add staff failed:", error); }
-  };
-
-  const handleCopy = (text, id) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleAddRestaurant = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${API_URL}/api/restaurants`, newRestaurant);
-      setNewRestaurant({ name: '', location: '' });
-      fetchRestaurants();
-    } catch (error) { console.error("Add restaurant failed:", error); }
-  };
-
-  const handleDeleteCategory = async (id, name) => {
-    const hasItems = menuItems.some(i => i.category === name);
-    if (hasItems) {
-      alert(`Cannot delete "${name}" because it still contains dishes. Please re-assign or delete those dishes first.`);
-      return;
-    }
-    if (!window.confirm(`Are you sure you want to delete category "${name}"?`)) return;
-    try {
-      await axios.delete(`${API_URL}/api/categories/${id}`);
-      fetchCategories();
-    } catch (error) { console.error("Delete category failed:", error); }
+        const auth = { params: { restaurant_id: adminUser.restaurant_id } };
+        const [ordersRes, menuRes, catRes, staffRes, restRes] = await Promise.all([
+            axios.get(`${API_URL}/api/orders`, auth),
+            axios.get(`${API_URL}/api/menu`, auth),
+            axios.get(`${API_URL}/api/menu/categories`, auth),
+            axios.get(`${API_URL}/api/users`, auth),
+            axios.get(`${API_URL}/api/restaurants`)
+        ]);
+        setOrders(ordersRes.data.data || []);
+        setMenuItems(menuRes.data.data || []);
+        setCategories(catRes.data.data || []);
+        setStaffList(staffRes.data.data || []);
+        setRestaurantsList(restRes.data.data || []);
+    } catch (e) { console.error("Fetch Error:", e); }
   };
 
   const handleLogout = () => {
@@ -277,620 +119,392 @@ const AdminPanel = () => {
     window.location.href = '/admin/login';
   };
 
-  const handlePrint = (order) => {
-    setSelectedOrder(order);
-    setTimeout(() => {
-      window.print();
-      setSelectedOrder(null);
-    }, 500);
+  const updateOrderStatus = async (id, status) => {
+    try {
+        await axios.put(`${API_URL}/api/orders/${id}/status`, { status });
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    } catch (e) { console.error(e); }
   };
 
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const validateForm = () => {
+    if (!newDish.name) return "Dish name is required";
+    if (!newDish.category) return "Please select a category";
+    if (!newDish.price || isNaN(newDish.price)) return "Valid price is required";
+    if (!newDish.description) return "Description is required";
+    return null;
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    setUploading(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/upload`, formData);
+      setNewDish({ ...newDish, image_url: res.data.url });
+    } catch (err) {
+      alert("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveDish = async () => {
+    const error = validateForm();
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    setFormError('');
+
+    try {
+      if (editingDishId) {
+        await axios.put(`${API_URL}/api/menu/${editingDishId}`, newDish);
+      } else {
+        await axios.post(`${API_URL}/api/menu`, { ...newDish, restaurant_id: adminUser.restaurant_id });
+      }
+      setShowMenuPopup(false);
+      fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const deleteDish = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this neural dish?")) return;
+    try {
+      await axios.delete(`${API_URL}/api/menu/${id}`);
+      fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCatName) return;
+    try {
+      await axios.post(`${API_URL}/api/menu/categories`, { name: newCatName, restaurant_id: adminUser.restaurant_id });
+      setNewCatName('');
+      setShowCatPopup(false);
+      fetchData();
+    } catch (e) { console.error(e); }
+  };
+  const handleAddStaff = async (e) => {
+    e.preventDefault();
+    try {
+        await axios.post(`${API_URL}/api/users`, newStaff);
+        setShowStaffPopup(false);
+        setNewStaff({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
+        fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleAddNode = async (e) => {
+    e.preventDefault();
+    try {
+        await axios.post(`${API_URL}/api/restaurants`, newNode);
+        setShowNodePopup(false);
+        setNewNode({ name: '', location: '' });
+        fetchData();
+    } catch (e) { console.error(e); }
+  };
 
   return (
-    <div className="admin-layout">
-      <aside className="admin-sidebar shadow-premium">
-        <div className="sidebar-brand">
-          <div className="brand-logo"><ChefHat size={28} color="white" /></div>
-          <h2>AI RESTO</h2>
-        </div>
-
-        <nav className="sidebar-nav">
-          {(adminUser.role === 'super_admin' || adminUser.role === 'admin') && (
-            <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={20} /> <span>Dashboard</span></button>
-          )}
-
-          <button className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>
-            <ListTodo size={20} />
-            <span>Live Orders</span>
-            {pendingOrders > 0 && <span className="nav-badge pulse">{pendingOrders}</span>}
-          </button>
-
-          {(adminUser.role === 'super_admin' || adminUser.role === 'admin') && (
-            <button className={`nav-item ${activeTab === 'menu' ? 'active' : ''}`} onClick={() => setActiveTab('menu')}><UtensilsCrossed size={20} /> <span>Inventory</span></button>
-          )}
-
-          {adminUser.role === 'admin' && (
-            <button className={`nav-item ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => setActiveTab('staff')}><Users size={20} /> <span>Staff Management</span></button>
-          )}
-
-          {adminUser.role === 'super_admin' && (
-            <button className={`nav-item ${activeTab === 'restaurants' ? 'active' : ''}`} onClick={() => setActiveTab('restaurants')}><Store size={20} /> <span>Business Management</span></button>
-          )}
-        </nav>
-
-        <div className="sidebar-footer-premium">
-          <div className="user-profile-plate">
-            <div className="profile-avatar shadow-premium">
-              <UserCircle size={24} color="var(--accent-color)" />
-            </div>
-            <div className="profile-info">
-              <span className="user-name">{adminUser.name}</span>
-              <span className="user-role">
-                {adminUser.role === 'super_admin' ? 'Global Master' :
-                  adminUser.role === 'admin' ? 'Restaurant Admin' : 'Orders Management'}
-              </span>
-            </div>
-          </div>
-          <button className="btn-logout-minimal" onClick={handleLogout}>
-            <LogOut size={18} /> <span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
+    <div className="admin-layout animate-fade-in">
+      <style>{`
+        .admin-main, .view-container, .dashboard-view, .orders-view, .menu-view, .team-view {
+          background: #050508 !important;
+          color: #ffffff !important;
+        }
+        h1, h2, h3, h4, h5, h6, .view-title, strong, .profile-name, .profile-role {
+          color: #ffffff !important;
+        }
+        p, span, .text-muted, label {
+          color: #94a3b8 !important;
+        }
+        .pulse-item, .glass-panel, .inventory-card, .stat-card-modern, .order-card {
+          background: #12121a !important;
+          border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+        .filter-input {
+          background: rgba(255, 255, 255, 0.03) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          color: white !important;
+        }
+        .empty-state p, .text-accent {
+          color: #00d2ff !important;
+        }
+        .main-header {
+          background: rgba(10, 10, 15, 0.8) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+      `}</style>
+      <AdminSidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        adminUser={adminUser} 
+        onLogout={handleLogout} 
+      />
 
       <main className="admin-main">
         <header className="main-header">
-          <div className="header-search"><Search size={18} /><input type="text" placeholder="Search orders, tables, dishes..." /></div>
+          <div className="header-search">
+            <Search size={20} color="var(--text-muted)" />
+            <input type="text" placeholder="Neural Search Engine..." />
+          </div>
           <div className="header-profile-premium">
             <div className="profile-details-group">
-              <span className="profile-name">{adminUser.name}</span>
-              <span className="profile-role">{adminUser.role === 'super_admin' ? 'Super Admin' : 'Admin'}</span>
+                <span className="profile-name">{adminUser.name}</span>
+                <span className="profile-role">{adminUser.role === 'super_admin' ? 'Master Intelligence' : 'Branch Node'}</span>
             </div>
             <div className="profile-avatar-glow">{adminUser.name?.charAt(0)}</div>
           </div>
         </header>
 
-        <div className="content-scrollable scrollbar-hidden">          {/* DASHBOARD VIEW */}
+        <div className="content-scrollable scrollbar-hidden">
           {activeTab === 'dashboard' && (
-            <div className="view-container animate-fade-in dashboard-premium">
+            <div className="view-container animate-slide-up">
               <div className="view-header-row">
-                <h2 className="view-title">Command Center</h2>
-                <div className="live-pulse"><div className="pulse-dot"></div> Live Business Feed</div>
+                <div className="header-left">
+                  <h1 className="view-title">Command Center</h1>
+                  <p className="text-muted">Real-time neural monitoring active for {adminUser.role === 'super_admin' ? 'Global Network' : 'Branch Node'}.</p>
+                </div>
+                <div className="header-date">
+                  <Calendar size={18} />
+                  <span>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                </div>
               </div>
 
-              {/* STATS ROW */}
               <div className="stats-grid-modern">
-                <div className="stat-card-modern purple shadow-premium">
-                  <div className="stat-icon-main"><DollarSign size={24} /></div>
+                <div className="stat-card-modern purple">
+                  <div className="stat-icon-main"><DollarSign size={32} /></div>
                   <div className="stat-body">
-                    <p className="stat-label">Total Revenue</p>
-                    <h3 className="stat-value">₹{totalRevenue.toLocaleString()}</h3>
-                    <div className="stat-trend positive">+12.5% <TrendingUp size={14} /></div>
+                    <span className="stat-label">Neural Revenue</span>
+                    <h3>₹{orders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0).toLocaleString()}</h3>
+                    <span className="trend up"><TrendingUp size={14} /> +12.5%</span>
                   </div>
                 </div>
-                <div className="stat-card-modern blue shadow-premium">
-                  <div className="stat-icon-main"><ListTodo size={24} /></div>
+                <div className="stat-card-modern blue">
+                  <div className="stat-icon-main"><ListTodo size={32} /></div>
                   <div className="stat-body">
-                    <p className="stat-label">Total Orders</p>
-                    <h3 className="stat-value">{orders.length}</h3>
-                    <div className="stat-trend neutral">Ongoing</div>
+                    <span className="stat-label">Total Syncs</span>
+                    <h3>{orders.length}</h3>
+                    <span className="trend up"><TrendingUp size={14} /> +8.2%</span>
                   </div>
                 </div>
-                <div className="stat-card-modern green shadow-premium">
-                  <div className="stat-icon-main"><Users size={24} /></div>
+                <div className="stat-card-modern green">
+                  <div className="stat-icon-main"><ChefHat size={32} /></div>
                   <div className="stat-body">
-                    <p className="stat-label">Active Tables</p>
-                    <h3 className="stat-value">{new Set(orders.filter(o => o.status === 'pending').map(o => o.tableNumber)).size} / 8</h3>
-                    <div className="stat-trend positive">Busy</div>
+                    <span className="stat-label">Menu Stability</span>
+                    <h3>{menuItems.length} items</h3>
+                    <span className="trend">Optimized</span>
                   </div>
                 </div>
               </div>
 
-              {/* MIDDLE ROW: CHART & TOP ITEMS */}
-              <div className="dashboard-mid-grid mt-4">
-                <div className="chart-section glass-panel shadow-premium">
-                  <div className="card-header">
-                    <h3>Sales Performance</h3>
-                    <span>Last 6 Sessions</span>
+              <div className="inventory-grid mt-4">
+                <div className="glass-panel p-8">
+                  <div className="view-header-row mb-6">
+                    <h3 className="font-bold text-xl flex items-center gap-3"><Clock size={20} className="text-accent"/> Recent Pulse</h3>
+                    <button className="btn-text" onClick={() => setActiveTab('orders')}>Explore Hub</button>
                   </div>
-                  <div className="svg-chart-container">
-                    <svg viewBox="0 0 400 150" className="sales-svg">
-                      <path d="M0,150 L50,120 L100,130 L150,80 L200,100 L250,50 L300,70 L350,20 L400,40" fill="none" stroke="var(--accent-color)" strokeWidth="3" strokeLinecap="round" className="chart-line-anim" />
-                      <path d="M0,150 L50,120 L100,130 L150,80 L200,100 L250,50 L300,70 L350,20 L400,40 L400,150 L0,150" fill="url(#gradient-purple)" fillOpacity="0.1" />
-                      <defs>
-                        <linearGradient id="gradient-purple" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--accent-color)" />
-                          <stop offset="100%" stopColor="white" />
-                        </linearGradient>
-                      </defs>
-                      {/* Data Points */}
-                      {[120, 130, 80, 100, 50, 70, 20].map((v, i) => (
-                        <circle key={i} cx={50 * (i + 1)} cy={v} r="4" fill="white" stroke="var(--accent-color)" strokeWidth="2" />
-                      ))}
-                    </svg>
-                    <div className="chart-labels">
-                      <span>12PM</span><span>2PM</span><span>4PM</span><span>6PM</span><span>8PM</span><span>10PM</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="top-items-section glass-panel shadow-premium">
-                  <div className="card-header">
-                    <h3>Trending Now</h3>
-                    <span>Popular Dishes</span>
-                  </div>
-                  <div className="top-items-list mt-3">
-                    {Object.entries(orders.flatMap(o => Array.isArray(o.items) ? o.items : [])
-                      .reduce((acc, itm) => {
-                        const key = itm.name || itm;
-                        acc[key] = (acc[key] || 0) + (itm.qty || 1);
-                        return acc;
-                      }, {}))
-                      .sort((a, b) => b[1] - a[1])
-                      .slice(0, 4).map(([name, qty], idx) => (
-                        <div key={idx} className="trending-item">
-                          <div className="trend-rank">#{idx + 1}</div>
-                          <div className="trend-info">
-                            <strong>{name}</strong>
-                            <span>ordered {qty} times</span>
-                          </div>
-                          <TrendingUp size={16} className="text-success" />
-                        </div>
-                      ))}
-                    {orders.length === 0 && <p className="empty-text">No trending data yet.</p>}
-                  </div>
-                </div>
-              </div>
-
-              {/* BOTTOM ROW: TABLE MAP & RECENT */}
-              <div className="dashboard-bottom-grid mt-4">
-                <div className="table-map-section glass-panel shadow-premium">
-                  <div className="card-header">
-                    <h3>Restaurant Layout</h3>
-                    <span>Live Occupancy</span>
-                  </div>
-                  <div className="table-map-grid mt-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(num => {
-                      const isOccupied = orders.some(o => o.tableNumber == num && o.status === 'pending');
-                      return (
-                        <div key={num} className={`map-table-node ${isOccupied ? 'occupied' : 'vacant'}`}>
-                          <span className="table-label">T{num}</span>
-                          <Users size={14} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="map-legend mt-4">
-                    <span className="vacant"><div className="dot"></div> Vacant</span>
-                    <span className="occupied"><div className="dot"></div> Occupied</span>
-                  </div>
-                </div>
-
-                <div className="recent-orders-mini-section glass-panel shadow-premium">
-                  <div className="card-header">
-                    <h3>Live Feed</h3>
-                    <span>Latest Activity</span>
-                  </div>
-                  <div className="mini-feed-list mt-3 scrollbar-hidden">
+                  <div className="pulse-container flex flex-col gap-4">
                     {orders.slice(0, 5).map(order => (
-                      <div key={order.id} className="feed-item">
-                        <div className={`status-icon ${order.status}`}></div>
-                        <div className="feed-content">
-                          <strong>Table {order.tableNumber}</strong>
-                          <span>Placed an order for ₹{order.total}</span>
+                      <div key={order.id} className="pulse-item flex items-center justify-between p-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl hover:bg-white/[0.06] transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-3 h-3 rounded-full ${order.status === 'completed' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
+                          <div>
+                            <p className="font-bold text-white">Table {order.table_number || order.tableNumber}</p>
+                            <span className="text-xs text-muted">Packet #{order.id}</span>
+                          </div>
                         </div>
-                        <span className="feed-time">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div className="text-right">
+                          <p className="font-bold text-accent">₹{order.total}</p>
+                          <span className="text-xs text-muted">{formatDate(order.created_at || order.timestamp)}</span>
+                        </div>
                       </div>
                     ))}
-                    {orders.length === 0 && <p className="empty-text">Awaiting orders...</p>}
+                    {orders.length === 0 && <p className="text-muted text-center py-8">No neural activity detected.</p>}
                   </div>
+                </div>
+
+                <div className="glass-panel p-8">
+                    <div className="view-header-row mb-6">
+                        <h3 className="font-bold text-xl flex items-center gap-3"><Sparkles size={20} className="text-accent"/> High Affinity Items</h3>
+                        <button className="btn-text" onClick={() => setActiveTab('menu')}>Modify Inventory</button>
+                    </div>
+                    <div className="pulse-container flex flex-col gap-4">
+                        {menuItems.slice(0, 5).map(item => (
+                            <div key={item.id} className="pulse-item flex items-center gap-4 p-3 bg-white/[0.03] border border-white/[0.05] rounded-2xl hover:bg-white/[0.06] transition-all">
+                                <img 
+                                    src={item.image_url ? (item.image_url.startsWith('http') ? item.image_url : `${API_URL}${item.image_url}`) : '/dish-placeholder.png'} 
+                                    className="w-14 h-14 rounded-xl object-cover shadow-lg border border-white/10" 
+                                    alt={item.name} 
+                                />
+                                <div className="flex-1">
+                                    <p className="font-bold text-white text-sm">{item.name}</p>
+                                    <span className="text-xs text-muted">{item.category}</span>
+                                </div>
+                                <div className="font-bold text-accent">₹{item.price}</div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'orders' && (
-            <div className="view-container animate-fade-in">
+            <div className="view-container animate-slide-up">
               <div className="view-header-row">
                 <div className="header-left">
-                  <h2 className="view-title">Live Kitchen Feed</h2>
-                  <p className="view-subtitle">Real-time order management & tracking</p>
+                  <h1 className="view-title">Orders Hub</h1>
+                  <p className="text-muted">Real-time neural order synchronization across the network.</p>
                 </div>
-                <button className="btn-secondary" onClick={fetchOrders}><Clock size={16} /> Refresh Feed</button>
-              </div>
-
-              {/* FILTER BAR */}
-              <div className="orders-filter-bar glass-panel shadow-premium mb-4">
-                <div className="filter-group">
-                  <label><Calendar size={14} /> Date Filter</label>
-                  <div className="date-input-wrapper">
-                    <input 
-                      type="date" 
-                      className="filter-input"
-                      value={orderFilters.date}
-                      onChange={(e) => setOrderFilters({ ...orderFilters, date: e.target.value })}
-                    />
-                    {orderFilters.date && (
-                      <button className="btn-clear-date" onClick={() => setOrderFilters({ ...orderFilters, date: '' })}>Show All</button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <label><Filter size={14} /> Status</label>
-                  <div className="filter-pills">
-                    {['all', 'pending', 'served'].map(s => (
-                      <button 
-                        key={s} 
-                        className={`filter-pill ${orderFilters.status === s ? 'active' : ''}`}
-                        onClick={() => setOrderFilters({ ...orderFilters, status: s })}
-                      >
-                        {s === 'all' ? 'All' : s === 'pending' ? 'Awaiting Action' : 'Served'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="filter-group">
-                  <label><Users size={14} /> Table</label>
-                  <select 
-                    className="filter-input"
-                    value={orderFilters.table}
-                    onChange={(e) => setOrderFilters({ ...orderFilters, table: e.target.value })}
-                  >
-                    <option value="all">All Tables</option>
-                    {Array.from(new Set(orders.map(o => o.tableNumber))).sort((a, b) => a - b).map(t => (
-                      <option key={t} value={t}>Table {t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="filter-stats">
-                  <span>Showing: <strong>{
-                    orders.filter(o => {
-                      if (!o.timestamp) return false;
-                      try {
-                        const dateObj = new Date(Number(o.timestamp) || o.timestamp);
-                        if (isNaN(dateObj.getTime())) return !orderFilters.date; // Fallback to hide if filtering by date and date is invalid
-                        const orderDate = dateObj.toISOString().split('T')[0];
-                        const dateMatch = !orderFilters.date || orderDate === orderFilters.date;
-                        const statusMatch = orderFilters.status === 'all' || o.status === orderFilters.status;
-                        const tableMatch = orderFilters.table === 'all' || String(o.tableNumber || o.tablenumber) === String(orderFilters.table);
-                        return dateMatch && statusMatch && tableMatch;
-                      } catch (e) { return !orderFilters.date; }
-                    }).length
-                  }</strong> / {orders.length}</span>
+                <div className="orders-filter-bar shadow-premium">
+                    <div className="filter-group">
+                        <label><Filter size={14} /> Filter Status</label>
+                        <select className="filter-input" onChange={(e) => {/* Filter logic here if needed */}}>
+                            <option value="all">All Syncs</option>
+                            <option value="pending">Waiting</option>
+                            <option value="preparing">In Progress</option>
+                            <option value="completed">Success</option>
+                        </select>
+                    </div>
+                    <div className="filter-stats">
+                        Total Pending: <strong>{orders.filter(o => o.status === 'pending').length}</strong>
+                    </div>
                 </div>
               </div>
 
-              {orders.length === 0 ? (
-                <div className="empty-state glass-panel"><ChefHat size={64} className="mb-4 text-muted" /><h3>No Data Found</h3><p>Real-time orders will appear here once guests start culinary sessions.</p></div>
-              ) : (
-                <div className="orders-grid-premium">
-                  {orders.filter(o => {
-                    if (!o.timestamp) return false;
-                    try {
-                      const dateObj = new Date(Number(o.timestamp) || o.timestamp);
-                      if (isNaN(dateObj.getTime())) return !orderFilters.date; 
-                      const orderDate = dateObj.toISOString().split('T')[0];
-                      const dateMatch = !orderFilters.date || orderDate === orderFilters.date;
-                      const statusMatch = orderFilters.status === 'all' || o.status === orderFilters.status;
-                      const tableMatch = orderFilters.table === 'all' || String(o.tableNumber || o.tablenumber) === String(orderFilters.table);
-                      return dateMatch && statusMatch && tableMatch;
-                    } catch (e) { return !orderFilters.date; }
-                  }).map((order, index) => (
-                    <div key={order.id} className={`p-order-card shadow-premium ${order.status} animate-fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
-                      <div className="p-card-header">
-                        <div className="p-header-left">
-                          <div className="table-badge">Table {order.tableNumber || order.tablenumber || '?'}</div>
-                          <div className={`status-pill ${order.status}`}>
-                            <span className="status-dot"></span>
-                            {order.status === 'pending' ? 'Awaiting Action' : 'Served'}
-                          </div>
-                        </div>
-                        <span className="p-time">
-                          <Clock size={14} /> 
-                          {order.timestamp ? new Date(Number(order.timestamp) || order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently'}
+              <div className="orders-grid-premium">
+                {orders.map(order => (
+                  <div key={order.id} className={`p-order-card ${order.status}`}>
+                    <div className="p-card-header">
+                      <div className="p-header-left">
+                        <div className="table-badge shadow-lg">Table {order.table_number || order.tableNumber}</div>
+                        <span className={`status-pill ${order.status}`}>
+                          <div className="status-dot"></div>
+                          {order.status}
                         </span>
                       </div>
-                      <div className="p-card-body">
-                        {(Array.isArray(order.items) ? order.items : []).map((item, idx) => (
-                          <div key={idx} className="p-item-row">
-                            <span className="p-qty">{item.qty || 1}x</span>
-                            <div className="p-item-info">
-                              <span className="p-name">{item.name || item}</span>
-                              <span className="p-item-desc">High-fidelity culinary prep</span>
-                            </div>
-                            <span className="p-price">₹{(item.price || 0) * (item.qty || 1)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="p-card-footer">
-                        <div className="p-total">
-                          <span className="total-label">Total Amount</span>
-                          <strong className="total-val">₹{order.total}</strong>
-                        </div>
-                        <div className="p-actions">
-                          {order.status === 'pending' && (
-                            <button className="btn-action-success animate-pulse-glow" onClick={() => handleStatusChange(order.id, 'completed')}>
-                              <CheckCircle size={16} /> Serve
-                            </button>
-                          )}
-                          <button className="btn-action-icon" onClick={() => handlePrint(order)} title="Print Reciept">
-                            <Printer size={18} />
-                          </button>
-                        </div>
+                      <div className="p-time">
+                        <Clock size={14} />
+                        {formatDate(order.created_at || order.timestamp)}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    <div className="p-card-body scrollbar-hidden">
+                      {(order.items || []).map((item, idx) => (
+                        <div key={idx} className="p-item-row">
+                          <div className="p-qty">{item.qty || 1}</div>
+                          <div className="p-item-info">
+                            <span className="p-name">{item.name}</span>
+                            <span className="p-item-desc text-xs">Neural ID: #{item.menu_id || item.id}</span>
+                          </div>
+                          <div className="p-price">₹{item.price * (item.qty || 1)}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-card-footer">
+                      <div className="p-total">
+                        <span className="total-label">Sync Amount</span>
+                        <span className="total-val">₹{order.total}</span>
+                      </div>
+                      <div className="p-actions">
+                        {order.status === 'pending' && (
+                          <button className="btn-action-success animate-pulse-glow" onClick={() => updateOrderStatus(order.id, 'preparing')}>
+                            <Check size={18} />
+                            Commit Sync
+                          </button>
+                        )}
+                        {order.status === 'preparing' && (
+                          <button className="btn-action-success" onClick={() => updateOrderStatus(order.id, 'completed')}>
+                            <Check size={18} />
+                            Finalize Sync
+                          </button>
+                        )}
+                        <button className="btn-action-icon" title="Print Invoice"><Printer size={18} /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {orders.length === 0 && (
+                  <div className="full-width p-20 text-center glass-panel">
+                    <AlertCircle size={48} className="mx-auto mb-4 text-muted" />
+                    <h3 className="text-xl font-bold">No Syncs Found</h3>
+                    <p className="text-muted">Wait for neural input from the kiosk.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {activeTab === 'menu' && (
-            <div className="view-container animate-fade-in">
+            <div className="view-container animate-slide-up">
               <div className="view-header-row">
-                <h2 className="view-title">Menu Management</h2>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  {adminUser.role === 'super_admin' && (
-                    <div className="branch-selector-toolbar glass-panel">
-                      <MapPin size={18} color="var(--accent-color)" />
-                      <select
-                        value={selectedBranchId || ''}
-                        onChange={(e) => {
-                          setSelectedBranchId(Number(e.target.value) || null);
-                          fetchMenu(Number(e.target.value) || null);
-                        }}
-                        className="branch-select-mini"
-                      >
-                        <option value="">All Branches</option>
-                        {branches.map(b => (
-                          <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {adminUser.role === 'super_admin' && (
-                    <button className="btn-secondary" onClick={() => setShowCategoriesPopup(!showCategoriesPopup)}>
-                      <Settings size={18} /> Manage Categories
+                <div className="header-left">
+                  <h1 className="view-title">Neural Inventory</h1>
+                  <p className="text-muted">Manage your digital menu items and system parameters.</p>
+                </div>
+                <div className="flex gap-4">
+                    <button className="btn-secondary" onClick={() => setShowCatPopup(true)}>
+                        <Settings size={20} />
+                        <span>Manage Categories</span>
                     </button>
-                  )}
-                  <button className="btn-primary" onClick={() => setShowMenuPopup(!showMenuPopup)}>
-                    {showMenuPopup ? 'Close Form' : '+ Add New Dish'}
-                  </button>
+                    <button className="btn-primary" onClick={() => {
+                        setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true });
+                        setEditingDishId(null);
+                        setFormError('');
+                        setShowMenuPopup(true);
+                    }}>
+                        <Plus size={20} />
+                        <span>Add New Dish</span>
+                    </button>
                 </div>
               </div>
 
-              {showCategoriesPopup && (
-                <div className="menu-add-card glass-panel shadow-premium animate-slide-down mb-4">
-                  <div className="card-header-accent mb-4"><h3><Settings size={18} /> Category Management</h3></div>
-                  <form onSubmit={handleAddCategory} className="modern-form mb-4" style={{ display: 'flex', gap: '12px' }}>
-                    <input
-                      type="text"
-                      className="flex-1"
-                      value={newCatName}
-                      onChange={(e) => setNewCatName(e.target.value)}
-                      placeholder="New Category Name (e.g. Seafood)"
-                      required
-                    />
-                    <button type="submit" className="btn-primary" style={{ padding: '0 24px' }}>Add Category</button>
-                  </form>
-                  <div className="category-grid-mini">
-                    {categories.map(cat => (
-                      <div key={cat.id} className="cat-manage-item glass-panel">
-                        <span>{cat.name}</span>
-                        <button className="btn-icon-danger" onClick={() => handleDeleteCategory(cat.id, cat.name)}><Trash2 size={14} /></button>
-                      </div>
-                    ))}
-                  </div>
+              <div className="inventory-toolbar-premium shadow-premium">
+                <div className="search-box-integrated">
+                    <Search size={18} className="search-icon-inner" />
+                    <input type="text" placeholder="Filter neural items..." />
                 </div>
-              )}
-              <div className="menu-manager-content">
-                {showMenuPopup && (
-                  <div className="menu-add-card glass-panel shadow-premium animate-slide-down">
-                    <div className="card-header-accent mb-4"><h3><Plus size={18} /> Dish Details</h3></div>
-                    <form onSubmit={handleAddDish} className="modern-form">
-                      <div className="form-grid">
-                        <div className="form-group full-width"><label>Dish Name</label><input type="text" value={newDish.name} onChange={(e) => setNewDish({ ...newDish, name: e.target.value })} placeholder="e.g. Garlic Naan" required /></div>
-                        <div className="form-group"><label>Category</label>
-                          <div className="category-select-wrapper">
-                            <input
-                              list="categories-list"
-                              value={newDish.category}
-                              onChange={(e) => setNewDish({ ...newDish, category: e.target.value })}
-                              placeholder="Select or type new..."
-                              required
-                            />
-                            <datalist id="categories-list">
-                              {categories.map(cat => <option key={cat.id} value={cat.name} />)}
-                            </datalist>
-                          </div>
-                          <div className="category-chips mt-3">
-                            {categories.slice(0, 8).map(cat => (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                className="cat-chip"
-                                onClick={() => setNewDish({ ...newDish, category: cat.name })}
-                              >
-                                {cat.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="form-group full-width"><label>Description</label><textarea value={newDish.description} onChange={(e) => setNewDish({ ...newDish, description: e.target.value })} placeholder="Delicious description..."></textarea></div>
-
-                        <div className="form-group"><label>Dish Photography</label>
-                          <div className="media-upload-zone">
-                            {newDish.image_url ? (
-                              <div className="media-preview-container">
-                                <img src={getMediaUrl(newDish.image_url)} alt="Preview" />
-                                <button type="button" className="btn-remove-media" onClick={() => setNewDish({ ...newDish, image_url: '' })}>×</button>
-                              </div>
-                            ) : (
-                              <label className="upload-placeholder">
-                                <ImageIcon size={24} />
-                                <span>{uploading.image ? 'Uploading...' : 'Select Dish Image'}</span>
-                                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'image')} hidden />
-                              </label>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="form-group"><label>Product Video (Optional)</label>
-                          <div className="media-upload-zone">
-                            {newDish.video_url ? (
-                              <div className="media-preview-container">
-                                <Film size={24} color="var(--accent-color)" />
-                                <span className="text-success" style={{ fontSize: '11px' }}>Video Ready</span>
-                                <button type="button" className="btn-remove-media" onClick={() => setNewDish({ ...newDish, video_url: '' })}>×</button>
-                              </div>
-                            ) : (
-                              <label className="upload-placeholder">
-                                <Film size={24} />
-                                <span>{uploading.video ? 'Uploading...' : 'Select Promo Video'}</span>
-                                <input type="file" accept="video/*" onChange={(e) => handleFileUpload(e, 'video')} hidden />
-                              </label>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="form-footer mt-4"><button type="submit" className="btn-save-dish" disabled={uploading.image || uploading.video}>{editingDishId ? 'Update Dish' : 'Save Dish to Menu'}</button><button type="button" className="btn-cancel" onClick={() => { setShowMenuPopup(false); setEditingDishId(null); }}>Cancel</button></div>
-                    </form>
-                  </div>
-                )}
-                <div className="inventory-section">
-                  <div className="inventory-toolbar-premium animate-fade-in">
-                    <div className="search-box-integrated">
-                      <Search size={18} className="search-icon-inner" />
-                      <input 
-                        type="text" 
-                        placeholder="Search dish name or category..." 
-                        value={menuSearchTerm}
-                        onChange={(e) => setMenuSearchTerm(e.target.value)}
-                      />
-                    </div>
-                    <div className="inventory-meta-badge">
-                      <ChefHat size={14} />
-                      <span><strong>{menuItems.length}</strong> Dishes Registered</span>
-                    </div>
-                  </div>
-
-                  <div className="inventory-categorized-content">
-                    {/* Get all unique categories present in items plus empty categories */}
-                    {Array.from(new Set([
-                      ...categories.map(c => c.name),
-                      ...menuItems.map(i => i.category)
-                    ])).map(catName => {
-                      const itemsInCat = menuItems.filter(item => 
-                        item.category === catName && 
-                        (item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) || 
-                         item.category.toLowerCase().includes(menuSearchTerm.toLowerCase()))
-                      );
-                      
-                      if (itemsInCat.length === 0 && menuSearchTerm) return null;
-                      if (itemsInCat.length === 0 && !categories.some(c => c.name === catName)) return null;
-
-                      return (
-                        <div key={catName || 'uncategorized'} className="category-inventory-section animate-fade-in mb-5">
-                          <div className="category-section-header">
-                            <div className="header-label-group">
-                              <h3 className="category-label-text">{catName || 'Uncategorized'}</h3>
-                              <span className="category-item-count">{itemsInCat.length} Items</span>
-                            </div>
-                            <div className="category-separator"></div>
-                          </div>
-                          
-                          <div className="inventory-grid">
-                            {itemsInCat.map(item => (
-                              <div key={item.id} className={`inventory-card glass-panel dish-card-premium animate-fade-in ${item.is_active === false ? 'inactive-card' : ''}`}>
-                                {item.image_url ? (
-                                  <div className="dish-banner" style={{ backgroundImage: `url("${getMediaUrl(item.image_url)}")` }}>
-                                    {item.video_url && <div className="video-badge"><Play size={12} fill="white" /> Video</div>}
-                                    {item.is_active === false && <div className="hidden-badge">HIDDEN</div>}
-                                  </div>
-                                ) : (
-                                  <div className="inv-icon-box"><ChefHat size={20} /></div>
-                                )}
-                                <div className="inv-details">
-                                  <strong>{item.name}</strong>
-                                  <p className="inv-cat-tag">{item.category}</p>
-                                  <div className="inv-meta">
-                                    <span className="inv-price">₹{item.price}</span>
-                                    <div className="inv-actions">
-                                      <button
-                                        className={`inv-btn-status ${item.is_active ? 'active' : 'inactive'}`}
-                                        onClick={() => handleToggleStatus(item)}
-                                        title={item.is_active ? 'Hide from Menu' : 'Show on Menu'}
-                                      >
-                                        {item.is_active ? <Eye size={16} /> : <EyeOff size={16} />}
-                                      </button>
-                                      <button className="inv-btn-edit" onClick={() => handleEditClick(item)}><Edit2 size={16} /></button>
-                                      <button className="inv-btn-delete" onClick={() => handleDeleteDish(item.id)}><Trash2 size={16} /></button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {menuItems.length === 0 && <div className="empty-inventory full-width"><Search size={40} /><p>Your culinary library is empty. Start by adding a dish above!</p></div>}
-                  </div>
+                <div className="inventory-meta-badge">
+                    <span>Active coverage:</span>
+                    <strong>{menuItems.filter(i => i.is_active).length}</strong>
+                    <span>/ {menuItems.length} items</span>
                 </div>
               </div>
-            </div>
-          )}
-          {activeTab === 'staff' && adminUser.role === 'admin' && (
-            <div className="view-container animate-fade-in dashboard-premium">
-              <div className="view-header-row">
-                <h2 className="view-title">Staff Management</h2>
-              </div>
-              <div className="menu-add-card glass-panel shadow-premium mb-4">
-                <div className="card-header-accent mb-4"><h3><Plus size={18} /> Add Orders Management Staff</h3></div>
-                <form onSubmit={handleAddStaff} className="modern-form">
-                  <div className="form-grid">
-                    <div className="form-group"><label>Full Name</label><input type="text" value={newStaffMember.name} onChange={(e) => setNewStaffMember({ ...newStaffMember, name: e.target.value })} placeholder="Staff Member Name" required /></div>
-                    <div className="form-group"><label>Designation</label><input type="text" value="Orders Management" disabled className="modern-input-disabled" /></div>
-                    <div className="form-group"><label>Login Email</label><input type="email" value={newStaffMember.email} onChange={(e) => setNewStaffMember({ ...newStaffMember, email: e.target.value })} placeholder="staff@resto.com" required /></div>
-                    <div className="form-group"><label>Security Password</label><input type="password" value={newStaffMember.password} onChange={(e) => setNewStaffMember({ ...newStaffMember, password: e.target.value })} placeholder="••••••••" required /></div>
-                  </div>
-                  <div className="form-footer mt-4"><button type="submit" className="btn-primary">Register Staff Profile</button></div>
-                </form>
-              </div>
+
               <div className="inventory-grid">
-                {staffList.map(staff => (
-                  <div key={staff.id} className="inventory-card glass-panel animate-zoom-in staff-member-card">
-                    <div className="inv-icon-box"><UserCircle size={24} color="var(--accent-color)" /></div>
+                {menuItems.map(item => (
+                  <div key={item.id} className="inventory-card glass-panel dish-card-premium shadow-premium">
+                    <div className="dish-banner" style={{ backgroundImage: `url(${item.image_url ? (item.image_url.startsWith('http') ? item.image_url : `${API_URL}${item.image_url}`) : '/dish-placeholder.png'})` }}>
+                    </div>
                     <div className="inv-details">
-                      <div className="staff-card-header">
-                        <strong>{staff.name}</strong>
-                        <span className={`role-badge ${staff.role}`}>{staff.role === 'admin' ? 'Admin' : 'Manager'}</span>
-                      </div>
-                      <p className="text-muted" style={{ fontSize: '12px' }}>
-                        Local Authorized Staff
-                      </p>
-
-                      <div className="credential-copy-box mt-3">
-                        <div className="cred-row">
-                          <span className="cred-label">Login:</span>
-                          <span className="cred-val">{staff.email}</span>
-                          <button className="btn-copy-mini" title="Copy Email" onClick={() => handleCopy(staff.email, `${staff.id}-e`)}>
-                            {copiedId === `${staff.id}-e` ? <CheckCircle size={14} color="#10b981" /> : <Copy size={14} />}
-                          </button>
-                        </div>
-                        <div className="cred-row">
-                          <span className="cred-label">Pass:</span>
-                          <span className="cred-val">••••••••</span>
-                          <button className="btn-copy-mini" title="Copy Password" onClick={() => handleCopy(staff.password, `${staff.id}-p`)}>
-                            {copiedId === `${staff.id}-p` ? <CheckCircle size={14} color="#10b981" /> : <Copy size={14} />}
-                          </button>
+                      <div className="inv-main">
+                        <div className="flex justify-between items-start">
+                            <strong className="text-lg">{item.name}</strong>
+                            <span className="inv-cat-tag shadow-sm">{item.category}</span>
                         </div>
                       </div>
+                      <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
+                      <div className="inv-meta">
+                        <div className="inv-price text-xl">₹{item.price}</div>
+                        <div className={`status-pill ${item.is_active ? 'active' : 'inactive'}`}>
+                            <div className="status-dot"></div>
+                            {item.is_active ? 'Active' : 'Hidden'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="inv-actions">
+                      <button className="inv-btn-edit" onClick={() => {
+                        setNewDish(item);
+                        setEditingDishId(item.id);
+                        setFormError('');
+                        setShowMenuPopup(true);
+                      }}><Edit2 size={16} /></button>
+                      <button className="inv-btn-delete" onClick={() => deleteDish(item.id)}><Trash2 size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -898,155 +512,270 @@ const AdminPanel = () => {
             </div>
           )}
 
-          {activeTab === 'restaurants' && adminUser.role === 'super_admin' && (
-            <div className="view-container animate-fade-in dashboard-premium">
+          {activeTab === 'staff' && adminUser.role === 'super_admin' && (
+            <div className="view-container animate-slide-up">
               <div className="view-header-row">
-                <h2 className="view-title">Corporate Administration</h2>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '32px' }}>
-                <div className="menu-add-card glass-panel shadow-premium">
-                  <div className="card-header-accent mb-4"><h3><Plus size={18} /> Create New Restaurant Branch</h3></div>
-                  <form onSubmit={handleAddRestaurant} className="modern-form">
-                    <div className="form-grid">
-                      <div className="form-group full-width"><label>Restaurant Name</label><input type="text" value={newRestaurant.name} onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })} placeholder="e.g. Gourmet Burger Central" required /></div>
-                      <div className="form-group full-width"><label>Branch Location</label><input type="text" value={newRestaurant.location} onChange={(e) => setNewRestaurant({ ...newRestaurant, location: e.target.value })} placeholder="City, Area" required /></div>
-                    </div>
-                    <div className="form-footer mt-4"><button type="submit" className="btn-primary">Provision Launch</button></div>
-                  </form>
+                <div className="header-left">
+                  <h1 className="view-title">Team Hierarchy</h1>
+                  <p className="text-muted">Manage system access and neural permissions across nodes.</p>
                 </div>
-
-                <div className="menu-add-card glass-panel shadow-premium">
-                  <div className="card-header-accent mb-4"><h3><Users size={18} /> Provision Admin / Management</h3></div>
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    axios.post(`${API_URL}/api/users`, newStaffMember).then(() => {
-                      setNewStaffMember({ email: '', password: '', name: '', role: 'admin', restaurant_id: '' });
-                      fetchStaff();
-                    });
-                  }} className="modern-form">
-                    <div className="form-group mb-3"><label>Target Branch</label>
-                      <select className="modern-select" value={newStaffMember.restaurant_id} onChange={(e) => setNewStaffMember({ ...newStaffMember, restaurant_id: e.target.value })} required>
-                        <option value="">Select Branch...</option>
-                        {restaurantsList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group mb-3"><label>Full Name</label><input type="text" value={newStaffMember.name} onChange={(e) => setNewStaffMember({ ...newStaffMember, name: e.target.value })} required /></div>
-                    <div className="form-group mb-3"><label>Assignment Role</label>
-                      <select className="modern-select" value={newStaffMember.role} onChange={(e) => setNewStaffMember({ ...newStaffMember, role: e.target.value })}>
-                        <option value="admin">Restaurant Admin</option>
-                        <option value="kitchen_staff">Orders Management</option>
-                      </select>
-                    </div>
-                    <div className="form-group mb-3"><label>Login Email</label><input type="email" value={newStaffMember.email} onChange={(e) => setNewStaffMember({ ...newStaffMember, email: e.target.value })} required /></div>
-                    <div className="form-group mb-3"><label>Password</label><input type="password" value={newStaffMember.password} onChange={(e) => setNewStaffMember({ ...newStaffMember, password: e.target.value })} required /></div>
-                    <button type="submit" className="btn-save-dish w-full mt-2 form-footer mt-4">Grant Credentials</button>
-                  </form>
-                </div>
-              </div>
-
-
-
-              <div className="view-header-row mt-4">
-                <h2 className="view-title">Fleet Branches (Click to Filter Staff)</h2>
+                <button className="btn-primary" onClick={() => setShowStaffPopup(true)}>
+                    <Plus size={20} />
+                    <span>Recruit Member</span>
+                </button>
               </div>
               <div className="inventory-grid">
-                {restaurantsList.map(res => {
-                  const personnelCount = staffList.filter(s => String(s.restaurant_id) === String(res.id)).length;
-                  return (
-                    <div
-                      key={res.id}
-                      className={`inventory-card glass-panel clickable-card fleet-branch-card ${String(selectedBranchId) === String(res.id) ? 'active-branch-card' : ''}`}
-                      onClick={() => setSelectedBranchId(selectedBranchId === res.id ? null : res.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="fleet-card-main">
-                        <div className="inv-icon-box"><Store size={24} /></div>
+                {staffList.map(staff => (
+                    <div key={staff.id} className="inventory-card glass-panel shadow-premium">
+                        <div className="inv-icon-box shadow-lg">
+                            <Users size={28} />
+                        </div>
                         <div className="inv-details">
-                          <strong>{res.name}</strong>
-                          <p className="text-muted">{res.location}</p>
+                            <div className="staff-card-header mb-2">
+                                <span className={`role-badge ${staff.role} shadow-sm`}>{staff.role.replace('_', ' ')}</span>
+                            </div>
+                            <div className="inv-main">
+                                <strong className="text-lg">{staff.name}</strong>
+                                <span className="text-sm text-muted block mt-1">{staff.email}</span>
+                            </div>
                         </div>
-                      </div>
-                      <div className="fleet-card-footer">
-                        <span className="branch-id-tag">ID: #{res.id}</span>
-                        <div className="staff-count-badge">
-                          <Users size={14} />
-                          <span>{personnelCount} Personnel</span>
+                        <div className="inv-actions">
+                            <button className="inv-btn-edit"><Edit2 size={16} /></button>
+                            <button className="inv-btn-delete"><Trash2 size={16} /></button>
                         </div>
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              <div className="view-header-row mt-4">
-                <h2 className="view-title">
-                  {selectedBranchId ? `Personnel assigned to: ${restaurantsList.find(r => String(r.id) === String(selectedBranchId))?.name || 'Branch'}` : 'All Human Infrastructure & Assignments'}
-                </h2>
-                {selectedBranchId && (
-                  <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setSelectedBranchId(null)}>
-                    View All Personnel
-                  </button>
-                )}
-              </div>
-              <div className="inventory-grid">
-                {staffList.filter(emp => !selectedBranchId || String(emp.restaurant_id) === String(selectedBranchId)).map(emp => {
-                  const restaurant = restaurantsList.find(r => String(r.id) === String(emp.restaurant_id));
-                  return (
-                    <div key={emp.id} className="inventory-card glass-panel animate-zoom-in staff-member-card">
-                      <div className="inv-icon-box"><UserCircle size={24} color="var(--accent-color)" /></div>
-                      <div className="inv-details">
-                        <div className="staff-card-header">
-                          <strong>{emp.name}</strong>
-                          <span className={`role-badge ${emp.role}`}>{emp.role === 'admin' ? 'Admin' : 'Manager'}</span>
-                        </div>
-                        <p className="text-muted" style={{ fontSize: '12px' }}>
-                          {restaurant ? `Branch: ${restaurant.name}` : 'Unassigned Branch'}
-                        </p>
-
-                        <div className="credential-copy-box mt-3">
-                          <div className="cred-row">
-                            <span className="cred-label">Login:</span>
-                            <span className="cred-val">{emp.email}</span>
-                            <button className="btn-copy-mini" title="Copy Email" onClick={() => handleCopy(emp.email, `${emp.id}-e`)}>
-                              {copiedId === `${emp.id}-e` ? <CheckCircle size={14} color="#10b981" /> : <Copy size={14} />}
-                            </button>
-                          </div>
-                          <div className="cred-row">
-                            <span className="cred-label">Pass:</span>
-                            <span className="cred-val">••••••••</span>
-                            <button className="btn-copy-mini" title="Copy Password" onClick={() => handleCopy(emp.password, `${emp.id}-p`)}>
-                              {copiedId === `${emp.id}-p` ? <CheckCircle size={14} color="#10b981" /> : <Copy size={14} />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {staffList.filter(emp => !selectedBranchId || String(emp.restaurant_id) === String(selectedBranchId)).length === 0 && (
-                  <div className="empty-inventory full-width">
-                    <Users size={40} />
-                    <p>No personnel found for this branch.</p>
-                  </div>
-                )}
+                ))}
               </div>
             </div>
+          )}
+
+          {activeTab === 'restaurants' && adminUser.role === 'super_admin' && (
+            <div className="view-container animate-slide-up">
+              <div className="view-header-row">
+                <div className="header-left">
+                  <h1 className="view-title">Node Network</h1>
+                  <p className="text-muted">Overview of all active neural nodes in the cluster.</p>
+                </div>
+                <button className="btn-primary" onClick={() => setShowNodePopup(true)}>
+                    <Plus size={20} />
+                    <span>Deploy New Node</span>
+                </button>
+              </div>
+              <div className="inventory-grid">
+                {restaurantsList.map(res => (
+                  <div key={res.id} className="inventory-card glass-panel fleet-branch-card shadow-premium clickable-card">
+                    <div className="fleet-card-main">
+                        <div className="inv-icon-box shadow-lg">
+                            <Store size={28} />
+                        </div>
+                        <div className="inv-details">
+                          <div className="inv-main">
+                            <strong className="text-lg">{res.name}</strong>
+                            <p className="text-sm text-muted mt-1 flex items-center gap-2">
+                                <TrendingUp size={14} className="text-green-500" />
+                                {res.location}
+                            </p>
+                          </div>
+                        </div>
+                    </div>
+                    <div className="fleet-card-footer">
+                        <span className="branch-id-tag">NODE ID: {res.id.toString().padStart(3, '0')}</span>
+                        <div className="staff-count-badge">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <span>Active Sync</span>
+                        </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'ai_prompt' && adminUser.role === 'super_admin' && (
+            <PromptManager />
           )}
         </div>
       </main>
 
-      {selectedOrder && (
-        <div className="print-invoice" id="printable-invoice">
-          <div className="invoice-header"><h2>AI RESTO</h2><p>Order Summary Invoice</p></div>
-          <div className="invoice-meta"><p><strong>Table:</strong> {selectedOrder.tableNumber}</p><p><strong>Order:</strong> #{selectedOrder.id}</p><p><strong>Time:</strong> {new Date(selectedOrder.timestamp).toLocaleString()}</p></div>
-          <table className="invoice-table">
-            <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
-            <tbody>{(Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((item, i) => (<tr key={i}><td>{item.name || item}</td><td>{item.qty || 1}</td><td>₹{(item.price || 0) * (item.qty || 1)}</td></tr>))}</tbody>
-          </table>
-          <div className="invoice-footer"><h3>Total: ₹{selectedOrder.total}</h3></div>
+      {/* Menu Modal */}
+      {showMenuPopup && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel animate-slide-down menu-add-card shadow-2xl">
+            <div className="card-header-accent">
+                <div className="brand-logo shadow-lg"><UtensilsCrossed size={20} color="white" /></div>
+                <h3>{editingDishId ? 'Modify Neural Dish' : 'Deploy New Neural Dish'}</h3>
+                <button className="ml-auto text-muted hover:text-white" onClick={() => setShowMenuPopup(false)}>✕</button>
+            </div>
+            
+            {formError && (
+              <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl mb-6 flex items-center gap-3 text-red-500 animate-shake">
+                <AlertCircle size={20} />
+                <span className="font-bold">{formError}</span>
+              </div>
+            )}
+
+            <div className="modern-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Identified Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Neural Masala Chai"
+                    value={newDish.name} 
+                    onChange={(e) => setNewDish({...newDish, name: e.target.value})} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Cluster Category</label>
+                  <select 
+                    className="modern-select"
+                    value={newDish.category} 
+                    onChange={(e) => setNewDish({...newDish, category: e.target.value})}
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Sync price (₹)</label>
+                  <input 
+                    type="number" 
+                    placeholder="0.00"
+                    value={newDish.price} 
+                    onChange={(e) => setNewDish({...newDish, price: e.target.value})} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Visual Hash (Image)</label>
+                  <div className="flex gap-4">
+                    <div className="relative flex-1">
+                        <input 
+                            type="text" 
+                            placeholder="URL or Upload..."
+                            value={newDish.image_url} 
+                            onChange={(e) => setNewDish({...newDish, image_url: e.target.value})} 
+                            className="w-full"
+                        />
+                    </div>
+                    <label className="btn-secondary cursor-pointer flex items-center justify-center p-0 w-14 h-14">
+                        {uploading ? <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full"></div> : <ImageIcon size={20} />}
+                        <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
+                    </label>
+                  </div>
+                </div>
+                <div className="form-group full-width">
+                  <label>Neural context (Description)</label>
+                  <textarea 
+                    placeholder="Explain the essence of this dish to the AI..."
+                    value={newDish.description} 
+                    onChange={(e) => setNewDish({...newDish, description: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="form-footer mt-10">
+                <button className="btn-secondary px-10" onClick={() => setShowMenuPopup(false)}>Abort</button>
+                <button className="btn-primary flex-1 flex items-center justify-center gap-3" onClick={handleSaveDish} disabled={uploading}>
+                  <CheckCircle size={20} />
+                  <span>{editingDishId ? 'Commit Update' : 'Finalize Deployment'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Category Modal */}
+      {showCatPopup && (
+          <div className="modal-overlay">
+              <div className="modal-content glass-panel animate-slide-down p-10 max-w-md shadow-2xl">
+                  <h3 className="text-2xl font-bold mb-6">Neural Categories</h3>
+                  <div className="flex flex-col gap-6">
+                      <div className="flex gap-4">
+                          <input 
+                            type="text" 
+                            className="flex-1 bg-black/20 border-none p-4 rounded-xl"
+                            placeholder="New cluster name..."
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                          />
+                          <button className="btn-primary p-4 rounded-xl" onClick={handleAddCategory}>
+                              <Plus size={24} />
+                          </button>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                          {categories.map(cat => (
+                              <div key={cat.id} className="bg-accent/10 text-accent px-4 py-2 rounded-full flex items-center gap-3 font-bold border border-accent/20">
+                                  {cat.name}
+                                  <button className="hover:text-red-500" onClick={async () => {
+                                      if(window.confirm("Delete category?")) {
+                                          await axios.delete(`${API_URL}/api/menu/categories/${cat.id}`);
+                                          fetchData();
+                                      }
+                                  }}>✕</button>
+                              </div>
+                          ))}
+                      </div>
+                      <button className="btn-secondary mt-4" onClick={() => setShowCatPopup(false)}>Close</button>
+                  </div>
+              </div>
+          </div>
+      )}
+       {/* Staff Modal */}
+       {showStaffPopup && (
+         <div className="modal-overlay">
+           <div className="modal-content glass-panel animate-slide-down p-10 max-w-lg shadow-2xl">
+             <h3 className="text-2xl font-bold mb-6 text-white">Recruit New Member</h3>
+             <form onSubmit={handleAddStaff} className="modern-form flex flex-col gap-5">
+               <div className="form-group">
+                 <label>Name</label>
+                 <input type="text" placeholder="John Doe" value={newStaff.name} onChange={(e) => setNewStaff({...newStaff, name: e.target.value})} required />
+               </div>
+               <div className="form-group">
+                 <label>Email</label>
+                 <input type="email" placeholder="john@resto.com" value={newStaff.email} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} required />
+               </div>
+               <div className="form-group">
+                 <label>Password</label>
+                 <input type="password" placeholder="••••••••" value={newStaff.password} onChange={(e) => setNewStaff({...newStaff, password: e.target.value})} required />
+               </div>
+               <div className="form-group">
+                 <label>Role</label>
+                 <select className="modern-select" value={newStaff.role} onChange={(e) => setNewStaff({...newStaff, role: e.target.value})}>
+                   <option value="admin">Admin</option>
+                   <option value="super_admin">Super Admin</option>
+                 </select>
+               </div>
+               <div className="flex gap-4 mt-6">
+                 <button type="button" className="btn-secondary flex-1" onClick={() => setShowStaffPopup(false)}>Cancel</button>
+                 <button type="submit" className="btn-primary flex-1">Finalize Recruit</button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
+
+       {/* Node Modal */}
+       {showNodePopup && (
+         <div className="modal-overlay">
+           <div className="modal-content glass-panel animate-slide-down p-10 max-w-lg shadow-2xl">
+             <h3 className="text-2xl font-bold mb-6 text-white">Deploy New Node</h3>
+             <form onSubmit={handleAddNode} className="modern-form flex flex-col gap-5">
+               <div className="form-group">
+                 <label>Node Name</label>
+                 <input type="text" placeholder="Robo Branch 1" value={newNode.name} onChange={(e) => setNewNode({...newNode, name: e.target.value})} required />
+               </div>
+               <div className="form-group">
+                 <label>Location</label>
+                 <input type="text" placeholder="Jaipur, Rajasthan" value={newNode.location} onChange={(e) => setNewNode({...newNode, location: e.target.value})} required />
+               </div>
+               <div className="flex gap-4 mt-6">
+                 <button type="button" className="btn-secondary flex-1" onClick={() => setShowNodePopup(false)}>Cancel</button>
+                 <button type="submit" className="btn-primary flex-1">Deploy Node</button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
     </div>
   );
 };
