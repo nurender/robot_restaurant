@@ -58,6 +58,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [zoomedImage, setZoomedImage] = useState(null); 
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
   const initializationRef = useRef(false);
 
   const videoRef = useRef(null);
@@ -121,7 +123,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const getCartTotal = () => currentCart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const getCartCount = () => currentCart.reduce((acc, item) => acc + item.qty, 0);
-  const getItemQty = (id) => currentCart.find(i => String(i.id) === String(id))?.qty || 0;
 
   const handleManualCartUpdate = (item, delta) => {
     setCurrentCart(prev => {
@@ -136,8 +137,42 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     });
   };
 
-  const completeOrderProcess = async () => {
+  const normalizeName = (value = '') =>
+    String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const findMenuItemByName = (itemName) => {
+    const query = normalizeName(itemName);
+    if (!query) return null;
+    const allItems = menuCategories.flatMap((cat) => cat.items || []);
+    return (
+      allItems.find((item) => normalizeName(item.name) === query) ||
+      allItems.find((item) => normalizeName(item.name).includes(query) || query.includes(normalizeName(item.name))) ||
+      null
+    );
+  };
+
+  const getItemQty = (itemOrId) => {
+    const menuItem = typeof itemOrId === 'object' ? itemOrId : null;
+    const targetId = menuItem?.id ?? itemOrId;
+    const targetName = normalizeName(menuItem?.name || '');
+
+    const match = currentCart.find((cartItem) => {
+      const sameId = targetId !== undefined && targetId !== null && String(cartItem.id) === String(targetId);
+      const sameName = targetName && normalizeName(cartItem.name) === targetName;
+      return sameId || sameName;
+    });
+
+    return Number(match?.qty || 0);
+  };
+
+  const completeOrderProcess = async (e) => {
+    if (e) e.preventDefault();
     if (getCartCount() === 0) return;
+    if (!customerInfo.name || !customerInfo.phone) {
+        alert(textLanguage === 'hi' ? 'कृपया अपना नाम और मोबाइल नंबर दर्ज करें।' : 'Please enter your name and phone number.');
+        return;
+    }
+    
     try {
         const orderData = {
             restaurant_id: restaurantId,
@@ -145,7 +180,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             items: currentCart,
             total: getCartTotal(),
             timestamp: Date.now(),
-            status: 'pending'
+            status: 'pending',
+            customerName: customerInfo.name,
+            customerPhone: customerInfo.phone
         };
         const res = await fetch(`${API_URL}/api/orders`, {
             method: 'POST',
@@ -155,11 +192,19 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         if (res.ok) {
             setOrderConfirmedUI(true);
             setCurrentCart([]);
+            setShowCustomerForm(false);
+            setCustomerInfo({ name: '', phone: '' });
             speak(dialogs[voiceLanguage].confirm(orderData.total), voiceLanguage);
             setTimeout(() => setOrderConfirmedUI(false), 5000);
             if (IS_OPENAI_REALTIME) stopSession();
         }
     } catch (e) { console.error("Order Failed:", e); }
+  };
+
+  const initiateCheckout = () => {
+      if (getCartCount() === 0) return;
+      setShowCustomerForm(true);
+      setShowCartSummary(false); // Hide cart summary if open
   };
 
   const { 
@@ -169,18 +214,79 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     stopSession
   } = useRealtime(restaurantId, tableNumber, {
     onCartUpdate: (items) => {
-        setCurrentCart(items);
+        const normalizedItems = (items || []).map((item) => {
+          const matchedMenuItem = !item?.id ? findMenuItemByName(item?.name) : null;
+          return {
+            ...item,
+            id: item?.id ?? matchedMenuItem?.id,
+            name: item?.name ?? matchedMenuItem?.name,
+            price: Number(item?.price ?? matchedMenuItem?.price ?? 0),
+            qty: Number(item?.qty ?? item?.quantity ?? 1)
+          };
+        });
+        setCurrentCart(normalizedItems);
         if (items.length > 0) setShowMenuPopup(true);
     },
     onShowMenu: (category) => {
         if (category) setActiveCategory(category);
         setShowMenuPopup(true);
     },
-    onConfirmOrder: () => completeOrderProcess(),
+    onConfirmOrder: () => initiateCheckout(),
     onResponse: (text) => {
         setCurrentSubtitle(text);
         setIsRobotSpeaking(true);
         setTimeout(() => setIsRobotSpeaking(false), text.length * 50);
+    },
+    onToolCall: ({ name, args }) => {
+        if (name === 'show_menu') {
+            if (args?.category) setActiveCategory(args.category);
+            setShowMenuPopup(true);
+            return;
+        }
+
+        if (name === 'confirm_order') {
+            initiateCheckout();
+            return;
+        }
+
+        if (name === 'show_item_photo') {
+            const target = findMenuItemByName(args?.name);
+            if (target?.image_url) {
+                setCurrentImageUrl(target.image_url);
+                setTimeout(() => setCurrentImageUrl(null), 2500);
+            }
+            return;
+        }
+
+        if (name === 'add_item_to_cart') {
+            const target = findMenuItemByName(args?.name);
+            if (!target) return;
+            const quantity = Math.max(1, Number(args?.quantity) || 1);
+            setCurrentCart((prev) => {
+                const existing = prev.find((i) => String(i.id) === String(target.id));
+                if (existing) {
+                    return prev.map((i) =>
+                        String(i.id) === String(target.id) ? { ...i, qty: (i.qty || 0) + quantity } : i
+                    );
+                }
+                return [...prev, { ...target, qty: quantity }];
+            });
+            setShowMenuPopup(true);
+            return;
+        }
+
+        if (name === 'remove_item_from_cart') {
+            const target = findMenuItemByName(args?.name);
+            if (!target) return;
+            const quantity = Math.max(1, Number(args?.quantity) || 1);
+            setCurrentCart((prev) =>
+                prev
+                    .map((i) =>
+                        String(i.id) === String(target.id) ? { ...i, qty: Math.max(0, (i.qty || 0) - quantity) } : i
+                    )
+                    .filter((i) => (i.qty || 0) > 0)
+            );
+        }
     }
   });
 
@@ -272,7 +378,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           getCartTotal={getCartTotal}
           getCartCount={getCartCount}
           setShowCartSummary={setShowCartSummary}
-          completeOrderProcess={completeOrderProcess}
+          completeOrderProcess={initiateCheckout}
           setShowMenuPopup={setShowMenuPopup}
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}
@@ -288,7 +394,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           setZoomedImage={setZoomedImage}
           handleManualCartUpdate={handleManualCartUpdate}
           getCartTotal={getCartTotal}
-          completeOrderProcess={completeOrderProcess}
+          completeOrderProcess={initiateCheckout}
         />
       )}
 
@@ -331,10 +437,54 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       {zoomedImage && (
         <div className="image-zoom-overlay" onClick={() => setZoomedImage(null)}>
-          <button className="close-zoom-btn" onClick={() => setZoomedImage(null)}>
-            <X size={30} />
-          </button>
-          <img src={zoomedImage} alt="Zoomed" className="zoomed-image-view" onClick={(e) => e.stopPropagation()} />
+            <div className="zoomed-image-container slide-up" onClick={e => e.stopPropagation()}>
+                <button className="close-zoom-btn" onClick={() => setZoomedImage(null)}>×</button>
+                <img src={zoomedImage} alt="Zoomed dish" />
+            </div>
+        </div>
+      )}
+
+      {showCustomerForm && (
+        <div className="modal-overlay" onClick={() => setShowCustomerForm(false)}>
+            <div className="modal-content glass-panel animate-scale-in booking-modal" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-bold mb-4 view-title">
+                    {textLanguage === 'hi' ? 'बुकिंग डिटेल्स' : 'Booking Details'}
+                </h3>
+                <p className="text-muted mb-6">
+                    {textLanguage === 'hi' ? 'आर्डर बुक करने के लिए कृपया अपनी जानकारी दें।' : 'Please provide your details to confirm the order.'}
+                </p>
+                <form onSubmit={(e) => { e.preventDefault(); completeOrderProcess(); }} className="modern-form booking-form">
+                    <div className="form-group mb-4">
+                        <label>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
+                        <input 
+                            type="text" 
+                            required 
+                            placeholder={textLanguage === 'hi' ? 'अपना नाम लिखें' : 'Enter your name'}
+                            value={customerInfo.name}
+                            onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                        />
+                    </div>
+                    <div className="form-group mb-6">
+                        <label>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
+                        <input 
+                            type="tel" 
+                            required 
+                            pattern="[0-9]{10}"
+                            placeholder={textLanguage === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
+                            value={customerInfo.phone}
+                            onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                        />
+                    </div>
+                    <div className="flex gap-4">
+                        <button type="button" className="btn-secondary w-full" onClick={() => setShowCustomerForm(false)}>
+                            {textLanguage === 'hi' ? 'रद्द करें' : 'Cancel'}
+                        </button>
+                        <button type="submit" className="btn-primary w-full">
+                            {textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
       )}
     </div>

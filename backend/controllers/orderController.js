@@ -4,7 +4,7 @@ const { pool } = require('../config/db');
  * Place a new order (Normalized V2)
  */
 const createOrder = async (req, res) => {
-    const { restaurant_id, tableNumber, items, total, status } = req.body;
+    const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone } = req.body;
     const io = req.app.get('socketio');
     const finalRestId = restaurant_id || 1;
 
@@ -12,21 +12,31 @@ const createOrder = async (req, res) => {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
+            
+            // Backward-compatible safety: ensure required columns exist in old DB schemas.
+            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb`);
+            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT`);
+            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
+            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'`);
+            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS total DECIMAL(10,2) NOT NULL DEFAULT 0.00`);
+            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
-            // Actual columns: id, restaurant_id, tablenumber, items, total, timestamp, status
             const orderRes = await client.query(
-                `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status) 
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-                [finalRestId, tableNumber, JSON.stringify(items), total, Date.now().toString(), status || 'pending']
+                `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status, customer_name, customer_phone) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+                [finalRestId, tableNumber, JSON.stringify(items), total, Date.now().toString(), status || 'pending', customerName || '', customerPhone || '']
             );
             const orderId = orderRes.rows[0].id;
 
             // Also insert into order_items for detailed reporting if needed
             for (const item of items) {
+                const quantity = Number(item.qty || item.quantity || 1);
+                const unitPrice = Number(item.price || 0);
+                const subtotal = quantity * unitPrice;
                 await client.query(
-                    `INSERT INTO order_items (order_id, menu_item_id, name, quantity, unit_price) 
-                     VALUES ($1, $2, $3, $4, $5)`,
-                    [orderId, item.id, item.name || 'Unknown', item.qty || 1, item.price || 0]
+                    `INSERT INTO order_items (order_id, menu_item_id, name, quantity, unit_price, subtotal) 
+                     VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [orderId, item.id, item.name || 'Unknown', quantity, unitPrice, subtotal]
                 );
             }
 
@@ -74,6 +84,8 @@ const getOrders = async (req, res) => {
                 ...row,
                 tableNumber: row.tablenumber,
                 timestamp: row.timestamp,
+                customerName: row.customer_name,
+                customerPhone: row.customer_phone,
                 items: parsedItems
             };
         });

@@ -31,6 +31,7 @@ import axios from 'axios';
 import './AdminPanel.css';
 import PromptManager from './PromptManager';
 import AdminSidebar from './AdminSidebar';
+import ThemeToggle from './ThemeToggle';
 import { API_URL } from '../config';
 
 const socket = io(API_URL, { autoConnect: true });
@@ -211,31 +212,44 @@ const AdminPanel = () => {
   return (
     <div className="admin-layout animate-fade-in">
       <style>{`
-        .admin-main, .view-container, .dashboard-view, .orders-view, .menu-view, .team-view {
-          background: #050508 !important;
-          color: #ffffff !important;
+        /* smooth transitions for all themed elements */
+        .admin-layout, .admin-main, .admin-sidebar,
+        .glass-panel, .inventory-card, .stat-card-modern,
+        .main-header, .modal-content, input, select, textarea,
+        .pulse-item, .nav-item, .view-container {
+          transition: background 0.25s ease, color 0.25s ease,
+                      border-color 0.25s ease, box-shadow 0.25s ease !important;
         }
-        h1, h2, h3, h4, h5, h6, .view-title, strong, .profile-name, .profile-role {
-          color: #ffffff !important;
+        /* Ensure view areas use theme tokens */
+        .content-scrollable { background: var(--bg-deep) !important; }
+        .view-title   { color: var(--text-main)  !important; }
+        .text-muted   { color: var(--text-muted) !important; }
+        .glass-panel  { background: var(--card-bg) !important; border-color: var(--card-border) !important; }
+        .modal-content{ background: var(--modal-bg) !important; }
+        /* Accent stays purple */
+        .text-accent, .inv-price { color: var(--accent-primary) !important; }
+        .btn-primary {
+          background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
+          box-shadow: 0 4px 20px var(--accent-glow) !important;
+          color: #fff !important;
         }
-        p, span, .text-muted, label {
-          color: #94a3b8 !important;
+        /* Input theming */
+        input, textarea, select {
+          background: var(--input-bg) !important;
+          border-color: var(--input-border) !important;
+          color: var(--input-text) !important;
         }
-        .pulse-item, .glass-panel, .inventory-card, .stat-card-modern, .order-card {
-          background: #12121a !important;
-          border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
+        /* Status pills */
+        .status-pill.active   { background: var(--success-bg);  color: var(--success);  border: 1px solid var(--success); }
+        .status-pill.inactive { background: var(--bg-tertiary); color: var(--text-muted); }
+        /* Role badges */
+        .role-badge.super_admin { background: var(--accent-light); color: var(--accent-secondary); }
+        .role-badge.admin       { background: rgba(59,130,246,0.1); color: #60a5fa; }
+        /* Filter dropdown */
         .filter-input {
-          background: rgba(255, 255, 255, 0.03) !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
-          color: white !important;
-        }
-        .empty-state p, .text-accent {
-          color: #00d2ff !important;
-        }
-        .main-header {
-          background: rgba(10, 10, 15, 0.8) !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+          background: var(--input-bg) !important;
+          border: 1px solid var(--input-border) !important;
+          color: var(--text-main) !important;
         }
       `}</style>
       <AdminSidebar 
@@ -252,6 +266,7 @@ const AdminPanel = () => {
             <input type="text" placeholder="Neural Search Engine..." />
           </div>
           <div className="header-profile-premium">
+            <ThemeToggle />
             <div className="profile-details-group">
                 <span className="profile-name">{adminUser.name}</span>
                 <span className="profile-role">{adminUser.role === 'super_admin' ? 'Master Intelligence' : 'Branch Node'}</span>
@@ -392,6 +407,14 @@ const AdminPanel = () => {
                         {formatDate(order.created_at || order.timestamp)}
                       </div>
                     </div>
+                    {order.customerName && (
+                        <div className="p-customer-info text-sm text-muted mt-2 px-4 pb-2 border-b border-[var(--border-default)]">
+                            <div className="flex justify-between">
+                                <span><strong>Customer:</strong> {order.customerName}</span>
+                                <span><strong>Phone:</strong> {order.customerPhone}</span>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="p-card-body scrollbar-hidden">
                       {(order.items || []).map((item, idx) => (

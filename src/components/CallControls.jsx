@@ -39,11 +39,11 @@ const CallControls = ({
             )}
             {!IS_OPENAI_REALTIME && (
                 <form className="fallback-form" onSubmit={handleFallbackSubmit}>
-                    <input 
-                        type="text" 
-                        placeholder={textLanguage === 'hi' ? "यहाँ टाइप करें..." : "Type here..."} 
-                        value={fallbackText} 
-                        onChange={(e) => setFallbackText(e.target.value)} 
+                    <input
+                        type="text"
+                        placeholder={textLanguage === 'hi' ? "यहाँ टाइप करें..." : "Type here..."}
+                        value={fallbackText}
+                        onChange={(e) => setFallbackText(e.target.value)}
                     />
                     <button type="submit" disabled={!fallbackText.trim()}>Send</button>
                 </form>
@@ -53,11 +53,11 @@ const CallControls = ({
                 <button className={`call-btn secondary-btn ${!isCameraOn ? 'muted' : ''}`} onClick={toggleCamera} title="Camera">
                     {isCameraOn ? <Video size={24} /> : <VideoOff size={24} />}
                 </button>
-                
-                <button 
-                    className={`call-btn active-call-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`} 
-                    onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening} 
-                    title="Speak" 
+
+                <button
+                    className={`call-btn active-call-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`}
+                    onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening}
+                    title="Speak"
                     disabled={isConnecting}
                 >
                     {isConnecting ? <div className="hud-loader"></div> : isListening ? <Mic size={28} /> : <MicOff size={28} />}
@@ -75,7 +75,7 @@ const CallControls = ({
                 {!IS_OPENAI_REALTIME && (
                     <button className="call-btn secondary-btn" onClick={() => setShowSettingsPopup(true)} title="Settings"><Settings size={22} /></button>
                 )}
-                <button className="call-btn danger-btn end-call-btn" onClick={() => window.location.reload()}><PhoneOff size={28} /></button>
+                {/* <button className="call-btn danger-btn end-call-btn" onClick={() => window.location.reload()}><PhoneOff size={28} /></button> */}
             </div>
         </div>
     );

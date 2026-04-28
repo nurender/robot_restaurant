@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Search, ChevronDown, ChevronRight, ChefHat, Plus, Minus, ShoppingCart, Play } from 'lucide-react';
 
 const MenuSystem = ({
@@ -20,6 +20,19 @@ const MenuSystem = ({
     getMediaUrl,
     setZoomedImage
 }) => {
+    const categoryScrollRef = useRef(null);
+
+    const handleCategoryWheel = (e) => {
+        const scroller = categoryScrollRef.current;
+        if (!scroller) return;
+
+        // Convert vertical wheel into horizontal movement for desktop users.
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            scroller.scrollLeft += e.deltaY;
+            e.preventDefault();
+        }
+    };
+
     return (
         <div className="premium-menu-panel slide-up">
             <div className="menu-header">
@@ -45,7 +58,11 @@ const MenuSystem = ({
                     )}
                 </div>
 
-                <div className="category-quick-links scrollbar-hidden">
+                <div
+                    ref={categoryScrollRef}
+                    className="category-quick-links scrollbar-hidden"
+                    onWheel={handleCategoryWheel}
+                >
                     <button
                         className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
                         onClick={() => setActiveCategory('All')}
@@ -87,16 +104,16 @@ const MenuSystem = ({
                             {isExpanded && (
                                 <div className="category-items animate-fade-in">
                                     {matchingItems.map((item) => {
-                                        const qty = getItemQty(item.id);
+                                        const qty = getItemQty(item);
                                         const isUnavailable = item.is_active === false;
                                         return (
                                             <div key={item.id} className={`premium-menu-item animate-slide-up ${isUnavailable ? 'unavailable' : ''}`}>
                                                 <div className="item-media">
                                                     {item.image_url ? (
-                                                        <img 
-                                                            src={getMediaUrl(item.image_url)} 
-                                                            alt={item.name} 
-                                                            className="item-thumb" 
+                                                        <img
+                                                            src={getMediaUrl(item.image_url)}
+                                                            alt={item.name}
+                                                            className="item-thumb"
                                                             onClick={() => setZoomedImage(getMediaUrl(item.image_url))}
                                                         />
                                                     ) : (

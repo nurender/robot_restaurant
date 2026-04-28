@@ -59,6 +59,8 @@ const connectDB = async () => {
         )`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS tablenumber TEXT`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS order_items (
             id SERIAL PRIMARY KEY,
@@ -69,6 +71,7 @@ const connectDB = async () => {
         )`);
         await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS menu_item_id TEXT`);
         await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2)`);
+        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS subtotal DECIMAL(10,2) NOT NULL DEFAULT 0`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
             key TEXT PRIMARY KEY,

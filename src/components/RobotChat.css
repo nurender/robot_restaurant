@@ -421,9 +421,20 @@
 }
 
 @keyframes pulseCall {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4);
+  }
+
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
+  }
 }
 
 /* Image Zoom Modal */
@@ -475,8 +486,15 @@
 }
 
 @keyframes scaleUp {
-  0% { transform: scale(0.8); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .danger-btn {
@@ -544,10 +562,19 @@
   display: flex;
   gap: 10px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 4px 0 8px 0;
   margin-top: 4px;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   -ms-overflow-style: none;
   scrollbar-width: none;
+  cursor: grab;
+}
+
+.category-quick-links:active {
+  cursor: grabbing;
 }
 
 .category-quick-links::-webkit-scrollbar {
@@ -555,6 +582,7 @@
 }
 
 .category-chip {
+  flex: 0 0 auto;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.6);
@@ -1462,7 +1490,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .cart-item-photo img {
@@ -1481,4 +1509,125 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Booking form readability in customer flow */
+.modal-overlay:has(.booking-modal) {
+  background: rgba(6, 8, 18, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.booking-modal {
+  width: min(92vw, 430px);
+  border-radius: 28px !important;
+  padding: 30px 18px 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%) !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35) !important;
+}
+
+.booking-modal .view-title {
+  color: var(--text-main) !important;
+  font-size: clamp(2rem, 7vw, 2.45rem);
+  line-height: 1.02;
+  margin-bottom: 8px !important;
+  letter-spacing: -0.04em;
+}
+
+.booking-modal .text-muted {
+  color: var(--text-dim) !important;
+  font-size: 1rem;
+  line-height: 1.4;
+  margin-bottom: 14px !important;
+}
+
+.booking-form .form-group label {
+  color: var(--text-dim) !important;
+  font-weight: 700 !important;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.booking-form input {
+  color: var(--text-main) !important;
+  background: #eef2f8 !important;
+  border: 1px solid #d5dce8 !important;
+  border-radius: 14px !important;
+  padding: 14px 16px !important;
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-height: 54px;
+}
+
+.booking-form input::placeholder {
+  color: #8a9ab1 !important;
+}
+
+.booking-form input:focus {
+  background: #f8fbff !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15) !important;
+}
+
+.booking-modal .flex.gap-4 {
+  gap: 10px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: 14px;
+}
+
+.booking-modal .flex.gap-4 .w-full {
+  width: auto !important;
+  flex: 1 1 0;
+}
+
+.booking-modal .btn-secondary,
+.booking-modal .btn-primary {
+  border-radius: 999px;
+  min-height: 50px;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0 16px;
+  white-space: nowrap;
+  text-align: center;
+  justify-content: center;
+}
+
+.booking-modal .btn-secondary {
+  background: #ffffff !important;
+  border: 1px solid #d7deea !important;
+  color: #7e8ea7 !important;
+}
+
+.booking-modal .btn-secondary:hover {
+  border-color: #bcc8db !important;
+  color: #637792 !important;
+  background: #f8fbff !important;
+}
+
+.booking-modal .btn-primary {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+}
+
+.booking-modal .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.38);
+}
+
+@media (max-width: 420px) {
+  .booking-modal {
+    width: min(94vw, 390px);
+    padding: 18px 14px 14px;
+    border-radius: 24px !important;
+  }
+
+  .booking-modal .view-title {
+    font-size: clamp(1.9rem, 10vw, 2.3rem);
+  }
 }
