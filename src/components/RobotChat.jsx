@@ -348,9 +348,19 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         <img src="/avatar.png" alt="AI Waiter Avatar" className={`waiter-avatar breathing-idle ${isRobotSpeaking ? 'animate-talk' : ''}`} />
         
         {!hasCameraError && (
-          <div className="user-camera-pip">
-            <video ref={videoRef} autoPlay playsInline muted className={`pip-video ${!isCameraOn ? 'muted-video' : ''}`} />
-            {!isCameraOn && <div className="pip-overlay"><VideoOff size={24} color="white" /></div>}
+          <div className="customer-pip-card" style={{ position: 'absolute', top: '80px', right: '20px', width: '110px', height: '150px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,0.2)', zIndex: 30 }}>
+            <video ref={videoRef} autoPlay playsInline muted className={`pip-video ${!isCameraOn ? 'muted-video' : ''}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {!isCameraOn && <div className="pip-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VideoOff size={20} color="white" /></div>}
+            
+            {/* "You" Tag positioned floating at the bottom right inside the preview box */}
+            <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '4px', color: 'white', fontSize: '11px', fontWeight: 'bold', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '10px', backdropFilter: 'blur(4px)' }}>
+              <span>You</span>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '10px' }}>
+                <span style={{ width: '2px', height: '100%', background: '#00e676', borderRadius: '1px' }}></span>
+                <span style={{ width: '2px', height: '50%', background: '#00e676', borderRadius: '1px' }}></span>
+                <span style={{ width: '2px', height: '75%', background: '#00e676', borderRadius: '1px' }}></span>
+              </div>
+            </div>
           </div>
         )}
 
