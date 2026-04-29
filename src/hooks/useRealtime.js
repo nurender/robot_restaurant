@@ -11,6 +11,9 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}) => {
   const audioElRef = useRef(null);
   const toolCallStateRef = useRef(new Map());
   const handledToolCallsRef = useRef(new Set());
+  
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
   const stopSession = useCallback(() => {
     if (peerConnection.current) {
@@ -37,8 +40,8 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}) => {
     if (!name) return;
     if (callId && handledToolCallsRef.current.has(callId)) return;
     if (callId) handledToolCallsRef.current.add(callId);
-    handlers.onToolCall?.({ name, args, callId });
-  }, [handlers]);
+    handlersRef.current.onToolCall?.({ name, args, callId });
+  }, []);
 
   const parseArgs = (rawArgs) => {
     if (!rawArgs) return {};
@@ -55,23 +58,23 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}) => {
     if (!event || typeof event !== 'object') return;
 
     if (event.type?.includes('response') && typeof event.text === 'string') {
-      handlers.onResponse?.(event.text);
+      handlersRef.current.onResponse?.(event.text);
     }
 
     if (event.type === 'response.output_text.delta' && typeof event.delta === 'string') {
-      handlers.onResponse?.(event.delta);
+      handlersRef.current.onResponse?.(event.delta);
     }
 
     if (event.type === 'cart.update' && Array.isArray(event.items)) {
-      handlers.onCartUpdate?.(event.items);
+      handlersRef.current.onCartUpdate?.(event.items);
     }
 
     if (event.type === 'menu.show') {
-      handlers.onShowMenu?.(event.category);
+      handlersRef.current.onShowMenu?.(event.category);
     }
 
     if (event.type === 'order.confirm') {
-      handlers.onConfirmOrder?.();
+      handlersRef.current.onConfirmOrder?.();
     }
 
     if (event.type === 'response.output_item.added' && event.item?.type === 'function_call') {

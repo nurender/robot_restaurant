@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Search, ChevronDown, ChevronRight, ChefHat, Plus, Minus, ShoppingCart, Play } from 'lucide-react';
 
 const MenuSystem = ({
@@ -21,6 +21,7 @@ const MenuSystem = ({
     setZoomedImage
 }) => {
     const categoryScrollRef = useRef(null);
+    const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'nonveg'
 
     const handleCategoryWheel = (e) => {
         const scroller = categoryScrollRef.current;
@@ -58,6 +59,21 @@ const MenuSystem = ({
                     )}
                 </div>
 
+                <div style={{ display: 'flex', gap: '12px', padding: '0 16px 12px' }}>
+                    <button
+                        onClick={() => setVegFilter('all')}
+                        style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: vegFilter === 'all' ? '2px solid var(--accent-primary)' : '1px solid var(--card-border)', background: vegFilter === 'all' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.02)', color: vegFilter === 'all' ? 'var(--accent-primary)' : 'var(--text-main)' }}
+                    >All</button>
+                    <button
+                        onClick={() => setVegFilter('veg')}
+                        style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: vegFilter === 'veg' ? '2px solid #22c55e' : '1px solid var(--card-border)', background: vegFilter === 'veg' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.02)', color: vegFilter === 'veg' ? '#22c55e' : 'var(--text-main)' }}
+                    >🟢 Veg</button>
+                    <button
+                        onClick={() => setVegFilter('nonveg')}
+                        style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: vegFilter === 'nonveg' ? '2px solid #ef4444' : '1px solid var(--card-border)', background: vegFilter === 'nonveg' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.02)', color: vegFilter === 'nonveg' ? '#ef4444' : 'var(--text-main)' }}
+                    >🔴 Non-Veg</button>
+                </div>
+
                 <div
                     ref={categoryScrollRef}
                     className="category-quick-links scrollbar-hidden"
@@ -85,10 +101,16 @@ const MenuSystem = ({
                 {menuCategories.map((category) => {
                     if (activeCategory !== 'All' && category.category !== activeCategory) return null;
 
-                    const matchingItems = category.items.filter(item =>
-                        item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) ||
-                        (item.description && item.description.toLowerCase().includes(menuSearchTerm.toLowerCase()))
-                    );
+                    const matchingItems = category.items.filter(item => {
+                        const matchesSearch = item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) ||
+                            (item.description && item.description.toLowerCase().includes(menuSearchTerm.toLowerCase()));
+
+                        const matchesVeg = vegFilter === 'all' ||
+                            (vegFilter === 'veg' && (item.veg_type === 'veg' || !item.veg_type)) ||
+                            (vegFilter === 'nonveg' && item.veg_type === 'nonveg');
+
+                        return matchesSearch && matchesVeg;
+                    });
 
                     if (matchingItems.length === 0) return null;
 

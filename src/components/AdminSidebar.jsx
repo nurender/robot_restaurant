@@ -8,20 +8,27 @@ import {
     Store, 
     Bot, 
     LogOut,
+    Package,
+    BarChart2,
+    Settings,
     Store as StoreIcon
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout }) => {
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'menu', label: 'Menu Management', icon: UtensilsCrossed },
         { id: 'orders', label: 'Orders Hub', icon: ListTodo },
+        { id: 'menu', label: 'Menu Management', icon: UtensilsCrossed },
+        { id: 'ai_prompt', label: 'AI Intelligence', icon: Bot },
+        { id: 'inventory', label: 'Inventory', icon: Package },
+        { id: 'reports', label: 'Reports', icon: BarChart2 },
+        { id: 'qr_codes', label: 'Tables & QR Codes', icon: StoreIcon },
+        { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
     if (adminUser.role === 'super_admin') {
         menuItems.push({ id: 'restaurants', label: 'Our Branches', icon: StoreIcon });
         menuItems.push({ id: 'staff', label: 'Team Members', icon: Users });
-        menuItems.push({ id: 'ai_prompt', label: 'AI Intelligence', icon: Bot });
     }
 
     return (

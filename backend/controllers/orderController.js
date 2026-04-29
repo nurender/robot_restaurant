@@ -104,6 +104,31 @@ const updateOrderStatus = async (req, res) => {
 
     try {
         await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, id]);
+        
+        // 🌾 Recipe Based Smart Inventory Deductions
+        if (status === 'preparing') {
+            const orderRes = await pool.query("SELECT items FROM orders WHERE id = $1", [id]);
+            if (orderRes.rows.length > 0) {
+                let items = orderRes.rows[0].items;
+                items = typeof items === 'string' ? JSON.parse(items) : items;
+                
+                for (const item of items) {
+                    const itemName = (item.name || '').toLowerCase();
+                    const qty = Number(item.qty || item.quantity || 1);
+                    
+                    if (itemName.includes('burger')) {
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%bun%' OR LOWER(name) LIKE '%patty%'", [qty]);
+                    } else if (itemName.includes('tea') || itemName.includes('chai')) {
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%milk%' OR LOWER(name) LIKE '%sugar%'", [qty * 0.1]);
+                    } else if (itemName.includes('paneer')) {
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%paneer%'", [qty * 0.2]);
+                    } else if (itemName.includes('rice')) {
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%rice%'", [qty * 0.15]);
+                    }
+                }
+            }
+        }
+
         if (io) io.emit('order_status_update', { id: Number(id), status });
         res.json({ message: "Status updated successfully" });
     } catch (err) {

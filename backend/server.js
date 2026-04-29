@@ -14,6 +14,7 @@ const app = express();
 const server = http.createServer(app);
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Setup Uploads
 const uploadDir = path.join(__dirname, 'uploads');
@@ -126,6 +127,8 @@ const adminRoutes = require('./routes/adminRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const userRoutes = require('./routes/userRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const tableRoutes = require('./routes/tableRoutes');
 
 // Pass socket.io instance to controllers via app
 app.set('socketio', io);
@@ -135,27 +138,13 @@ app.use('/api', chatRoutes);       // /api/chat, /api/session
 app.use('/api/admin', adminRoutes); // /api/admin/prompt
 app.use('/api/menu', menuRoutes);   // /api/menu, /api/menu/categories
 app.use('/api/orders', orderRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api', tableRoutes);
 app.use('/api', userRoutes);       // /api/login, /api/users, /api/restaurants
 
 // 🔄 Route Aliases for Compatibility
 app.use('/api/auth/login', (req, res) => {
     res.redirect(307, '/api/login');
-});
-
-// --- Realtime OpenAI Session ---
-// 🔒 Secure Token Verification
-app.get('/api/verify-token/:token', async (req, res) => {
-    const { token } = req.params;
-    try {
-        const result = await pool.query("SELECT restaurant_id, table_number FROM tables WHERE secret_token = $1", [token]);
-        if (result.rows.length > 0) {
-            res.json({ success: true, ...result.rows[0] });
-        } else {
-            res.status(404).json({ success: false, message: "Invalid or Expired Token" });
-        }
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
 });
 
 const PORT = process.env.PORT || 3001;

@@ -172,6 +172,12 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         alert(textLanguage === 'hi' ? 'कृपया अपना नाम और मोबाइल नंबर दर्ज करें।' : 'Please enter your name and phone number.');
         return;
     }
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(customerInfo.phone)) {
+        alert(textLanguage === 'hi' ? 'कृपया एक वैध 10 अंकों का मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+        return;
+    }
     
     try {
         const orderData = {
@@ -446,40 +452,42 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       {showCustomerForm && (
         <div className="modal-overlay" onClick={() => setShowCustomerForm(false)}>
-            <div className="modal-content glass-panel animate-scale-in booking-modal" onClick={e => e.stopPropagation()}>
-                <h3 className="text-xl font-bold mb-4 view-title">
+            <div style={{ background: 'rgba(23, 23, 33, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', padding: '32px', maxWidth: '440px', width: '100%', backdropFilter: 'blur(16px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', marginBottom: '8px', letterSpacing: '-0.5px' }}>
                     {textLanguage === 'hi' ? 'बुकिंग डिटेल्स' : 'Booking Details'}
                 </h3>
-                <p className="text-muted mb-6">
+                <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '24px', lineHeight: '1.5' }}>
                     {textLanguage === 'hi' ? 'आर्डर बुक करने के लिए कृपया अपनी जानकारी दें।' : 'Please provide your details to confirm the order.'}
                 </p>
-                <form onSubmit={(e) => { e.preventDefault(); completeOrderProcess(); }} className="modern-form booking-form">
-                    <div className="form-group mb-4">
-                        <label>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
+                <form onSubmit={(e) => { e.preventDefault(); completeOrderProcess(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
                         <input 
                             type="text" 
                             required 
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '14px 16px', borderRadius: '12px', color: '#ffffff', fontSize: '15px', outline: 'none', transition: 'all 0.3s' }}
                             placeholder={textLanguage === 'hi' ? 'अपना नाम लिखें' : 'Enter your name'}
                             value={customerInfo.name}
                             onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
                         />
                     </div>
-                    <div className="form-group mb-6">
-                        <label>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
                         <input 
                             type="tel" 
                             required 
                             pattern="[0-9]{10}"
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '14px 16px', borderRadius: '12px', color: '#ffffff', fontSize: '15px', outline: 'none', transition: 'all 0.3s' }}
                             placeholder={textLanguage === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
                             value={customerInfo.phone}
                             onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
                         />
                     </div>
-                    <div className="flex gap-4">
-                        <button type="button" className="btn-secondary w-full" onClick={() => setShowCustomerForm(false)}>
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+                        <button type="button" style={{ flex: 1, padding: '14px', background: '#ffffff', color: '#0f172a', border: 'none', borderRadius: '30px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', transition: 'all 0.3s' }} onClick={() => setShowCustomerForm(false)}>
                             {textLanguage === 'hi' ? 'रद्द करें' : 'Cancel'}
                         </button>
-                        <button type="submit" className="btn-primary w-full">
+                        <button type="submit" style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', color: '#ffffff', border: 'none', borderRadius: '30px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.4)', transition: 'all 0.3s' }}>
                             {textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'}
                         </button>
                     </div>

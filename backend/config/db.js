@@ -240,6 +240,84 @@ const connectDB = async () => {
                 ON CONFLICT (email) DO NOTHING
             `, u);
         }
+
+        // Swiggy/Zomato Level Smart Menu Schema Definitions
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS menu_categories (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER DEFAULT 4,
+                name TEXT NOT NULL,
+                name_hindi TEXT,
+                image_url TEXT,
+                sort_order INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS menu_items (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER DEFAULT 4,
+                category_id INTEGER,
+                name TEXT NOT NULL,
+                name_hindi TEXT,
+                slug TEXT,
+                description TEXT,
+                short_description TEXT,
+                base_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                half_price DECIMAL(10,2),
+                full_price DECIMAL(10,2),
+                medium_price DECIMAL(10,2),
+                large_price DECIMAL(10,2),
+                custom_price_json JSONB,
+                veg_type TEXT DEFAULT 'veg',
+                spice_level INTEGER DEFAULT 0,
+                calories INTEGER,
+                prep_time INTEGER,
+                image_url TEXT,
+                video_url TEXT,
+                is_available BOOLEAN DEFAULT TRUE,
+                is_featured BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                display_order INTEGER DEFAULT 0,
+                source_type TEXT DEFAULT 'manual',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS menu_variants (
+                id SERIAL PRIMARY KEY,
+                menu_item_id INTEGER NOT NULL,
+                variant_name TEXT NOT NULL,
+                price DECIMAL(10,2) NOT NULL DEFAULT 0.00
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS menu_addons (
+                id SERIAL PRIMARY KEY,
+                menu_item_id INTEGER NOT NULL,
+                addon_name TEXT NOT NULL,
+                price DECIMAL(10,2) NOT NULL DEFAULT 0.00
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS menu_import_history (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER DEFAULT 4,
+                file_url TEXT,
+                file_type TEXT,
+                extracted_json JSONB,
+                total_items INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
     } catch (err) {
         console.error("Error connecting to PostgreSQL database: " + err.message);
     }
