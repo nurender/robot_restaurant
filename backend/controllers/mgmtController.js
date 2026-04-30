@@ -27,6 +27,21 @@ const deleteCoupon = async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
 
+const updateCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { code, discount_type, discount_value, min_order_value, usage_limit, expiry_date, is_active } = req.body;
+        await pool.query(
+            `UPDATE coupons SET 
+                code = $1, discount_type = $2, discount_value = $3, 
+                min_order_value = $4, usage_limit = $5, expiry_date = $6, is_active = $7
+             WHERE id = $8`,
+            [code, discount_type, discount_value, min_order_value, usage_limit, expiry_date, is_active, id]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
 // --- Customers ---
 const getCustomers = async (req, res) => {
     try {
@@ -114,6 +129,26 @@ const assignRiderToOrder = async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
 
+const updateRider = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, phone, status } = req.body;
+        await pool.query(
+            "UPDATE riders SET name = $1, phone = $2, status = $3, updated_at = NOW() WHERE id = $4",
+            [name, phone, status, id]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const deleteRider = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query("DELETE FROM riders WHERE id = $1", [id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
 const updateStock = async (req, res) => {
     try {
         const { item_id, quantity } = req.body;
@@ -122,4 +157,4 @@ const updateStock = async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
 
-module.exports = { getCoupons, createCoupon, deleteCoupon, getCustomers, getSettings, updateSettings, getRiders, createRider, assignRiderToOrder, updateStock };
+module.exports = { getCoupons, createCoupon, updateCoupon, deleteCoupon, getCustomers, getSettings, updateSettings, getRiders, createRider, updateRider, deleteRider, assignRiderToOrder, updateStock };

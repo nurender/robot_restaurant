@@ -1,10 +1,11 @@
 const express = require('express');
-const { getCoupons, createCoupon, deleteCoupon, getCustomers, getSettings, updateSettings, getRiders, createRider, assignRiderToOrder } = require('../controllers/mgmtController');
+const { getCoupons, createCoupon, updateCoupon, deleteCoupon, getCustomers, getSettings, updateSettings, getRiders, createRider, updateRider, deleteRider, assignRiderToOrder } = require('../controllers/mgmtController');
 
 const router = express.Router();
 
 router.get('/coupons', getCoupons);
 router.post('/coupons', createCoupon);
+router.put('/coupons/:id', updateCoupon);
 router.delete('/coupons/:id', deleteCoupon);
 
 router.get('/customers', getCustomers);
@@ -14,6 +15,8 @@ router.post('/settings', updateSettings);
 
 router.get('/riders', getRiders);
 router.post('/riders', createRider);
+router.put('/riders/:id', updateRider);
+router.delete('/riders/:id', deleteRider);
 router.post('/orders/assign-rider', assignRiderToOrder);
 router.post('/feedback', async (req, res) => {
     const { restaurant_id, table_number, customer_phone, customer_name, rating, comment } = req.body;

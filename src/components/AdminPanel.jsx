@@ -32,8 +32,23 @@ import {
   Bike,
   CreditCard,
   Phone,
-  Star
+  Star,
+  Send
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  BarChart,
+  Bar,
+  Cell,
+  PieChart,
+  Pie
+} from 'recharts';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import './AdminPanel.css';
@@ -113,9 +128,39 @@ const AdminPanel = () => {
   const [newCatName, setNewCatName] = useState('');
 
   const [showStaffPopup, setShowStaffPopup] = useState(false);
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState(null);
   const [showNodePopup, setShowNodePopup] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState(null);
+  const [nodeActiveTab, setNodeActiveTab] = useState('basic');
   const [newStaff, setNewStaff] = useState({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
-  const [newNode, setNewNode] = useState({ name: '', location: '' });
+  const [newNode, setNewNode] = useState({
+    name: '', branch_code: '', brand_name: '', description: '', branch_type: 'dine_in',
+    address: '', landmark: '', city: '', state: '', country: 'India', pincode: '', latitude: '', longitude: '',
+    phone: '', whatsapp_number: '', email: '', manager_name: '', emergency_contact: '',
+    working_hours: {
+      mon: { open: '10:00', close: '22:00' },
+      tue: { open: '10:00', close: '22:00' },
+      wed: { open: '10:00', close: '22:00' },
+      thu: { open: '10:00', close: '22:00' },
+      fri: { open: '10:00', close: '22:00' },
+      sat: { open: '10:00', close: '23:00' },
+      sun: { open: '10:00', close: '23:00' }
+    },
+    is_24x7: false, is_temp_closed: false,
+    delivery_available: true, pickup_available: true, dine_in_available: true,
+    delivery_radius: 5, min_order_amount: 149, delivery_charges: 29, free_delivery_above: 499, avg_delivery_time: 30,
+    gst_number: '', tax_percent: 5, currency: '₹', invoice_prefix: 'INV-', bill_footer: 'Thank you for dining with us!',
+    ai_enabled: true, ai_greeting: 'Welcome to Cyber Chef! Kya khilayein?', ai_language: 'Hinglish', ai_upsell_enabled: true, ai_tone: 'friendly',
+    logo_url: '', cover_url: ''
+  });
+
+  const [kitchenOrders, setKitchenOrders] = useState([]);
+  useEffect(() => {
+    // Filter orders for KDS (Accepted or Preparing)
+    const filtered = orders.filter(o => ['accepted', 'preparing'].includes(o.status));
+    setKitchenOrders(filtered);
+  }, [orders]);
 
   // AI Menu Import States
   const [isImporting, setIsImporting] = useState(false);
@@ -123,15 +168,158 @@ const AdminPanel = () => {
   const [showImportReview, setShowImportReview] = useState(false);
   const [showCouponPopup, setShowCouponPopup] = useState(false);
   const [showRiderPopup, setShowRiderPopup] = useState(false);
-  const [newRider, setNewRider] = useState({ name: '', phone: '' });
+  const [editingRiderId, setEditingRiderId] = useState(null);
+  const [newRider, setNewRider] = useState({ name: '', phone: '', status: 'online' });
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     discount_type: 'percent',
     discount_value: '',
     min_order_value: '',
     usage_limit: '',
-    expiry_date: ''
+    expiry_date: '',
+    is_active: true
   });
+  const [editingCouponId, setEditingCouponId] = useState(null);
+
+  const [analyticsData, setAnalyticsData] = useState({
+    revenueHistory: [],
+    topItems: [],
+    hourlyHeatmap: [],
+    staffSales: []
+  });
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      processAnalytics();
+    }
+  }, [orders, menuItems]);
+
+  const processAnalytics = () => {
+    // 1. Revenue Trends (Last 7 Days)
+    const revMap = {};
+    const last7Days = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return d.toISOString().split('T')[0];
+    }).reverse();
+
+    last7Days.forEach(date => revMap[date] = 0);
+    orders.forEach(o => {
+      const date = safeGetISODate(o);
+      if (revMap[date] !== undefined) revMap[date] += parseFloat(o.total || 0);
+    });
+    const revenueHistory = last7Days.map(date => ({ date: date.split('-').slice(1).join('/'), amount: revMap[date] }));
+
+    // 2. Top Performers
+    const itemMap = {};
+    orders.forEach(o => {
+      const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+      (items || []).forEach(item => {
+        itemMap[item.name] = (itemMap[item.name] || 0) + (item.qty || item.quantity || 1);
+      });
+    });
+    const topItems = Object.entries(itemMap)
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+
+    // 3. Hourly Heatmap
+    const hourMap = {};
+    [...Array(24)].forEach((_, i) => hourMap[i] = 0);
+    orders.forEach(o => {
+      const hour = new Date(o.created_at || parseInt(o.timestamp)).getHours();
+      hourMap[hour] = (hourMap[hour] || 0) + 1;
+    });
+    const hourlyHeatmap = Object.entries(hourMap).map(([hour, count]) => ({
+      time: `${hour}:00`,
+      orders: count
+    }));
+
+    // 4. Staff Performance
+    const staffMap = {};
+    orders.forEach(o => {
+      if (o.staff_id) {
+        const staff = staffList.find(s => s.id === o.staff_id);
+        const name = staff ? staff.name : `Staff #${o.staff_id}`;
+        if (!staffMap[name]) staffMap[name] = { name, sales: 0, count: 0 };
+        staffMap[name].sales += parseFloat(o.total || 0);
+        staffMap[name].count += 1;
+      }
+    });
+    const staffSales = Object.values(staffMap).sort((a, b) => b.sales - a.sales);
+
+    setAnalyticsData({ revenueHistory, topItems, hourlyHeatmap, staffSales });
+  };
+
+  const [showManualOrderPopup, setShowManualOrderPopup] = useState(false);
+  const [manualOrderSearch, setManualOrderSearch] = useState('');
+  const [manualOrderData, setManualOrderData] = useState({
+    tableNumber: '1',
+    items: [],
+    customerName: '',
+    customerPhone: '',
+    total: 0
+  });
+  const [manualOrderCategory, setManualOrderCategory] = useState('All');
+
+  const addToManualOrder = (item) => {
+    const existing = manualOrderData.items.find(i => i.id === item.id);
+    let newItems;
+    if (existing) {
+      newItems = manualOrderData.items.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+    } else {
+      newItems = [...manualOrderData.items, { ...item, qty: 1 }];
+    }
+    const newTotal = newItems.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    setManualOrderData({ ...manualOrderData, items: newItems, total: newTotal });
+  };
+
+  const updateManualQty = (id, delta) => {
+    const newItems = manualOrderData.items.map(i => {
+      if (i.id === id) {
+        const newQty = Math.max(0, i.qty + delta);
+        return { ...i, qty: newQty };
+      }
+      return i;
+    }).filter(i => i.qty > 0);
+    const newTotal = newItems.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    setManualOrderData({ ...manualOrderData, items: newItems, total: newTotal });
+  };
+
+  const submitManualOrder = async () => {
+    if (manualOrderData.items.length === 0) return alert("Please add at least one item");
+    try {
+      await axios.post(`${API_URL}/api/orders`, {
+        ...manualOrderData,
+        restaurant_id: adminUser.restaurant_id,
+        status: 'pending'
+      });
+      setShowManualOrderPopup(false);
+      setManualOrderData({ tableNumber: '1', items: [], customerName: '', customerPhone: '', total: 0 });
+      fetchData();
+    } catch (e) { alert("Failed to place order"); }
+  };
+
+  const generateCouponCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const prefix = ['OFFER', 'DEAL', 'SAVE', 'RESTO', 'CYBER'][Math.floor(Math.random() * 5)];
+    let code = prefix;
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    setNewCoupon({ ...newCoupon, code });
+  };
+
+  const toggleCouponStatus = async (coupon) => {
+    try {
+      await axios.put(`${API_URL}/api/mgmt/coupons/${coupon.id}`, { ...coupon, is_active: !coupon.is_active });
+      fetchData();
+    } catch (e) { alert("Failed to toggle status"); }
+  };
+
+  const handleEditCoupon = (coupon) => {
+    setEditingCouponId(coupon.id);
+    setNewCoupon({ ...coupon, expiry_date: coupon.expiry_date ? coupon.expiry_date.split('T')[0] : '' });
+    setShowCouponPopup(true);
+  };
 
   const formatDate = (dateStr) => {
     try {
@@ -174,17 +362,17 @@ const AdminPanel = () => {
 
   useEffect(() => {
     if (activeTab === 'feedback') {
-        fetchData();
+      fetchData();
     }
   }, [activeTab]);
 
   const fetchData = async () => {
     try {
       const auth = { params: { restaurant_id: adminUser.restaurant_id } };
-      
+
       const fetchHelper = (url) => axios.get(url, auth).catch(err => {
-          console.warn(`⚠️ Partial Fetch Failure for ${url}:`, err.message);
-          return { data: { data: [] } }; // Return empty data on failure
+        console.warn(`⚠️ Partial Fetch Failure for ${url}:`, err.message);
+        return { data: { data: [] } }; // Return empty data on failure
       });
 
       const [ordersRes, menuRes, catRes, staffRes, restRes, tablesRes, chatLogsRes, statsRes, couponsRes, customersRes, settingsRes, ridersRes, feedbackRes] = await Promise.all([
@@ -219,8 +407,8 @@ const AdminPanel = () => {
       if (tablesRes.data && tablesRes.data.length > 0) {
         setRestaurantTables(tablesRes.data.map(t => ({ table: `Table ${t.table_number}`, token: t.secret_token })));
       }
-    } catch (e) { 
-      console.error("Critical Fetch Error:", e); 
+    } catch (e) {
+      console.error("Critical Fetch Error:", e);
     }
   };
 
@@ -365,47 +553,134 @@ const AdminPanel = () => {
   const handleAddStaff = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_URL}/api/users`, newStaff);
+      if (editingStaffId) {
+        await axios.put(`${API_URL}/api/users/${editingStaffId}`, newStaff);
+        alert("Staff updated successfully!");
+      } else {
+        await axios.post(`${API_URL}/api/users`, newStaff);
+        alert("Staff recruited successfully!");
+      }
       setShowStaffPopup(false);
+      setEditingStaffId(null);
       setNewStaff({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); alert("Action failed: " + e.message); }
   };
 
   const handleAddNode = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_URL}/api/restaurants`, newNode);
+      if (editingNodeId) {
+        await axios.put(`${API_URL}/api/restaurants/${editingNodeId}`, newNode);
+        alert("Node updated successfully!");
+      } else {
+        await axios.post(`${API_URL}/api/restaurants`, newNode);
+        alert("Node deployed successfully!");
+      }
       setShowNodePopup(false);
-      setNewNode({ name: '', location: '' });
+      setEditingNodeId(null);
+      setNewNode({
+        name: '', branch_code: '', brand_name: '', description: '', branch_type: 'dine_in',
+        address: '', landmark: '', city: '', state: '', country: 'India', pincode: '', latitude: '', longitude: '',
+        phone: '', whatsapp_number: '', email: '', manager_name: '', emergency_contact: '',
+        working_hours: {
+          mon: { open: '10:00', close: '22:00' },
+          tue: { open: '10:00', close: '22:00' },
+          wed: { open: '10:00', close: '22:00' },
+          thu: { open: '10:00', close: '22:00' },
+          fri: { open: '10:00', close: '22:00' },
+          sat: { open: '10:00', close: '23:00' },
+          sun: { open: '10:00', close: '23:00' }
+        },
+        is_24x7: false, is_temp_closed: false,
+        delivery_available: true, pickup_available: true, dine_in_available: true,
+        delivery_radius: 5, min_order_amount: 149, delivery_charges: 29, free_delivery_above: 499, avg_delivery_time: 30,
+        gst_number: '', tax_percent: 5, currency: '₹', invoice_prefix: 'INV-', bill_footer: 'Thank you for dining with us!',
+        ai_enabled: true, ai_greeting: 'Welcome to Cyber Chef! Kya khilayein?', ai_language: 'Hinglish', ai_upsell_enabled: true, ai_tone: 'friendly',
+        logo_url: '', cover_url: ''
+      });
+      fetchData();
+    } catch (e) { console.error(e); alert("Action failed: " + e.message); }
+  };
+
+  const deleteUser = async (id) => {
+    if (!window.confirm("Are you sure you want to terminate this neural contract?")) return;
+    try {
+      await axios.delete(`${API_URL}/api/users/${id}`);
       fetchData();
     } catch (e) { console.error(e); }
   };
 
+  const deleteRestaurant = async (id) => {
+    if (!window.confirm("WARNING: Deleting this restaurant will wipe all associated data. Proceed?")) return;
+    try {
+      await axios.delete(`${API_URL}/api/restaurants/${id}`);
+      fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleEditRider = (rider) => {
+    setEditingRiderId(rider.id);
+    setNewRider({ name: rider.name, phone: rider.phone, status: rider.status || 'online' });
+    setShowRiderPopup(true);
+  };
+
+  const handleDeleteRider = async (id) => {
+    if (window.confirm("Are you sure you want to remove this rider from the fleet?")) {
+      try {
+        await axios.delete(`${API_URL}/api/mgmt/riders/${id}`);
+        fetchData();
+      } catch (err) { alert("Failed to remove rider"); }
+    }
+  };
+
+  const handleSaveRider = async () => {
+    try {
+      if (editingRiderId) {
+        await axios.put(`${API_URL}/api/mgmt/riders/${editingRiderId}`, { ...newRider });
+      } else {
+        await axios.post(`${API_URL}/api/mgmt/riders`, { ...newRider, restaurant_id: adminUser.restaurant_id });
+      }
+      setShowRiderPopup(false);
+      setEditingRiderId(null);
+      setNewRider({ name: '', phone: '', status: 'online' });
+      fetchData();
+    } catch (e) { alert(editingRiderId ? "Failed to update rider" : "Failed to recruit rider"); }
+  };
+
+  const deleteCoupon = async (id) => {
+    if (!window.confirm("Are you sure you want to deactivate this neural promotion?")) return;
+    try {
+      await axios.delete(`${API_URL}/api/mgmt/coupons/${id}`);
+      fetchData();
+    } catch (e) { alert("Failed to delete coupon"); }
+  };
+
   const getPermittedTabs = (role) => {
     const permissions = {
-        super_admin: ['dashboard', 'orders', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants'],
-        manager: ['dashboard', 'orders', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
-        staff: ['orders', 'monitor']
+      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants'],
+      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
+      staff: ['orders', 'monitor'],
+      chef: ['kitchen', 'orders', 'monitor']
     };
     return permissions[role] || ['orders'];
   };
 
   if (!getPermittedTabs(adminUser.role).includes(activeTab)) {
     return (
-        <div className="admin-layout" style={{ background: 'var(--bg-deep)', color: 'white', display: 'flex', minHeight: '100vh' }}>
-            <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} adminUser={adminUser} onLogout={handleLogout} />
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-                <div className="glass-panel text-center animate-slide-up" style={{ maxWidth: '440px', padding: '60px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '32px' }}>
-                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                        <AlertCircle size={40} style={{ color: '#ef4444' }} />
-                    </div>
-                    <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '12px', color: 'white' }}>ACCESS RESTRICTED</h2>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '15px', lineHeight: '1.6' }}>Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong style={{ color: 'var(--accent-primary)' }}>{activeTab}</strong> module.</p>
-                    <button className="btn-primary" onClick={() => handleTabChange('orders')} style={{ width: '100%', padding: '14px', borderRadius: '14px' }}>Return to Safety</button>
-                </div>
+      <div className="admin-layout" style={{ background: 'var(--bg-deep)', color: 'white', display: 'flex', minHeight: '100vh' }}>
+        <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} adminUser={adminUser} onLogout={handleLogout} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+          <div className="glass-panel text-center animate-slide-up" style={{ maxWidth: '440px', padding: '60px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '32px' }}>
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <AlertCircle size={40} style={{ color: '#ef4444' }} />
             </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '12px', color: 'white' }}>ACCESS RESTRICTED</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '15px', lineHeight: '1.6' }}>Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong style={{ color: 'var(--accent-primary)' }}>{activeTab}</strong> module.</p>
+            <button className="btn-primary" onClick={() => handleTabChange('orders')} style={{ width: '100%', padding: '14px', borderRadius: '14px' }}>Return to Safety</button>
+          </div>
         </div>
+      </div>
     );
   }
 
@@ -608,17 +883,20 @@ const AdminPanel = () => {
                 <div className="orders-filter-bar shadow-premium">
                   <div className="filter-group">
                     <label><Calendar size={14} /> Filter Date</label>
-                    <input 
-                      type="date" 
-                      className="filter-input" 
-                      value={selectedDate} 
-                      onChange={(e) => setSelectedDate(e.target.value)} 
+                    <input
+                      type="date"
+                      className="filter-input"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
                       style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
                     />
                   </div>
                   <div className="filter-stats">
                     Total Pending: <strong>{orders.filter(o => o.status === 'pending' && safeGetISODate(o) === selectedDate).length}</strong>
                   </div>
+                  <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', marginLeft: '12px', height: '40px' }}>
+                    <Plus size={18} /> New Order
+                  </button>
                 </div>
               </div>
 
@@ -646,7 +924,7 @@ const AdminPanel = () => {
                               <Clock size={12} /> {formatDate(order.created_at || order.timestamp)}
                             </span>
                           </div>
-                          
+
                           {(order.customerName || order.customer_name || order.customerPhone || order.customer_phone) && (
                             <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
                               {(order.customerName || order.customer_name) && <div><span style={{ color: 'var(--text-muted)' }}>Customer:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerName || order.customer_name}</strong></div>}
@@ -669,7 +947,7 @@ const AdminPanel = () => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Total: <strong>₹{order.total}</strong></span>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <button 
+                              <button
                                 onClick={() => handlePrintBill(order)}
                                 style={{ padding: '6px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                 title="Print Bill"
@@ -685,24 +963,24 @@ const AdminPanel = () => {
                               )}
                               {order.status === 'preparing' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <select 
-                                        className="rider-select"
-                                        onChange={async (e) => {
-                                            const rId = e.target.value;
-                                            if (!rId) return;
-                                            try {
-                                                await axios.post(`${API_URL}/api/mgmt/orders/assign-rider`, { order_id: order.id, rider_id: rId });
-                                                fetchData();
-                                            } catch(e) { alert("Assignment failed"); }
-                                        }}
-                                        style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-deep)', color: 'white', border: '1px solid var(--card-border)', fontSize: '11px', outline: 'none' }}
-                                    >
-                                        <option value="">Assign Rider</option>
-                                        {riders.filter(r => r.status !== 'offline').map(r => (
-                                            <option key={r.id} value={r.id}>{r.name} ({r.status})</option>
-                                        ))}
-                                    </select>
-                                    <button onClick={() => updateOrderStatus(order.id, 'out_for_delivery')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: '#3b82f6' }}>Dispatch</button>
+                                  <select
+                                    className="rider-select"
+                                    onChange={async (e) => {
+                                      const rId = e.target.value;
+                                      if (!rId) return;
+                                      try {
+                                        await axios.post(`${API_URL}/api/mgmt/orders/assign-rider`, { order_id: order.id, rider_id: rId });
+                                        fetchData();
+                                      } catch (e) { alert("Assignment failed"); }
+                                    }}
+                                    style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-deep)', color: 'white', border: '1px solid var(--card-border)', fontSize: '11px', outline: 'none' }}
+                                  >
+                                    <option value="">Assign Rider</option>
+                                    {riders.filter(r => r.status !== 'offline').map(r => (
+                                      <option key={r.id} value={r.id}>{r.name} ({r.status})</option>
+                                    ))}
+                                  </select>
+                                  <button onClick={() => updateOrderStatus(order.id, 'out_for_delivery')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: '#3b82f6' }}>Dispatch</button>
                                 </div>
                               )}
                               {order.status === 'out_for_delivery' && (
@@ -715,7 +993,7 @@ const AdminPanel = () => {
                           </div>
                           {(order.customerPhone || order.customer_phone) && (
                             <a href={`tel:${order.customerPhone || order.customer_phone}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', marginTop: '10px' }}>
-                                <Phone size={14} /> Call Customer
+                              <Phone size={14} /> Call Customer
                             </a>
                           )}
                         </div>
@@ -762,6 +1040,12 @@ const AdminPanel = () => {
                       }}
                     />
                   </label>
+                  <button className="btn-secondary" onClick={fetchData} style={{ borderRadius: '14px' }}>
+                    <Clock size={18} /> Refresh Hub
+                  </button>
+                  <button className="btn-primary" style={{ borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
+                    <Bot size={18} /> AI Menu Insights
+                  </button>
                   <button className="btn-secondary" onClick={() => setShowCatPopup(true)}>
                     <Settings size={20} />
                     <span>Manage Categories</span>
@@ -876,10 +1160,10 @@ const AdminPanel = () => {
                                 <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                                   <div className="inv-price text-xl">₹{item.price}</div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                      <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
-                                      <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
-                                          {item.stock_quantity} Left
-                                      </span>
+                                    <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
+                                    <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
+                                      {item.stock_quantity} Left
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -953,26 +1237,26 @@ const AdminPanel = () => {
                                 )}
                               </div>
                               <div className="inv-details">
-                                  <div className="flex justify-between items-start">
-                                    <div className="flex flex-col">
-                                        <strong className="text-lg">{item.name}</strong>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <div style={{ width: '12px', height: '12px', border: `1px solid ${item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981'}`, padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981' }} />
-                                            </div>
-                                            {item.is_featured && <span style={{ fontSize: '10px', fontWeight: '800', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>BESTSELLER</span>}
-                                        </div>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex flex-col">
+                                    <strong className="text-lg">{item.name}</strong>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div style={{ width: '12px', height: '12px', border: `1px solid ${item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981'}`, padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981' }} />
+                                      </div>
+                                      {item.is_featured && <span style={{ fontSize: '10px', fontWeight: '800', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>BESTSELLER</span>}
                                     </div>
-                                    <span className="inv-cat-tag shadow-sm">{item.category || 'Unassigned'}</span>
                                   </div>
+                                  <span className="inv-cat-tag shadow-sm">{item.category || 'Unassigned'}</span>
+                                </div>
                                 <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
                                 <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                                   <div className="inv-price text-xl">₹{item.price}</div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                      <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
-                                      <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
-                                          {item.stock_quantity} Left
-                                      </span>
+                                    <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
+                                    <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
+                                      {item.stock_quantity} Left
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -1008,35 +1292,127 @@ const AdminPanel = () => {
               <div className="view-header-row">
                 <div className="header-left">
                   <h1 className="view-title">Team Hierarchy</h1>
-                  <p className="text-muted">Manage system access and neural permissions across nodes.</p>
+                  <p className="text-muted">Manage system access and personnel across your restaurant network.</p>
                 </div>
-                <button className="btn-primary" onClick={() => setShowStaffPopup(true)}>
+                {/* <button className="btn-primary" onClick={() => {
+                  setEditingStaffId(null);
+                  setNewStaff({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
+                  setShowStaffPopup(true);
+                }}>
                   <Plus size={20} />
                   <span>Recruit Member</span>
-                </button>
+                </button> */}
               </div>
-              <div className="inventory-grid">
-                {staffList.map(staff => (
-                  <div key={staff.id} className="inventory-card glass-panel shadow-premium">
-                    <div className="inv-icon-box shadow-lg">
-                      <Users size={28} />
-                    </div>
-                    <div className="inv-details">
-                      <div className="staff-card-header mb-2">
-                        <span className={`role-badge ${staff.role} shadow-sm`}>{staff.role.replace('_', ' ')}</span>
+
+              {restaurantsList.map(resto => {
+                const restoStaff = staffList.filter(s => s.restaurant_id === resto.id);
+                return (
+                  <div key={resto.id} style={{ marginBottom: '44px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', paddingBottom: '12px', borderBottom: '1px solid var(--card-border)' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(124, 58, 237, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
+                        <Store size={20} />
                       </div>
-                      <div className="inv-main">
-                        <strong className="text-lg">{staff.name}</strong>
-                        <span className="text-sm text-muted block mt-1">{staff.email}</span>
+                      <div>
+                        <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{resto.name}</h2>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{restoStaff.length} Members Assigned</p>
+                      </div>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={() => {
+                            setNewNode({ ...resto });
+                            setEditingNodeId(resto.id);
+                            setShowNodePopup(true);
+                          }}
+                          style={{ background: 'none', border: '1px solid var(--card-border)', color: 'var(--text-dim)', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Edit2 size={12} /> EDIT RESTO
+                        </button>
+                        <button
+                          onClick={() => deleteRestaurant(resto.id)}
+                          style={{ background: 'none', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Trash2 size={12} /> DELETE
+                        </button>
                       </div>
                     </div>
-                    <div className="inv-actions">
-                      <button className="inv-btn-edit"><Edit2 size={16} /></button>
-                      <button className="inv-btn-delete"><Trash2 size={16} /></button>
+                    <div className="inventory-grid">
+                      {restoStaff.length > 0 ? restoStaff.map(staff => (
+                        <div key={staff.id} className="inventory-card glass-panel shadow-premium">
+                          <div className="inv-icon-box shadow-lg">
+                            <Users size={28} />
+                          </div>
+                          <div className="inv-details">
+                            <div className="staff-card-header mb-2">
+                              <span className={`role-badge ${staff.role} shadow-sm`}>{staff.role.replace('_', ' ')}</span>
+                            </div>
+                            <div className="inv-main">
+                              <strong className="text-lg">{staff.name}</strong>
+                              <span className="text-sm text-muted block mt-1">{staff.email}</span>
+                            </div>
+                          </div>
+                          <div className="inv-actions">
+                            <button className="inv-btn-edit" onClick={() => {
+                              setNewStaff({ ...staff });
+                              setEditingStaffId(staff.id);
+                              setShowStaffPopup(true);
+                            }}><Edit2 size={16} /></button>
+                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)}><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                      )) : (
+                        <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed var(--card-border)', color: 'var(--text-muted)', fontSize: '14px' }}>
+                          No members found in this restaurant.
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+
+              {/* Staff without restaurant (Global Admins) */}
+              {(() => {
+                const globalStaff = staffList.filter(s => !s.restaurant_id || !restaurantsList.find(r => r.id === s.restaurant_id));
+                if (globalStaff.length === 0) return null;
+                return (
+                  <div style={{ marginBottom: '44px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', paddingBottom: '12px', borderBottom: '1px solid var(--card-border)' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(124, 58, 237, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
+                        <Sparkles size={20} />
+                      </div>
+                      <div>
+                        <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>Global Administrators</h2>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Unassigned or Master Accounts</p>
+                      </div>
+                    </div>
+                    <div className="inventory-grid">
+                      {globalStaff.map(staff => (
+                        <div key={staff.id} className="inventory-card glass-panel shadow-premium">
+                          <div className="inv-icon-box shadow-lg">
+                            <Users size={28} />
+                          </div>
+                          <div className="inv-details">
+                            <div className="staff-card-header mb-2">
+                              <span className={`role-badge ${staff.role} shadow-sm`}>{staff.role.replace('_', ' ')}</span>
+                            </div>
+                            <div className="inv-main">
+                              <strong className="text-lg">{staff.name}</strong>
+                              <span className="text-sm text-muted block mt-1">{staff.email}</span>
+                            </div>
+                          </div>
+                          <div className="inv-actions">
+                            <button className="inv-btn-edit" onClick={() => {
+                              setNewStaff({ ...staff });
+                              setEditingStaffId(staff.id);
+                              setShowStaffPopup(true);
+                            }}><Edit2 size={16} /></button>
+                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)}><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1044,40 +1420,92 @@ const AdminPanel = () => {
             <div className="view-container animate-slide-up">
               <div className="view-header-row">
                 <div className="header-left">
-                  <h1 className="view-title">Node Network</h1>
-                  <p className="text-muted">Overview of all active neural nodes in the cluster.</p>
+                  <h1 className="view-title">Restaurant Network</h1>
+                  <p className="text-muted">Overview of all active restaurants in the cluster.</p>
                 </div>
                 <button className="btn-primary" onClick={() => setShowNodePopup(true)}>
                   <Plus size={20} />
-                  <span>Deploy New Node</span>
+                  <span>Add New Restaurant</span>
                 </button>
               </div>
               <div className="inventory-grid">
-                {restaurantsList.map(res => (
-                  <div key={res.id} className="inventory-card glass-panel fleet-branch-card shadow-premium clickable-card">
-                    <div className="fleet-card-main">
-                      <div className="inv-icon-box shadow-lg">
-                        <Store size={28} />
-                      </div>
-                      <div className="inv-details">
-                        <div className="inv-main">
-                          <strong className="text-lg">{res.name}</strong>
-                          <p className="text-sm text-muted mt-1 flex items-center gap-2">
-                            <TrendingUp size={14} className="text-green-500" />
-                            {res.location}
+                {restaurantsList.map(res => {
+                  const nodeStaff = staffList.filter(s => s.restaurant_id === res.id);
+                  return (
+                    <div key={res.id} className="inventory-card glass-panel fleet-branch-card shadow-premium" style={{ display: 'flex', flexDirection: 'column', gap: '0', padding: '0', overflow: 'hidden', border: '1px solid var(--card-border)' }}>
+                      {/* Card Content */}
+                      <div style={{ padding: '24px', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <div className="inv-icon-box shadow-lg" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white' }}>
+                            <Store size={24} />
+                          </div>
+                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                            <button className="inv-btn-edit" title="Edit Restaurant" onClick={() => {
+                              setNewNode({ ...res });
+                              setEditingNodeId(res.id);
+                              setShowNodePopup(true);
+                            }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s' }}><Edit2 size={14} /></button>
+                            <button className="inv-btn-delete" title="Delete Restaurant" onClick={() => deleteRestaurant(res.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }}><Trash2 size={14} /></button>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '20px' }}>
+                          <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{res.name}</h3>
+                          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <TrendingUp size={14} style={{ color: '#22c55e' }} />
+                            {res.city || 'Active Restaurant'} • {res.branch_code || 'ID: ' + res.id}
                           </p>
+                        </div>
+
+                        {/* Team Section */}
+                        <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--card-border)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Members ({nodeStaff.length})</span>
+                            <button onClick={() => {
+                              setNewStaff({ ...newStaff, restaurant_id: res.id });
+                              setShowStaffPopup(true);
+                            }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontWeight: '700', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Plus size={12} /> ADD MEMBER
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {nodeStaff.length > 0 ? nodeStaff.slice(0, 3).map(s => (
+                              <div key={s.id}
+                                onClick={() => {
+                                  setNewStaff({ ...s });
+                                  setEditingStaffId(s.id);
+                                  setShowStaffPopup(true);
+                                }}
+                                className="staff-tag-hover"
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '6px',
+                                  background: 'rgba(255,255,255,0.03)', padding: '4px 10px',
+                                  borderRadius: '20px', border: '1px solid var(--card-border)',
+                                  cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                              >
+                                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'var(--accent-primary)', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'white' }}>{s.name[0]}</div>
+                                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-dim)' }}>{s.name.split(' ')[0]}</span>
+                                <Edit2 size={10} style={{ color: 'var(--text-muted)', marginLeft: '2px' }} />
+                              </div>
+                            )) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No staff assigned</span>
+                            )}
+                            {nodeStaff.length > 3 && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>+{nodeStaff.length - 3} more</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="fleet-card-footer" style={{ background: 'rgba(255,255,255,0.02)', padding: '16px 24px', borderTop: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="branch-id-tag" style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)' }}>RESTO ID: {res.branch_code || res.id}</span>
+                        <div className="staff-count-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#22c55e', fontWeight: '800', textTransform: 'uppercase' }}>
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                          <span>Active Live Sync</span>
                         </div>
                       </div>
                     </div>
-                    <div className="fleet-card-footer">
-                      <span className="branch-id-tag">NODE ID: {res.id.toString().padStart(3, '0')}</span>
-                      <div className="staff-count-badge">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                        <span>Active Sync</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1086,161 +1514,461 @@ const AdminPanel = () => {
             <PromptManager />
           )}
 
-          {activeTab === 'customers' && (
+          {activeTab === 'inventory' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-                <div className="view-header-row mb-8">
-                    <div className="header-left">
-                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Customer Directory</h1>
-                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Database of neural network customer profiles and behavior.</p>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title">Smart Inventory Hub</h1>
+                  <p className="text-muted">Real-time resource tracking and replenishment forecasting.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <button className="btn-primary" style={{ padding: '12px 24px', borderRadius: '14px' }}>
+                    <Plus size={18} /> Add Stock
+                  </button>
+                </div>
+              </div>
+
+              {/* Stock Forecast Section */}
+              <div className="glass-panel mb-8" style={{ padding: '24px', borderRadius: '24px', border: '1.5px solid var(--accent-primary)', background: 'rgba(124, 58, 237, 0.05)' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Bot size={20} className="text-accent" /> AI Stock Forecast
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                  {[
+                    { item: 'Burger Buns', status: 'CRITICAL', days: '2 Days Left', color: 'var(--error)' },
+                    { item: 'Chicken Breast', status: 'STABLE', days: '8 Days Left', color: 'var(--success)' },
+                    { item: 'Coffee Beans', status: 'WARNING', days: '4 Days Left', color: 'var(--warning)' }
+                  ].map((f, i) => (
+                    <div key={i} style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>{f.item}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: f.color }}>{f.status}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{f.days}</span>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'marketing' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-10">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Marketing Hub</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Automated engagement and loyalty orchestration.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '32px' }}>
+                <div className="glass-panel" style={{ padding: '32px', borderRadius: '28px' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px' }}>Launch Campaign</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>SELECT AUDIENCE</label>
+                      <select style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '8px' }}>
+                        <option>Top 10% High Spenders</option>
+                        <option>Inactive (Last 30 Days)</option>
+                        <option>All Neural Profiles</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>COUPON CODE</label>
+                      <select style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '8px' }}>
+                        {coupons.map(c => <option key={c.id}>{c.code} - {c.discount_value}% Off</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>MESSAGE PRESET</label>
+                      <textarea
+                        rows="4"
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '8px' }}
+                        defaultValue="Hi {name}, we miss you! Here is a special 20% discount for your next visit. Use code {code}."
+                      />
+                    </div>
+                    <button className="btn-primary" style={{ padding: '16px', borderRadius: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                      <Send size={18} /> Blast Campaign via WhatsApp
+                    </button>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Note: Real-time API integration required for actual delivery.</p>
+                  </div>
                 </div>
 
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
-                                <th style={{ padding: '20px' }}>NAME</th>
-                                <th style={{ padding: '20px' }}>PHONE</th>
-                                <th style={{ padding: '20px' }}>LAST ORDER</th>
-                                <th style={{ padding: '20px' }}>ACTIONS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {customers.map((c, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '12px' }}>
-                                                {c.name?.charAt(0)}
-                                            </div>
-                                            <span style={{ fontWeight: '700' }}>{c.name}</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '20px', color: 'var(--text-dim)' }}>{c.phone}</td>
-                                    <td style={{ padding: '20px', fontSize: '13px' }}>{c.last_order_date ? new Date(c.last_order_date).toLocaleDateString() : 'N/A'}</td>
-                                    <td style={{ padding: '20px' }}>
-                                        <button className="inv-btn-edit" style={{ padding: '6px 12px', fontSize: '12px' }}>View Profile</button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {customers.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        <Users size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
-                                        <p>No neural profiles found in this node.</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="glass-panel" style={{ padding: '32px', borderRadius: '28px' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px' }}>Top Target Leads</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {customers.slice(0, 5).map((c, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>{c.name.charAt(0)}</div>
+                          <div>
+                            <div style={{ fontWeight: '700' }}>{c.name}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Spent: ₹{c.total_spend}</div>
+                          </div>
+                        </div>
+                        <div className="status-pill active" style={{ fontSize: '10px' }}>HIGH VALUE</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'customers' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Customer Directory</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Database of neural network customer profiles and behavior.</p>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
+                      <th style={{ padding: '20px' }}>NAME</th>
+                      <th style={{ padding: '20px' }}>PHONE</th>
+                      <th style={{ padding: '20px' }}>ORDERS</th>
+                      <th style={{ padding: '20px' }}>TOTAL SPEND</th>
+                      <th style={{ padding: '20px' }}>LAST ORDER</th>
+                      <th style={{ padding: '20px' }}>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.map((c, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-main)', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '12px' }}>
+                              {c.name?.charAt(0) || 'U'}
+                            </div>
+                            <span style={{ fontWeight: '700' }}>{c.name || 'Anonymous'}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px', color: 'var(--text-dim)' }}>{c.phone}</td>
+                        <td style={{ padding: '20px' }}>
+                          <span style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa', padding: '4px 10px', borderRadius: '8px', fontWeight: '800', fontSize: '12px' }}>{c.total_orders || 1}</span>
+                        </td>
+                        <td style={{ padding: '20px', fontWeight: '800', color: 'var(--success)' }}>₹{Number(c.total_spend || 0).toLocaleString()}</td>
+                        <td style={{ padding: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>{c.last_order_date ? new Date(c.last_order_date).toLocaleDateString() : 'Recent'}</td>
+                        <td style={{ padding: '20px' }}>
+                          <button
+                            className="inv-btn-edit"
+                            onClick={() => alert(`Customer Insights for ${c.name || 'Anonymous'}\nPhone: ${c.phone}\nTotal Orders: ${c.total_orders || 1}\nTotal Spend: ₹${c.total_spend || 0}`)}
+                            style={{
+                              padding: '8px 16px',
+                              fontSize: '11px',
+                              borderRadius: '12px',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontWeight: '700',
+                              letterSpacing: '0.5px',
+                              background: 'rgba(124, 58, 237, 0.1)',
+                              color: 'var(--accent-primary)',
+                              border: '1px solid rgba(124, 58, 237, 0.2)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s',
+                              width: 'auto',
+                              height: 'auto'
+                            }}
+                          >
+                            <BarChart2 size={14} /> View Insights
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {customers.length === 0 && (
+                      <tr>
+                        <td colSpan="4" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <Users size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
+                          <p>No neural profiles found in this node.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'kitchen' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Kitchen Display System</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Live order orchestration for culinary excellence.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div className="status-pill active" style={{ padding: '8px 16px', fontSize: '12px' }}>
+                    KITCHEN LIVE: {kitchenOrders.length} ACTIVE
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+                {kitchenOrders.map((order, idx) => (
+                  <div key={idx} className="glass-panel animate-scale-in" style={{
+                    padding: '24px',
+                    borderRadius: '28px',
+                    border: '2px solid var(--card-border)',
+                    background: 'var(--card-bg)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                    boxShadow: '0 15px 40px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          Table {order.tableNumber}
+                        </div>
+                        <h2 style={{ fontSize: '24px', fontWeight: '900', marginTop: '4px' }}>Order #{order.id}</h2>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning)', fontWeight: '800', fontSize: '18px' }}>
+                          <Clock size={20} />
+                          {Math.floor((Date.now() - (order.timestamp || Date.now())) / 60000)}m ago
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                      {(order.items || []).map((item, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ width: '32px', height: '32px', background: 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'var(--accent-primary)', fontSize: '14px' }}>
+                              {item.qty || item.quantity}x
+                            </div>
+                            <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      {order.status === 'accepted' ? (
+                        <button
+                          onClick={() => updateOrderStatus(order.id, 'preparing')}
+                          className="btn-primary"
+                          style={{ flex: 1, padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', fontWeight: '800' }}
+                        >
+                          START PREPARING
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateOrderStatus(order.id, 'out_for_delivery')}
+                          className="btn-primary"
+                          style={{ flex: 1, padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981, #059669)', fontWeight: '800' }}
+                        >
+                          MARK AS READY
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {kitchenOrders.length === 0 && (
+                  <div style={{ gridColumn: '1 / -1', padding: '100px', textAlign: 'center', opacity: 0.3 }}>
+                    <ChefHat size={80} style={{ margin: '0 auto 20px' }} />
+                    <h3 style={{ fontSize: '24px', fontWeight: '800' }}>Kitchen is Clean</h3>
+                    <p>No active culinary protocols at the moment.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {activeTab === 'coupons' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-                <div className="view-header-row mb-8">
-                    <div className="header-left">
-                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Neural Promotions</h1>
-                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Manage active discount protocols and customer incentives.</p>
-                    </div>
-                    <button className="btn-primary">
-                        <Plus size={20} />
-                        <span>Create Coupon</span>
-                    </button>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Neural Promotions</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Manage active discount protocols and customer incentives.</p>
                 </div>
+                <button className="btn-primary" onClick={() => setShowCouponPopup(true)}>
+                  <Plus size={20} />
+                  <span>Create Coupon</span>
+                </button>
+              </div>
 
-                <div className="inventory-grid">
-                    {coupons.map((c, i) => (
-                        <div key={i} className="inventory-card glass-panel shadow-premium">
-                            <div className="inv-icon-box" style={{ background: 'var(--accent-primary)' }}>
-                                <CreditCard size={28} />
-                            </div>
-                            <div className="inv-details">
-                                <strong className="text-lg">{c.code}</strong>
-                                <span className="text-sm text-muted block mt-1">{c.discount_percent}% Discount</span>
-                                <div className="mt-4">
-                                    <span className="branch-id-tag">EXPIRES: {new Date(c.expiry_date).toLocaleDateString()}</span>
-                                </div>
-                            </div>
+              <div className="inventory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                {coupons.map((c, i) => (
+                  <div key={i} className="glass-panel" style={{
+                    padding: '24px',
+                    borderRadius: '24px',
+                    position: 'relative',
+                    border: '1px solid var(--card-border)',
+                    background: 'var(--card-bg)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div className="inv-icon-box" style={{
+                        background: c.is_active ? 'rgba(124, 58, 237, 0.1)' : 'rgba(100, 116, 139, 0.1)',
+                        color: c.is_active ? 'var(--accent-primary)' : 'var(--text-muted)',
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '16px'
+                      }}>
+                        <CreditCard size={28} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleEditCoupon(c)}
+                          className="inv-btn-edit"
+                          style={{ width: '32px', height: '32px', borderRadius: '8px' }}
+                          title="Edit Coupon"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => deleteCoupon(c.id)}
+                          className="inv-btn-delete"
+                          style={{ width: '32px', height: '32px', borderRadius: '8px' }}
+                          title="Delete Coupon"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '20px', fontWeight: '900', letterSpacing: '1px' }}>{c.code}</strong>
+                        <div
+                          onClick={(e) => { e.stopPropagation(); toggleCouponStatus(c); }}
+                          className={`status-pill ${c.is_active ? 'active' : 'inactive'}`}
+                          style={{
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            border: `1.5px solid ${c.is_active ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: c.is_active ? '0 4px 12px rgba(34, 197, 94, 0.2)' : 'none'
+                          }}
+                        >
+                          <div style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: c.is_active ? '#22c55e' : '#ef4444',
+                            boxShadow: c.is_active ? '0 0 8px #22c55e' : 'none'
+                          }} />
+                          {c.is_active ? 'ACTIVE' : 'DISABLED'}
                         </div>
-                    ))}
-                    {coupons.length === 0 && (
-                        <div style={{ gridColumn: '1/-1', padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            <CreditCard size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
-                            <p>No active neural coupons found.</p>
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '600' }}>
+                        {c.discount_type === 'percent' ? `${c.discount_value}%` : `₹${c.discount_value}`} Off
+                        {c.min_order_value > 0 && <span style={{ opacity: 0.6 }}> • Min order ₹{c.min_order_value}</span>}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      marginTop: 'auto',
+                      paddingTop: '16px',
+                      borderTop: '1px dashed var(--border-default)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
+                        Expires: {new Date(c.expiry_date).toLocaleDateString()}
+                      </div>
+                      {c.usage_limit && (
+                        <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>
+                          Limit: {c.usage_limit}
                         </div>
-                    )}
-                </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {coupons.length === 0 && (
+                  <div style={{ gridColumn: '1/-1', padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <CreditCard size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
+                    <p>No active neural coupons found.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {activeTab === 'robo_control' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-                <div className="view-header-row mb-8">
-                    <div className="header-left">
-                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>AI Robo Control</h1>
-                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Neural personality adjustment and operational parameters.</p>
-                    </div>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>AI Robo Control</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Neural personality adjustment and operational parameters.</p>
                 </div>
+              </div>
 
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '32px', maxWidth: '600px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '16px' }}>Neural Tone & Personality</label>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                {['friendly', 'professional', 'funny', 'robotic'].map(tone => (
-                                    <button 
-                                        key={tone}
-                                        onClick={() => setRoboSettings({...roboSettings, ai_tone: tone})}
-                                        style={{ flex: 1, padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)', background: roboSettings.ai_tone === tone ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: roboSettings.ai_tone === tone ? 'white' : 'var(--text-muted)', fontWeight: '700', textTransform: 'capitalize', cursor: 'pointer', transition: 'all 0.3s' }}
-                                    >
-                                        {tone}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-                            <div>
-                                <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Voice Synthesis</strong>
-                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Enable neural voice communication.</span>
-                            </div>
-                            <div 
-                                onClick={() => setRoboSettings({...roboSettings, voice_enabled: !roboSettings.voice_enabled})}
-                                style={{ width: '56px', height: '30px', background: roboSettings.voice_enabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
-                            >
-                                <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.voice_enabled ? '30px' : '4px', transition: '0.3s' }} />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-                            <div>
-                                <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Auto-Accept Orders</strong>
-                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Bypass manual accept for fast processing.</span>
-                            </div>
-                            <div 
-                                onClick={() => setRoboSettings({...roboSettings, auto_accept_orders: !roboSettings.auto_accept_orders})}
-                                style={{ width: '56px', height: '30px', background: roboSettings.auto_accept_orders ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
-                            >
-                                <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.auto_accept_orders ? '30px' : '4px', transition: '0.3s' }} />
-                            </div>
-                        </div>
-
-                        <button 
-                            className="btn-primary" 
-                            style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '16px' }}
-                            onClick={async () => {
-                                try {
-                                    await axios.post(`${API_URL}/api/mgmt/settings`, { ...roboSettings, restaurant_id: adminUser.restaurant_id });
-                                    alert("Neural parameters synchronized successfully!");
-                                } catch (e) { alert("Sync failed"); }
-                            }}
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '32px', maxWidth: '600px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '16px' }}>Neural Tone & Personality</label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      {['friendly', 'professional', 'funny', 'robotic'].map(tone => (
+                        <button
+                          key={tone}
+                          onClick={() => setRoboSettings({ ...roboSettings, ai_tone: tone })}
+                          style={{ flex: 1, padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)', background: roboSettings.ai_tone === tone ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: roboSettings.ai_tone === tone ? 'white' : 'var(--text-muted)', fontWeight: '700', textTransform: 'capitalize', cursor: 'pointer', transition: 'all 0.3s' }}
                         >
-                            Synchronize Parameters
+                          {tone}
                         </button>
+                      ))}
                     </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Voice Synthesis</strong>
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Enable neural voice communication.</span>
+                    </div>
+                    <div
+                      onClick={() => setRoboSettings({ ...roboSettings, voice_enabled: !roboSettings.voice_enabled })}
+                      style={{ width: '56px', height: '30px', background: roboSettings.voice_enabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
+                    >
+                      <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.voice_enabled ? '30px' : '4px', transition: '0.3s' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Auto-Accept Orders</strong>
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Bypass manual accept for fast processing.</span>
+                    </div>
+                    <div
+                      onClick={() => setRoboSettings({ ...roboSettings, auto_accept_orders: !roboSettings.auto_accept_orders })}
+                      style={{ width: '56px', height: '30px', background: roboSettings.auto_accept_orders ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
+                    >
+                      <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.auto_accept_orders ? '30px' : '4px', transition: '0.3s' }} />
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn-primary"
+                    style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '16px' }}
+                    onClick={async () => {
+                      try {
+                        await axios.post(`${API_URL}/api/mgmt/settings`, { ...roboSettings, restaurant_id: adminUser.restaurant_id });
+                        alert("Neural parameters synchronized successfully!");
+                      } catch (e) { alert("Sync failed"); }
+                    }}
+                  >
+                    Synchronize Parameters
+                  </button>
                 </div>
+              </div>
             </div>
           )}
 
@@ -1264,8 +1992,8 @@ const AdminPanel = () => {
                   <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Real-time monitoring of AI interactions and customer sentiment.</p>
                 </div>
                 <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '10px 18px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                    <span style={{ fontWeight: '700', fontSize: '14px' }}>Live Connection Active</span>
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                  <span style={{ fontWeight: '700', fontSize: '14px' }}>Live Connection Active</span>
                 </div>
               </div>
 
@@ -1286,27 +2014,27 @@ const AdminPanel = () => {
                       <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', fontSize: '14px', transition: 'background 0.2s' }}>
                         <td style={{ padding: '20px', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{formatDate(log.created_at)}</td>
                         <td style={{ padding: '20px' }}>
-                           <span style={{ background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '8px', fontWeight: '800' }}>Table {log.table_number}</span>
+                          <span style={{ background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '8px', fontWeight: '800' }}>Table {log.table_number}</span>
                         </td>
                         <td style={{ padding: '20px', color: 'var(--text-main)', maxWidth: '300px' }}>{log.customer_transcript}</td>
                         <td style={{ padding: '20px', color: 'var(--text-dim)', maxWidth: '400px' }}>{log.ai_reply}</td>
                         <td style={{ padding: '20px', textAlign: 'center' }}>
-                            <span title={log.customer_mood} style={{ fontSize: '20px' }}>
-                                {log.customer_mood === 'happy' ? '😊' : log.customer_mood === 'angry' ? '😠' : log.customer_mood === 'sad' ? '😔' : '😐'}
-                            </span>
+                          <span title={log.customer_mood} style={{ fontSize: '20px' }}>
+                            {log.customer_mood === 'happy' ? '😊' : log.customer_mood === 'angry' ? '😠' : log.customer_mood === 'sad' ? '😔' : '😐'}
+                          </span>
                         </td>
                         <td style={{ padding: '20px' }}>
-                           <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '11px', background: log.action_taken === 'CHAT' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)', color: log.action_taken === 'CHAT' ? '#60a5fa' : 'var(--success)', fontWeight: '700' }}>{log.action_taken}</span>
+                          <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '11px', background: log.action_taken === 'CHAT' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)', color: log.action_taken === 'CHAT' ? '#60a5fa' : 'var(--success)', fontWeight: '700' }}>{log.action_taken}</span>
                         </td>
                       </tr>
                     ))}
                     {chatLogs.length === 0 && (
-                        <tr>
-                            <td colSpan="5" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                <Bot size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
-                                <p>No neural logs detected yet in this branch.</p>
-                            </td>
-                        </tr>
+                      <tr>
+                        <td colSpan="5" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <Bot size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                          <p>No neural logs detected yet in this branch.</p>
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -1316,42 +2044,64 @@ const AdminPanel = () => {
 
           {activeTab === 'rider_fleet' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-                <div className="view-header-row mb-8">
-                    <div className="header-left">
-                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Rider Fleet</h1>
-                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Manage your delivery force and real-time logistics.</p>
-                    </div>
-                    <button className="btn-primary" onClick={() => setShowRiderPopup(true)}>
-                        <Plus size={20} />
-                        <span>Recruit Rider</span>
-                    </button>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Rider Fleet</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Manage your delivery force and real-time logistics.</p>
                 </div>
+                <button className="btn-primary" onClick={() => { setEditingRiderId(null); setNewRider({ name: '', phone: '', status: 'online' }); setShowRiderPopup(true); }}>
+                  <Plus size={20} />
+                  <span>Recruit Rider</span>
+                </button>
+              </div>
 
-                <div className="inventory-grid">
-                    {riders.map(rider => (
-                        <div key={rider.id} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            <div style={{ width: '60px', height: '60px', borderRadius: '18px', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                                <Bike size={32} className="text-accent" />
-                                <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '16px', height: '16px', borderRadius: '50%', background: rider.status === 'online' ? 'var(--success)' : rider.status === 'busy' ? 'var(--warning)' : 'var(--text-muted)', border: '3px solid var(--card-bg)' }} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{rider.name}</div>
-                                <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginTop: '2px' }}>{rider.phone}</div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', marginTop: '6px' }}>Status: {rider.status}</div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <button className="inv-btn-edit"><Edit2 size={16} /></button>
-                                <button className="inv-btn-delete"><Trash2 size={16} /></button>
-                            </div>
-                        </div>
-                    ))}
-                    {riders.length === 0 && (
-                        <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            <Bike size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
-                            <p>No riders in your fleet. Recruit your first rider to enable delivery.</p>
-                        </div>
-                    )}
-                </div>
+              <div className="inventory-grid">
+                {riders.map(rider => (
+                  <div key={rider.id} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '18px', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                      <Bike size={32} className="text-accent" />
+                      <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '16px', height: '16px', borderRadius: '50%', background: rider.status === 'online' ? 'var(--success)' : rider.status === 'busy' ? 'var(--warning)' : 'var(--text-muted)', border: '3px solid var(--card-bg)' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{rider.name}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginTop: '2px' }}>{rider.phone}</div>
+                      <div
+                        onClick={() => {
+                          const nextStatus = rider.status === 'online' ? 'offline' : 'online';
+                          axios.put(`${API_URL}/api/mgmt/riders/${rider.id}`, { ...rider, status: nextStatus }).then(() => fetchData());
+                        }}
+                        className={`status-pill clickable-status ${rider.status === 'online' ? 'active' : 'inactive'}`}
+                        style={{ cursor: 'pointer', fontSize: '10px', padding: '4px 10px', display: 'inline-flex', marginTop: '8px' }}
+                      >
+                        <div className="status-dot" />
+                        {rider.status.toUpperCase()}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        className="inv-btn-edit"
+                        onClick={() => handleEditRider(rider)}
+                        style={{ background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', border: 'none', padding: '10px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        className="inv-btn-delete"
+                        onClick={() => handleDeleteRider(rider.id)}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: 'none', padding: '10px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {riders.length === 0 && (
+                  <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <Bike size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                    <p>No riders in your fleet. Recruit your first rider to enable delivery.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1359,101 +2109,92 @@ const AdminPanel = () => {
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
               <div className="view-header-row mb-8">
                 <div className="header-left">
-                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Network Yield Analytics</h1>
-                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Detailed financial oversight and AI performance metrics.</p>
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Intelligence Center</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Neural insights and business performance analytics.</p>
                 </div>
-                <button className="btn-primary" style={{ padding: '12px 24px', borderRadius: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Printer size={18} /> Export PDF Report
+                <button className="btn-secondary" onClick={fetchData} style={{ borderRadius: '14px' }}>
+                  <Clock size={18} /> Refresh Intelligence
                 </button>
               </div>
 
-              {/* KPI Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-                {[
-                  { title: 'Gross Revenue', value: `₹${Number(advancedStats.totalRevenue).toLocaleString()}`, sub: 'Total sales across node', icon: DollarSign, color: 'purple' },
-                  { title: 'Avg Order Value', value: `₹${advancedStats.avgOrderValue}`, sub: 'Per transaction average', icon: TrendingUp, color: 'blue' },
-                  { title: 'AI Conversion', value: `${advancedStats.conversionRate}%`, sub: 'Chat to Order success', icon: Bot, color: 'green' },
-                  { title: 'Tax Liability', value: `₹${(Number(advancedStats.totalRevenue) * 0.18).toFixed(2)}`, sub: 'Calculated GST (18%)', icon: AlertCircle, color: 'orange' }
-                ].map((s, i) => (
-                  <div key={i} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{s.title}</span>
-                        <s.icon size={20} className={s.color === 'purple' ? 'text-accent' : s.color === 'blue' ? 'text-info' : s.color === 'green' ? 'text-success' : 'text-warning'} />
-                    </div>
-                    <h3 style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)' }}>{s.value}</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-dim)' }}>{s.sub}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Charts & Distribution */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
-                    <h4 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <CreditCard className="text-info" /> Financial Distribution
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {[
-                            { label: 'Cash Payments', value: orders.filter(o => o.payment_method === 'cash').reduce((acc, curr) => acc + parseFloat(curr.total || 0), 0), color: '#10b981' },
-                            { label: 'Online / UPI', value: orders.filter(o => o.payment_method === 'online' || o.payment_method === 'upi').reduce((acc, curr) => acc + parseFloat(curr.total || 0), 0), color: '#3b82f6' }
-                        ].map((p, i) => {
-                            const total = orders.reduce((acc, curr) => acc + parseFloat(curr.total || 0), 0);
-                            const percent = total > 0 ? (p.value / total) * 100 : 0;
-                            return (
-                                <div key={i}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: '700' }}>
-                                        <span>{p.label}</span>
-                                        <span>₹{p.value.toLocaleString()} ({Math.round(percent)}%)</span>
-                                    </div>
-                                    <div style={{ height: '8px', background: 'var(--bg-deep)', borderRadius: '4px', overflow: 'hidden' }}>
-                                        <div style={{ width: `${percent}%`, height: '100%', background: p.color }} />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+              {/* Analytics Dashboard Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '32px' }}>
+                {/* Revenue Trend Chart */}
+                <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', minHeight: '400px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <DollarSign size={20} className="text-success" /> Revenue Trend (Last 7 Days)
+                  </h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={analyticsData.revenueHistory}>
+                      <defs>
+                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} />
+                      <YAxis stroke="var(--text-muted)" fontSize={12} />
+                      <Tooltip contentStyle={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '12px' }} />
+                      <Area type="monotone" dataKey="amount" stroke="var(--accent-primary)" fillOpacity={1} fill="url(#colorRev)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
 
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
-                    <h4 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px' }}>Top Performing Items</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {advancedStats.popularItems && advancedStats.popularItems.map((item, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'var(--accent-primary)' }}>{i+1}</div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.name}</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.order_count} units synchronized</div>
-                                </div>
-                                <div style={{ fontWeight: '800', color: 'var(--text-main)' }}>{Math.round((item.order_count / Math.max(1, orders.length)) * 100)}%</div>
-                            </div>
-                        ))}
-                    </div>
+                {/* Top Items Bar Chart */}
+                <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', minHeight: '400px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <UtensilsCrossed size={20} className="text-warning" /> Top Performers
+                  </h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={analyticsData.topItems} layout="vertical">
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" width={100} fontSize={12} stroke="var(--text-main)" />
+                      <Tooltip contentStyle={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '12px' }} />
+                      <Bar dataKey="qty" fill="var(--accent-primary)" radius={[0, 10, 10, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              </div>
 
-              {/* Voice Analytics */}
-              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
-                  <h4 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Bot className="text-accent" /> Neural Voice Intelligence Analytics
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                      {[
-                          { label: 'Total Voice Calls', value: advancedStats.voice?.totalCalls || 0, icon: Phone, color: '#3b82f6' },
-                          { label: 'Voice Conversion', value: `${advancedStats.voice?.conversion || 0}%`, icon: Sparkles, color: '#10b981' },
-                          { label: 'Avg Call Duration', value: `${advancedStats.voice?.avgDuration || 0}s`, icon: Clock, color: '#f59e0b' },
-                          { label: 'Success Sessions', value: Math.round((advancedStats.voice?.totalCalls || 0) * (advancedStats.voice?.conversion || 0) / 100), icon: CheckCircle, color: '#8b5cf6' }
-                      ].map((v, i) => (
-                          <div key={i} style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '18px', border: '1px solid var(--card-border)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                                  <v.icon size={16} style={{ color: v.color }} />
-                                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{v.label}</span>
-                              </div>
-                              <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{v.value}</div>
-                          </div>
+                {/* Hourly Heatmap */}
+                <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', gridColumn: 'span 2' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={20} className="text-info" /> Order Heatmap
+                  </h3>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={analyticsData.hourlyHeatmap}>
+                      <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} />
+                      <Tooltip contentStyle={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '12px' }} />
+                      <Bar dataKey="orders" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Staff Performance Table */}
+                <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', gridColumn: 'span 2' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Staff Performance Leaderboard</h3>
+                  <table className="inv-table">
+                    <thead>
+                      <tr>
+                        <th>STAFF</th>
+                        <th>TOTAL SALES</th>
+                        <th>ORDERS</th>
+                        <th style={{ textAlign: 'right' }}>EFFICIENCY</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsData.staffSales.map((s, i) => (
+                        <tr key={i}>
+                          <td style={{ fontWeight: '700' }}>{s.name}</td>
+                          <td style={{ color: 'var(--success)', fontWeight: '800' }}>₹{s.sales.toLocaleString()}</td>
+                          <td>{s.count}</td>
+                          <td style={{ textAlign: 'right' }}>{Math.min(100, Math.round((s.sales / 10000) * 100))}%</td>
+                        </tr>
                       ))}
-                  </div>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-
             </div>
           )}
 
@@ -1464,20 +2205,20 @@ const AdminPanel = () => {
                   <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Tables & QR Codes</h1>
                   <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Dine-in Customer ordering entry endpoints.</p>
                 </div>
-                <button 
+                <button
                   onClick={async () => {
-                     const nextId = restaurantTables.length + 1;
-                     const randomSecret = `T${nextId}-R4-DINE${Math.floor(1000 + Math.random() * 9000)}`;
-                     try {
-                        await axios.post(`${API_URL}/api/tables`, {
-                           table_number: nextId,
-                           secret_token: randomSecret,
-                           restaurant_id: adminUser.restaurant_id || 4
-                        });
-                        setRestaurantTables([...restaurantTables, { table: `Table ${nextId}`, token: randomSecret }]);
-                     } catch(err) { alert("Persistence failed"); }
+                    const nextId = restaurantTables.length + 1;
+                    const randomSecret = `T${nextId}-R4-DINE${Math.floor(1000 + Math.random() * 9000)}`;
+                    try {
+                      await axios.post(`${API_URL}/api/tables`, {
+                        table_number: nextId,
+                        secret_token: randomSecret,
+                        restaurant_id: adminUser.restaurant_id || 4
+                      });
+                      setRestaurantTables([...restaurantTables, { table: `Table ${nextId}`, token: randomSecret }]);
+                    } catch (err) { alert("Persistence failed"); }
                   }}
-                  className="btn-primary" 
+                  className="btn-primary"
                   style={{ padding: '12px 24px', borderRadius: '14px', fontWeight: '700', fontSize: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
                   <Plus size={18} /> Add New Table
@@ -1490,43 +2231,43 @@ const AdminPanel = () => {
                   return (
                     <div key={idx} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px', boxShadow: 'var(--shadow-md)', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' }}>
                       <div style={{ padding: '16px', background: 'white', borderRadius: '16px', width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                         <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(liveUrl)}`} 
-                            alt="Scannable QR Code" 
-                            style={{ width: '130px', height: '130px', objectFit: 'contain' }}
-                         />
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(liveUrl)}`}
+                          alt="Scannable QR Code"
+                          style={{ width: '130px', height: '130px', objectFit: 'contain' }}
+                        />
                       </div>
                       <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{t.table}</h3>
                       <div style={{ fontSize: '12px', background: 'var(--bg-deep)', padding: '8px 12px', borderRadius: '8px', color: 'var(--accent-primary)', fontWeight: '700', wordBreak: 'break-all' }}>{t.token}</div>
-                      
-                      <button 
-                         onClick={() => {
-                           navigator.clipboard.writeText(liveUrl);
-                           alert("Table URL copied to clipboard!");
-                         }} 
-                         className="btn-primary" 
-                         style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', width: '100%', border: 'none', cursor: 'pointer' }}
+
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(liveUrl);
+                          alert("Table URL copied to clipboard!");
+                        }}
+                        className="btn-primary"
+                        style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', width: '100%', border: 'none', cursor: 'pointer' }}
                       >
                         Copy Dine-In Link
                       </button>
 
-                      <button 
-                          onClick={() => {
-                            fetch(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(liveUrl)}`)
-                              .then(response => response.blob())
-                              .then(blob => {
-                                const blobUrl = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = blobUrl;
-                                a.download = `${t.table}_QR.png`;
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                                window.URL.revokeObjectURL(blobUrl);
-                              })
-                              .catch(() => alert("Download failed"));
-                          }} 
-                         style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', width: '100%', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', marginTop: '-8px' }}
+                      <button
+                        onClick={() => {
+                          fetch(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(liveUrl)}`)
+                            .then(response => response.blob())
+                            .then(blob => {
+                              const blobUrl = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = blobUrl;
+                              a.download = `${t.table}_QR.png`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(blobUrl);
+                            })
+                            .catch(() => alert("Download failed"));
+                        }}
+                        style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', width: '100%', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', marginTop: '-8px' }}
                       >
                         Download QR
                       </button>
@@ -1538,56 +2279,56 @@ const AdminPanel = () => {
           )}
           {activeTab === 'feedback' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-                <div className="view-header-row mb-8">
-                    <div className="header-left">
-                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Customer Sentiments</h1>
-                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Direct qualitative feedback from neural session endpoints.</p>
-                    </div>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Customer Sentiments</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Direct qualitative feedback from neural session endpoints.</p>
                 </div>
+              </div>
 
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
-                                <th style={{ padding: '20px' }}>TIMESTAMP</th>
-                                <th style={{ padding: '20px' }}>CUSTOMER</th>
-                                <th style={{ padding: '20px' }}>TABLE</th>
-                                <th style={{ padding: '20px' }}>RATING</th>
-                                <th style={{ padding: '20px' }}>COMMENT</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {feedbackList.map((f, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
-                                    <td style={{ padding: '20px', fontSize: '13px' }}>{new Date(f.created_at).toLocaleString()}</td>
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontWeight: '700', fontSize: '14px' }}>{f.customer_name || 'Anonymous'}</span>
-                                            <span style={{ fontSize: '12px', opacity: 0.6 }}>{f.customer_phone || 'N/A'}</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '20px' }}><span className="branch-id-tag">TABLE {f.table_number}</span></td>
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', gap: '2px' }}>
-                                            {[1, 2, 3, 4, 5].map(s => (
-                                                <Star key={s} size={14} fill={s <= f.rating ? '#f1c40f' : 'none'} color={s <= f.rating ? '#f1c40f' : 'var(--text-muted)'} />
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '20px', fontSize: '14px', maxWidth: '400px' }}>{f.comment || <span style={{ opacity: 0.3 }}>No verbal feedback provided.</span>}</td>
-                                </tr>
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
+                      <th style={{ padding: '20px' }}>TIMESTAMP</th>
+                      <th style={{ padding: '20px' }}>CUSTOMER</th>
+                      <th style={{ padding: '20px' }}>TABLE</th>
+                      <th style={{ padding: '20px' }}>RATING</th>
+                      <th style={{ padding: '20px' }}>COMMENT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feedbackList.map((f, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
+                        <td style={{ padding: '20px', fontSize: '13px' }}>{new Date(f.created_at).toLocaleString()}</td>
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: '700', fontSize: '14px' }}>{f.customer_name || 'Anonymous'}</span>
+                            <span style={{ fontSize: '12px', opacity: 0.6 }}>{f.customer_phone || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px' }}><span className="branch-id-tag">TABLE {f.table_number}</span></td>
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} size={14} fill={s <= f.rating ? '#f1c40f' : 'none'} color={s <= f.rating ? '#f1c40f' : 'var(--text-muted)'} />
                             ))}
-                            {feedbackList.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        <Star size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
-                                        <p>No customer sentiments recorded yet.</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px', fontSize: '14px', maxWidth: '400px' }}>{f.comment || <span style={{ opacity: 0.3 }}>No verbal feedback provided.</span>}</td>
+                      </tr>
+                    ))}
+                    {feedbackList.length === 0 && (
+                      <tr>
+                        <td colSpan="5" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <Star size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
+                          <p>No customer sentiments recorded yet.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -1613,7 +2354,6 @@ const AdminPanel = () => {
           )}
         </div>
       </main>
-
       {/* Menu Modal */}
       {showMenuPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)' }}>
@@ -1638,10 +2378,10 @@ const AdminPanel = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Item Name *</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="e.g. Premium Paneer Tikka"
-                    value={newDish.name} 
+                    value={newDish.name}
                     onChange={(e) => setNewDish({ ...newDish, name: e.target.value })}
                     style={{ width: '100%', height: '52px', padding: '16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '15px', transition: 'border 0.2s', outline: 'none' }}
                   />
@@ -1649,8 +2389,8 @@ const AdminPanel = () => {
 
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Category *</label>
-                  <select 
-                    value={newDish.category} 
+                  <select
+                    value={newDish.category}
                     onChange={(e) => setNewDish({ ...newDish, category: e.target.value })}
                     style={{ width: '100%', height: '52px', padding: '0 16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '15px', cursor: 'pointer', outline: 'none' }}
                   >
@@ -1662,20 +2402,20 @@ const AdminPanel = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
                     <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Price (₹) *</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       placeholder="0.00"
-                      value={newDish.price} 
+                      value={newDish.price}
                       onChange={(e) => setNewDish({ ...newDish, price: e.target.value })}
                       style={{ width: '100%', height: '52px', padding: '16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '16px', outline: 'none' }}
                     />
                   </div>
                   <div>
                     <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Offer Price (₹)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       placeholder="Promo value"
-                      value={newDish.offer_price || ''} 
+                      value={newDish.offer_price || ''}
                       onChange={(e) => setNewDish({ ...newDish, offer_price: e.target.value })}
                       style={{ width: '100%', height: '52px', padding: '16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--success)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '16px', outline: 'none' }}
                     />
@@ -1690,19 +2430,19 @@ const AdminPanel = () => {
                       { type: 'nonveg', color: 'rgba(239, 68, 68, 0.2)', text: '#ef4444' },
                       { type: 'egg', color: 'rgba(234, 179, 8, 0.2)', text: '#eab308' }
                     ].map(item => (
-                      <button 
+                      <button
                         key={item.type}
                         type="button"
                         onClick={() => setNewDish({ ...newDish, veg_type: item.type })}
-                        style={{ 
-                          flex: 1, 
-                          padding: '14px', 
-                          borderRadius: '14px', 
-                          background: newDish.veg_type === item.type ? item.color : 'var(--bg-deep)', 
-                          color: newDish.veg_type === item.type ? item.text : 'var(--text-main)', 
-                          border: newDish.veg_type === item.type ? `2px solid ${item.text}` : '1px solid var(--card-border)', 
-                          fontWeight: '800', 
-                          textTransform: 'uppercase', 
+                        style={{
+                          flex: 1,
+                          padding: '14px',
+                          borderRadius: '14px',
+                          background: newDish.veg_type === item.type ? item.color : 'var(--bg-deep)',
+                          color: newDish.veg_type === item.type ? item.text : 'var(--text-main)',
+                          border: newDish.veg_type === item.type ? `2px solid ${item.text}` : '1px solid var(--card-border)',
+                          fontWeight: '800',
+                          textTransform: 'uppercase',
                           letterSpacing: '1px',
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -1721,17 +2461,17 @@ const AdminPanel = () => {
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Upload Food Image</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label 
-                      style={{ 
-                        height: '140px', 
-                        border: '2px dashed var(--card-border)', 
-                        borderRadius: '20px', 
-                        display: 'flex', 
+                    <label
+                      style={{
+                        height: '140px',
+                        border: '2px dashed var(--card-border)',
+                        borderRadius: '20px',
+                        display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        cursor: 'pointer', 
-                        gap: '12px', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        gap: '12px',
                         background: 'var(--bg-deep)',
                         transition: 'all 0.2s',
                         color: 'var(--text-muted)'
@@ -1775,9 +2515,9 @@ const AdminPanel = () => {
 
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Description</label>
-                  <textarea 
+                  <textarea
                     placeholder="Briefly describe dish ingredients and taste..."
-                    value={newDish.description} 
+                    value={newDish.description}
                     onChange={(e) => setNewDish({ ...newDish, description: e.target.value })}
                     style={{ width: '100%', minHeight: '94px', padding: '16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', resize: 'none', outline: 'none' }}
                   />
@@ -1789,43 +2529,43 @@ const AdminPanel = () => {
             <div style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Prep Time (mins)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   placeholder="e.g. 15"
-                  value={newDish.prep_time || ''} 
+                  value={newDish.prep_time || ''}
                   onChange={(e) => setNewDish({ ...newDish, prep_time: e.target.value })}
                   style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
                 />
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Spice Level (1-5)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   min="1" max="5"
                   placeholder="🌶️ 1 to 5"
-                  value={newDish.spice_level || ''} 
+                  value={newDish.spice_level || ''}
                   onChange={(e) => setNewDish({ ...newDish, spice_level: e.target.value })}
                   style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
                 />
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>SKU Code</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="SKU-XXX"
-                  value={newDish.sku || ''} 
+                  value={newDish.sku || ''}
                   onChange={(e) => setNewDish({ ...newDish, sku: e.target.value })}
                   style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
                 />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '28px' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={newDish.is_featured} 
-                    onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })} 
-                    style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--warning)' }} 
-                  />
-                  <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer' }}>⭐ Mark as Bestseller</label>
+                <input
+                  type="checkbox"
+                  checked={newDish.is_featured}
+                  onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })}
+                  style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--warning)' }}
+                />
+                <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer' }}>⭐ Mark as Bestseller</label>
               </div>
             </div>
 
@@ -1850,20 +2590,20 @@ const AdminPanel = () => {
 
             {/* Sticky/Fixed Footer Controls */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '40px', borderTop: '1px solid var(--card-border)', paddingTop: '24px' }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
-                onClick={() => setShowMenuPopup(false)} 
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowMenuPopup(false)}
                 style={{ padding: '14px 28px', borderRadius: '14px', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontWeight: '700', fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s' }}
                 onMouseOver={(e) => e.currentTarget.style.borderColor = 'white'}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--card-border)'}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
-                className="btn-primary" 
-                onClick={handleSaveDish} 
+                className="btn-primary"
+                onClick={handleSaveDish}
                 disabled={uploading}
                 style={{ padding: '14px 40px', borderRadius: '14px', fontWeight: '800', fontSize: '15px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', boxShadow: '0 10px 20px -5px rgba(124, 58, 237, 0.4)', transition: 'all 0.2s' }}
                 onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -1895,9 +2635,9 @@ const AdminPanel = () => {
                 <div key={catIdx} style={{ background: 'var(--bg-deep)', borderRadius: '20px', padding: '24px', border: '1px solid var(--card-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                     <span style={{ fontSize: '13px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>Category:</span>
-                    <input 
-                      type="text" 
-                      value={cat.name} 
+                    <input
+                      type="text"
+                      value={cat.name}
                       onChange={(e) => {
                         const updated = { ...extractedReviewData };
                         updated.categories[catIdx].name = e.target.value;
@@ -1912,9 +2652,9 @@ const AdminPanel = () => {
                       <div key={itemIdx} style={{ background: 'var(--card-bg)', borderRadius: '14px', padding: '16px', border: '1px solid var(--card-border)', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '16px', alignItems: 'center' }}>
                         <div>
                           <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>ITEM NAME</label>
-                          <input 
-                            type="text" 
-                            value={item.name} 
+                          <input
+                            type="text"
+                            value={item.name}
                             onChange={(e) => {
                               const updated = { ...extractedReviewData };
                               updated.categories[catIdx].items[itemIdx].name = e.target.value;
@@ -1926,9 +2666,9 @@ const AdminPanel = () => {
 
                         <div>
                           <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>HINDI NAME</label>
-                          <input 
-                            type="text" 
-                            value={item.name_hindi || ''} 
+                          <input
+                            type="text"
+                            value={item.name_hindi || ''}
                             onChange={(e) => {
                               const updated = { ...extractedReviewData };
                               updated.categories[catIdx].items[itemIdx].name_hindi = e.target.value;
@@ -1940,9 +2680,9 @@ const AdminPanel = () => {
 
                         <div>
                           <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>PRICE (₹)</label>
-                          <input 
-                            type="number" 
-                            value={item.base_price || item.price || ''} 
+                          <input
+                            type="number"
+                            value={item.base_price || item.price || ''}
                             onChange={(e) => {
                               const updated = { ...extractedReviewData };
                               updated.categories[catIdx].items[itemIdx].price = Number(e.target.value);
@@ -1954,8 +2694,8 @@ const AdminPanel = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '10px' }}>
-                          <select 
-                            value={item.veg_type || 'veg'} 
+                          <select
+                            value={item.veg_type || 'veg'}
                             onChange={(e) => {
                               const updated = { ...extractedReviewData };
                               updated.categories[catIdx].items[itemIdx].veg_type = e.target.value;
@@ -1967,7 +2707,7 @@ const AdminPanel = () => {
                             <option value="nonveg">Non-Veg</option>
                             <option value="egg">Egg</option>
                           </select>
-                          <button 
+                          <button
                             onClick={() => {
                               const updated = { ...extractedReviewData };
                               updated.categories[catIdx].items.splice(itemIdx, 1);
@@ -1985,8 +2725,8 @@ const AdminPanel = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '32px' }}>
               <button className="btn-secondary" onClick={() => setShowImportReview(false)} style={{ padding: '12px 24px', borderRadius: '14px' }}>Abort</button>
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 style={{ padding: '12px 32px', borderRadius: '14px', border: 'none', fontWeight: '700', cursor: 'pointer' }}
                 onClick={async () => {
                   try {
@@ -1999,7 +2739,7 @@ const AdminPanel = () => {
                         const catRes = await axios.post(`${API_URL}/api/menu/categories`, { name: catName, restaurant_id: adminUser.restaurant_id });
                         categories.push({ id: catRes.data.id, name: catName });
                       }
-                      
+
                       // 2. Publish items
                       for (const itm of cat.items) {
                         await axios.post(`${API_URL}/api/menu`, {
@@ -2067,50 +2807,59 @@ const AdminPanel = () => {
       {showStaffPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
           <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '500px', width: '90%', padding: '32px', borderRadius: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>Add New Staff Member</h3>
+            <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{editingStaffId ? 'Edit Neural Member' : 'Recruit New Member'}</h3>
             <p className="text-muted" style={{ fontSize: '14px', marginBottom: '24px' }}>Onboard elite operators to manage branch endpoints.</p>
-            
+
             <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Full Name *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. John Doe" 
-                  value={newStaff.name} 
-                  onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} 
-                  required 
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={newStaff.name}
+                  onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                  required
                   style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
                 />
               </div>
 
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Email Address *</label>
-                <input 
-                  type="email" 
-                  placeholder="e.g. john@swiggy.com" 
-                  value={newStaff.email} 
-                  onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })} 
-                  required 
+                <input
+                  type="email"
+                  placeholder="e.g. john@swiggy.com"
+                  value={newStaff.email}
+                  onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                  required
                   style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
                 />
               </div>
 
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Secure Password *</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={newStaff.password} 
-                  onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })} 
-                  required 
-                  style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showStaffPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={newStaff.password}
+                    onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                    required
+                    style={{ width: '100%', height: '48px', padding: '12px 48px 12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowStaffPassword(!showStaffPassword)}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Operational Role *</label>
-                <select 
-                  value={newStaff.role} 
+                <select
+                  value={newStaff.role}
                   onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
                   style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
                 >
@@ -2119,17 +2868,31 @@ const AdminPanel = () => {
                 </select>
               </div>
 
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Assign to Restaurant *</label>
+                <select
+                  value={newStaff.restaurant_id || ''}
+                  onChange={(e) => setNewStaff({ ...newStaff, restaurant_id: e.target.value || null })}
+                  style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="">No Specific Restaurant (Global)</option>
+                  {restaurantsList.map(r => (
+                    <option key={r.id} value={r.id}>{r.name} ({r.city})</option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => setShowStaffPopup(false)}
                   style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-primary"
                   style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)' }}
                 >
@@ -2144,50 +2907,258 @@ const AdminPanel = () => {
       {/* Node Modal */}
       {showNodePopup && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '500px', width: '90%', padding: '32px', borderRadius: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>Deploy New Node</h3>
-            <p className="text-muted" style={{ fontSize: '14px', marginBottom: '24px' }}>Initialize operational backend endpoints across regional networks.</p>
-            
-            <form onSubmit={handleAddNode} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Node Name *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Robo Branch 1" 
-                  value={newNode.name} 
-                  onChange={(e) => setNewNode({ ...newNode, name: e.target.value })} 
-                  required 
-                  style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                />
-              </div>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '800px', width: '95%', padding: '40px', borderRadius: '32px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
+            <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{editingNodeId ? 'Edit Restaurant' : 'Add New Restaurant'}</h3>
+            <p className="text-muted" style={{ fontSize: '14px', marginBottom: '24px' }}>Initialize operational backend for your restaurant network.</p>
 
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Physical Location *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Jaipur, Rajasthan" 
-                  value={newNode.location} 
-                  onChange={(e) => setNewNode({ ...newNode, location: e.target.value })} 
-                  required 
-                  style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                />
-              </div>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--card-border)', marginBottom: '24px', overflowX: 'auto', gap: '20px' }} className="scrollbar-hidden">
+              {[
+                { id: 'basic', label: 'Basic Info' },
+                { id: 'location', label: 'Location' },
+                { id: 'contact', label: 'Contact' },
+                { id: 'timings', label: 'Timings' },
+                { id: 'delivery', label: 'Delivery' },
+                { id: 'billing', label: 'Billing' },
+                { id: 'ai', label: 'AI Settings' },
+                { id: 'branding', label: 'Branding' }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setNodeActiveTab(t.id)}
+                  style={{
+                    padding: '10px 16px',
+                    border: 'none',
+                    borderBottom: nodeActiveTab === t.id ? '3px solid var(--accent-primary)' : '3px solid transparent',
+                    color: nodeActiveTab === t.id ? 'var(--accent-primary)' : 'var(--text-muted)',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    background: nodeActiveTab === t.id ? 'rgba(124, 58, 237, 0.05)' : 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    transition: 'all 0.2s ease',
+                    borderRadius: '8px 8px 0 0'
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-              <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+            <form onSubmit={handleAddNode} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {nodeActiveTab === 'basic' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BRANCH NAME *</label>
+                      <input type="text" value={newNode.name} onChange={(e) => setNewNode({ ...newNode, name: e.target.value })} required style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BRANCH CODE (UNIQUE) *</label>
+                      <input type="text" placeholder="e.g. CC-JP-01" value={newNode.branch_code} onChange={(e) => setNewNode({ ...newNode, branch_code: e.target.value })} required style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>RESTAURANT BRAND NAME</label>
+                    <input type="text" value={newNode.brand_name} onChange={(e) => setNewNode({ ...newNode, brand_name: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BRANCH TYPE</label>
+                    <select value={newNode.branch_type} onChange={(e) => setNewNode({ ...newNode, branch_type: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
+                      <option value="dine_in">Dine-in</option>
+                      <option value="delivery">Delivery Only</option>
+                      <option value="pickup">Pickup Only</option>
+                      <option value="cloud_kitchen">Cloud Kitchen</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>DESCRIPTION</label>
+                    <textarea value={newNode.description} onChange={(e) => setNewNode({ ...newNode, description: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px', minHeight: '80px' }} />
+                  </div>
+                </div>
+              )}
+
+              {nodeActiveTab === 'location' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>FULL ADDRESS *</label>
+                    <textarea value={newNode.address} onChange={(e) => setNewNode({ ...newNode, address: e.target.value })} required style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px', minHeight: '60px' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>CITY</label>
+                      <input type="text" value={newNode.city} onChange={(e) => setNewNode({ ...newNode, city: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>PINCODE</label>
+                      <input type="text" value={newNode.pincode} onChange={(e) => setNewNode({ ...newNode, pincode: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>LATITUDE</label>
+                      <input type="number" step="any" placeholder="26.9124" value={newNode.latitude} onChange={(e) => setNewNode({ ...newNode, latitude: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>LONGITUDE</label>
+                      <input type="number" step="any" placeholder="75.7873" value={newNode.longitude} onChange={(e) => setNewNode({ ...newNode, longitude: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {nodeActiveTab === 'contact' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>PHONE NUMBER *</label>
+                      <input type="tel" value={newNode.phone} onChange={(e) => setNewNode({ ...newNode, phone: e.target.value })} required style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>WHATSAPP NUMBER</label>
+                      <input type="tel" value={newNode.whatsapp_number} onChange={(e) => setNewNode({ ...newNode, whatsapp_number: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>MANAGER NAME</label>
+                    <input type="text" value={newNode.manager_name} onChange={(e) => setNewNode({ ...newNode, manager_name: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BRANCH EMAIL</label>
+                    <input type="email" value={newNode.email} onChange={(e) => setNewNode({ ...newNode, email: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                </div>
+              )}
+
+              {nodeActiveTab === 'timings' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                    <span style={{ fontWeight: '700' }}>24x7 Operational</span>
+                    <input type="checkbox" checked={newNode.is_24x7} onChange={(e) => setNewNode({ ...newNode, is_24x7: e.target.checked })} />
+                  </div>
+                  {!newNode.is_24x7 && Object.keys(newNode.working_hours).map(day => (
+                    <div key={day} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', alignItems: 'center' }}>
+                      <span style={{ textTransform: 'capitalize', fontWeight: '700', fontSize: '13px' }}>{day}</span>
+                      <input type="time" value={newNode.working_hours[day].open} onChange={(e) => {
+                        const wh = { ...newNode.working_hours };
+                        wh[day].open = e.target.value;
+                        setNewNode({ ...newNode, working_hours: wh });
+                      }} style={{ padding: '8px', borderRadius: '8px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white' }} />
+                      <input type="time" value={newNode.working_hours[day].close} onChange={(e) => {
+                        const wh = { ...newNode.working_hours };
+                        wh[day].close = e.target.value;
+                        setNewNode({ ...newNode, working_hours: wh });
+                      }} style={{ padding: '8px', borderRadius: '8px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {nodeActiveTab === 'delivery' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>DELIVERY RADIUS (KM)</label>
+                      <input type="number" value={newNode.delivery_radius} onChange={(e) => setNewNode({ ...newNode, delivery_radius: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>MIN ORDER (₹)</label>
+                      <input type="number" value={newNode.min_order_amount} onChange={(e) => setNewNode({ ...newNode, min_order_amount: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>DELIVERY CHARGES (₹)</label>
+                      <input type="number" value={newNode.delivery_charges} onChange={(e) => setNewNode({ ...newNode, delivery_charges: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>FREE DELIVERY ABOVE (₹)</label>
+                      <input type="number" value={newNode.free_delivery_above} onChange={(e) => setNewNode({ ...newNode, free_delivery_above: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {nodeActiveTab === 'billing' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>GST NUMBER</label>
+                    <input type="text" placeholder="22AAAAA0000A1Z5" value={newNode.gst_number} onChange={(e) => setNewNode({ ...newNode, gst_number: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>TAX PERCENT (%)</label>
+                      <input type="number" value={newNode.tax_percent} onChange={(e) => setNewNode({ ...newNode, tax_percent: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>INVOICE PREFIX</label>
+                      <input type="text" value={newNode.invoice_prefix} onChange={(e) => setNewNode({ ...newNode, invoice_prefix: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BILL FOOTER NOTE</label>
+                    <input type="text" value={newNode.bill_footer} onChange={(e) => setNewNode({ ...newNode, bill_footer: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                </div>
+              )}
+
+              {nodeActiveTab === 'ai' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>AI GREETING MESSAGE</label>
+                    <textarea value={newNode.ai_greeting} onChange={(e) => setNewNode({ ...newNode, ai_greeting: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px', minHeight: '80px' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>LANGUAGE</label>
+                      <select value={newNode.ai_language} onChange={(e) => setNewNode({ ...newNode, ai_language: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
+                        <option value="English">English Only</option>
+                        <option value="Hindi">Hindi Only</option>
+                        <option value="Hinglish">Hinglish (Mix)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>TONE</label>
+                      <select value={newNode.ai_tone} onChange={(e) => setNewNode({ ...newNode, ai_tone: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
+                        <option value="friendly">Friendly</option>
+                        <option value="professional">Professional</option>
+                        <option value="funny">Funny / Witty</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {nodeActiveTab === 'branding' && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BRANCH LOGO URL</label>
+                    <input type="text" value={newNode.logo_url} onChange={(e) => setNewNode({ ...newNode, logo_url: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>COVER IMAGE URL</label>
+                    <input type="text" value={newNode.cover_url} onChange={(e) => setNewNode({ ...newNode, cover_url: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '16px', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--card-border)' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => setShowNodePopup(false)}
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontWeight: '700', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '14px', borderRadius: '14px', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-primary"
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)' }}
+                  style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 24px -6px rgba(124, 58, 237, 0.4)' }}
                 >
-                  Deploy Node
+                  {nodeActiveTab === 'branding' ? 'Deploy Node 🚀' : 'Next Step →'}
                 </button>
               </div>
             </form>
@@ -2198,42 +3169,85 @@ const AdminPanel = () => {
       {showCouponPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
           <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '500px', width: '90%', padding: '32px', borderRadius: '24px' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Create New Offer</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '24px', fontWeight: '800' }}>{editingCouponId ? 'Refine Offer' : 'Forge New Offer'}</h3>
+              <div
+                onClick={() => setNewCoupon({ ...newCoupon, is_active: !newCoupon.is_active })}
+                className={`status-pill ${newCoupon.is_active ? 'active' : 'inactive'}`}
+                style={{ cursor: 'pointer' }}
+              >
+                {newCoupon.is_active ? 'ACTIVE' : 'INACTIVE'}
+              </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>COUPON CODE</label>
-                <input type="text" placeholder="e.g. WELCOME50" value={newCoupon.code} onChange={(e) => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                  <input
+                    type="text"
+                    placeholder="e.g. WELCOME50"
+                    value={newCoupon.code}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                    style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white' }}
+                  />
+                  <button
+                    onClick={generateCouponCode}
+                    className="btn-secondary"
+                    style={{ width: '48px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Auto-generate Code"
+                  >
+                    <Sparkles size={18} />
+                  </button>
+                </div>
               </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>TYPE</label>
-                  <select value={newCoupon.discount_type} onChange={(e) => setNewCoupon({...newCoupon, discount_type: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
-                    <option value="percent">% Discount</option>
-                    <option value="flat">Flat ₹ Discount</option>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>DISCOUNT TYPE</label>
+                  <select value={newCoupon.discount_type} onChange={(e) => setNewCoupon({ ...newCoupon, discount_type: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
+                    <option value="percent">% Percentage</option>
+                    <option value="flat">Flat Amount (₹)</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>VALUE</label>
-                  <input type="number" placeholder="Value" value={newCoupon.discount_value} onChange={(e) => setNewCoupon({...newCoupon, discount_value: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                  <input type="number" placeholder="0.00" value={newCoupon.discount_value} onChange={(e) => setNewCoupon({ ...newCoupon, discount_value: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
                 </div>
               </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>MIN ORDER VALUE (₹)</label>
-                <input type="number" value={newCoupon.min_order_value} onChange={(e) => setNewCoupon({...newCoupon, min_order_value: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>MIN ORDER (₹)</label>
+                  <input type="number" value={newCoupon.min_order_value} onChange={(e) => setNewCoupon({ ...newCoupon, min_order_value: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>USAGE LIMIT</label>
+                  <input type="number" placeholder="Unlimited" value={newCoupon.usage_limit} onChange={(e) => setNewCoupon({ ...newCoupon, usage_limit: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                </div>
               </div>
+
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>EXPIRY DATE</label>
-                <input type="date" value={newCoupon.expiry_date} onChange={(e) => setNewCoupon({...newCoupon, expiry_date: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                <input type="date" value={newCoupon.expiry_date} onChange={(e) => setNewCoupon({ ...newCoupon, expiry_date: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
               </div>
+
               <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                <button className="btn-secondary" onClick={() => setShowCouponPopup(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn-secondary" onClick={() => { setShowCouponPopup(false); setEditingCouponId(null); }} style={{ flex: 1 }}>Cancel</button>
                 <button className="btn-primary" onClick={async () => {
-                    try {
-                        await axios.post(`${API_URL}/api/mgmt/coupons`, { ...newCoupon, restaurant_id: adminUser.restaurant_id });
-                        setShowCouponPopup(false);
-                        fetchData();
-                    } catch(e) { alert("Failed to create coupon"); }
-                }} style={{ flex: 1 }}>Publish Offer</button>
+                  try {
+                    const payload = { ...newCoupon, restaurant_id: adminUser.restaurant_id };
+                    if (editingCouponId) {
+                      await axios.put(`${API_URL}/api/mgmt/coupons/${editingCouponId}`, payload);
+                    } else {
+                      await axios.post(`${API_URL}/api/mgmt/coupons`, payload);
+                    }
+                    setShowCouponPopup(false);
+                    setEditingCouponId(null);
+                    setNewCoupon({ code: '', discount_type: 'percent', discount_value: '', min_order_value: '', usage_limit: '', expiry_date: '', is_active: true });
+                    fetchData();
+                  } catch (e) { alert("Failed to save coupon"); }
+                }} style={{ flex: 1 }}>{editingCouponId ? 'Update Promotion' : 'Publish Offer'}</button>
               </div>
             </div>
           </div>
@@ -2244,25 +3258,190 @@ const AdminPanel = () => {
       {showRiderPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
           <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '400px', width: '90%', padding: '32px', borderRadius: '24px' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Recruit New Rider</h3>
+            <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>{editingRiderId ? 'Update Rider Bio' : 'Recruit New Rider'}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>RIDER NAME</label>
-                <input type="text" placeholder="Full Name" value={newRider.name} onChange={(e) => setNewRider({...newRider, name: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                <input type="text" placeholder="Full Name" value={newRider.name} onChange={(e) => setNewRider({ ...newRider, name: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
               </div>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
-                <input type="text" placeholder="+91 XXXXX XXXXX" value={newRider.phone} onChange={(e) => setNewRider({...newRider, phone: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                <input type="text" placeholder="+91 XXXXX XXXXX" value={newRider.phone} onChange={(e) => setNewRider({ ...newRider, phone: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
               </div>
+              {editingRiderId && (
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>AVAILABILITY STATUS</label>
+                  <select value={newRider.status} onChange={(e) => setNewRider({ ...newRider, status: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
+                    <option value="online">Online & Active</option>
+                    <option value="busy">Busy / Delivering</option>
+                    <option value="offline">Offline / Shift End</option>
+                  </select>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                 <button className="btn-secondary" onClick={() => setShowRiderPopup(false)} style={{ flex: 1 }}>Cancel</button>
-                <button className="btn-primary" onClick={async () => {
-                    try {
-                        await axios.post(`${API_URL}/api/mgmt/riders`, { ...newRider, restaurant_id: adminUser.restaurant_id });
-                        setShowRiderPopup(false);
-                        fetchData();
-                    } catch(e) { alert("Failed to recruit rider"); }
-                }} style={{ flex: 1 }}>Onboard Rider</button>
+                <button className="btn-primary" onClick={handleSaveRider} style={{ flex: 1 }}>{editingRiderId ? 'Synchronize Data' : 'Onboard Rider'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Manual Order Modal */}
+      {showManualOrderPopup && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '1200px', width: '98%', padding: '0', borderRadius: '28px', overflow: 'hidden', display: 'flex', flexDirection: 'row', height: '92vh', background: 'var(--bg-deep)' }}>
+            {/* Left Side: Menu Search */}
+            <div style={{ flex: 1.5, padding: '32px', borderRight: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'hidden' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>Select Items</h3>
+                  <div style={{ position: 'relative', flex: 0.8 }}>
+                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search menu items..."
+                      value={manualOrderSearch}
+                      onChange={(e) => setManualOrderSearch(e.target.value)}
+                      style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '14px', background: 'var(--bg-primary)', border: '1px solid var(--card-border)', color: 'white' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Category Pills */}
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px' }}>
+                  <button
+                    onClick={() => setManualOrderCategory('All')}
+                    className={`status-pill ${manualOrderCategory === 'All' ? 'active' : 'inactive'}`}
+                    style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    All Items
+                  </button>
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setManualOrderCategory(cat.name)}
+                      className={`status-pill ${manualOrderCategory === cat.name ? 'active' : 'inactive'}`}
+                      style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px', paddingRight: '8px' }}>
+                {menuItems.filter(item => {
+                  const matchesSearch = item.name.toLowerCase().includes(manualOrderSearch.toLowerCase());
+                  const matchesCat = manualOrderCategory === 'All' || item.category === manualOrderCategory;
+                  return matchesSearch && matchesCat;
+                }).map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => addToManualOrder(item)}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '20px',
+                      background: 'var(--card-bg)',
+                      border: '1.5px solid var(--card-border)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
+                  >
+                    <div style={{ width: '100%', height: '100px', borderRadius: '12px', overflow: 'hidden', background: '#222' }}>
+                      <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</strong>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)' }}>₹{item.price}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Side: Order Summary */}
+            <div style={{ flex: 1, padding: '32px', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>Order Summary</h3>
+                <button onClick={() => setShowManualOrderPopup(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <Trash2 size={24} />
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>TABLE</label>
+                  <select
+                    value={manualOrderData.tableNumber}
+                    onChange={(e) => setManualOrderData({ ...manualOrderData, tableNumber: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}
+                  >
+                    {restaurantTables.map((t, idx) => (
+                      <option key={idx} value={t.table.replace('Table ', '')}>
+                        {t.table}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>CUSTOMER NAME</label>
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={manualOrderData.customerName}
+                    onChange={(e) => setManualOrderData({ ...manualOrderData, customerName: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
+                  <input
+                    type="text"
+                    placeholder="+91..."
+                    value={manualOrderData.customerPhone}
+                    onChange={(e) => setManualOrderData({ ...manualOrderData, customerPhone: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {manualOrderData.items.map(item => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-deep)', padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '700', fontSize: '14px' }}>{item.name}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--accent-primary)' }}>₹{item.price}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-primary)', padding: '4px 12px', borderRadius: '10px' }}>
+                      <button onClick={() => updateManualQty(item.id, -1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                      <span style={{ fontWeight: '900', fontSize: '15px' }}>{item.qty}</span>
+                      <button onClick={() => updateManualQty(item.id, 1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                    </div>
+                  </div>
+                ))}
+                {manualOrderData.items.length === 0 && (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>
+                    <UtensilsCrossed size={48} />
+                    <p style={{ fontWeight: '700' }}>Your basket is empty</p>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: '2px solid var(--card-border)', paddingTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>Grand Total</span>
+                  <span style={{ fontSize: '24px', fontWeight: '900', color: 'var(--success)' }}>₹{manualOrderData.total}</span>
+                </div>
+                <button
+                  onClick={submitManualOrder}
+                  className="btn-primary"
+                  style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: '800', background: 'linear-gradient(135deg, var(--accent-primary), #4f46e5)' }}
+                >
+                  Confirm & Place Order
+                </button>
               </div>
             </div>
           </div>

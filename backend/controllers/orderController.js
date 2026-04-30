@@ -28,6 +28,19 @@ const createOrder = async (req, res) => {
             );
             const orderId = orderRes.rows[0].id;
 
+            // --- Update Customer Directory ---
+            if (customerPhone) {
+                await client.query(`
+                    INSERT INTO customers (restaurant_id, name, phone, total_orders, total_spend, last_order_date)
+                    VALUES ($1, $2, $3, 1, $4, CURRENT_TIMESTAMP)
+                    ON CONFLICT (phone) DO UPDATE SET
+                        total_orders = customers.total_orders + 1,
+                        total_spend = customers.total_spend + EXCLUDED.total_spend,
+                        last_order_date = CURRENT_TIMESTAMP,
+                        name = COALESCE(EXCLUDED.name, customers.name)
+                `, [finalRestId, customerName, customerPhone, total]);
+            }
+
             // Also insert into order_items for detailed reporting if needed
             for (const item of items) {
                 const quantity = Number(item.qty || item.quantity || 1);

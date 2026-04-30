@@ -13,15 +13,125 @@ const connectDB = async () => {
         await pool.query(`CREATE TABLE IF NOT EXISTS restaurants (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
-            location TEXT
+            branch_code TEXT UNIQUE,
+            brand_name TEXT,
+            description TEXT,
+            branch_type TEXT DEFAULT 'dine_in', -- dine_in, delivery, pickup, cloud_kitchen
+            
+            -- Location
+            address TEXT,
+            landmark TEXT,
+            city TEXT,
+            state TEXT,
+            country TEXT DEFAULT 'India',
+            pincode TEXT,
+            latitude DECIMAL(10, 8),
+            longitude DECIMAL(11, 8),
+            
+            -- Contact
+            phone TEXT,
+            whatsapp_number TEXT,
+            email TEXT,
+            manager_name TEXT,
+            emergency_contact TEXT,
+            
+            -- Operations
+            working_hours JSONB, -- { mon: { open: "10:00", close: "22:00" }, ... }
+            is_24x7 BOOLEAN DEFAULT false,
+            is_temp_closed BOOLEAN DEFAULT false,
+            is_active BOOLEAN DEFAULT true,
+            is_accepting_orders BOOLEAN DEFAULT true,
+            busy_mode BOOLEAN DEFAULT false,
+            
+            -- Delivery
+            delivery_available BOOLEAN DEFAULT true,
+            pickup_available BOOLEAN DEFAULT true,
+            dine_in_available BOOLEAN DEFAULT true,
+            delivery_radius DECIMAL(5,2) DEFAULT 5.0,
+            min_order_amount DECIMAL(10,2) DEFAULT 0.0,
+            delivery_charges DECIMAL(10,2) DEFAULT 0.0,
+            free_delivery_above DECIMAL(10,2),
+            avg_delivery_time INTEGER DEFAULT 30,
+            
+            -- Tax & Billing
+            gst_number TEXT,
+            tax_percent DECIMAL(5,2) DEFAULT 5.0,
+            currency TEXT DEFAULT '₹',
+            invoice_prefix TEXT,
+            bill_footer TEXT,
+            
+            -- AI Robo Settings
+            ai_enabled BOOLEAN DEFAULT true,
+            ai_greeting TEXT,
+            ai_language TEXT DEFAULT 'Hinglish',
+            ai_upsell_enabled BOOLEAN DEFAULT true,
+            ai_tone TEXT DEFAULT 'friendly',
+            
+            -- Branding
+            logo_url TEXT,
+            cover_url TEXT,
+            
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
+        
+        // Migration: Ensure all new columns exist for existing deployments
+        const restaurantColumns = [
+            ['branch_code', 'TEXT UNIQUE'],
+            ['brand_name', 'TEXT'],
+            ['description', 'TEXT'],
+            ['branch_type', "TEXT DEFAULT 'dine_in'"],
+            ['address', 'TEXT'],
+            ['landmark', 'TEXT'],
+            ['city', 'TEXT'],
+            ['state', 'TEXT'],
+            ['country', "TEXT DEFAULT 'India'"],
+            ['pincode', 'TEXT'],
+            ['latitude', 'DECIMAL(10, 8)'],
+            ['longitude', 'DECIMAL(11, 8)'],
+            ['phone', 'TEXT'],
+            ['whatsapp_number', 'TEXT'],
+            ['email', 'TEXT'],
+            ['manager_name', 'TEXT'],
+            ['emergency_contact', 'TEXT'],
+            ['working_hours', 'JSONB'],
+            ['is_24x7', 'BOOLEAN DEFAULT false'],
+            ['is_temp_closed', 'BOOLEAN DEFAULT false'],
+            ['is_active', 'BOOLEAN DEFAULT true'],
+            ['is_accepting_orders', 'BOOLEAN DEFAULT true'],
+            ['busy_mode', 'BOOLEAN DEFAULT false'],
+            ['delivery_available', 'BOOLEAN DEFAULT true'],
+            ['pickup_available', 'BOOLEAN DEFAULT true'],
+            ['dine_in_available', 'BOOLEAN DEFAULT true'],
+            ['delivery_radius', 'DECIMAL(5,2) DEFAULT 5.0'],
+            ['min_order_amount', 'DECIMAL(10,2) DEFAULT 0.0'],
+            ['delivery_charges', 'DECIMAL(10,2) DEFAULT 0.0'],
+            ['free_delivery_above', 'DECIMAL(10,2)'],
+            ['avg_delivery_time', 'INTEGER DEFAULT 30'],
+            ['gst_number', 'TEXT'],
+            ['tax_percent', 'DECIMAL(5,2) DEFAULT 5.0'],
+            ['currency', "TEXT DEFAULT '₹'"],
+            ['invoice_prefix', 'TEXT'],
+            ['bill_footer', 'TEXT'],
+            ['ai_enabled', 'BOOLEAN DEFAULT true'],
+            ['ai_greeting', 'TEXT'],
+            ['ai_language', "TEXT DEFAULT 'Hinglish'"],
+            ['ai_upsell_enabled', 'BOOLEAN DEFAULT true'],
+            ['ai_tone', "TEXT DEFAULT 'friendly'"],
+            ['logo_url', 'TEXT'],
+            ['cover_url', 'TEXT']
+        ];
+
+        for (const [col, type] of restaurantColumns) {
+            await pool.query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ${col} ${type}`);
+        }
 
         const restCheck = await pool.query("SELECT count(*) FROM restaurants");
         if (parseInt(restCheck.rows[0].count) === 0) {
-            await pool.query("INSERT INTO restaurants (id, name, location) VALUES (1, $1, $2)", ['Default Restaurant', 'Downtown']);
+            await pool.query(`INSERT INTO restaurants (id, name, location) VALUES (1, $1, $2)`, ['Default Restaurant', 'Downtown']);
         }
         // Ensure Restaurant 4 exists for Demo
-        await pool.query("INSERT INTO restaurants (id, name, location) VALUES (4, $1, $2) ON CONFLICT (id) DO NOTHING", ['Cyber Chef', 'Jaipur']);
+        await pool.query(`INSERT INTO restaurants (id, name, branch_code, brand_name) VALUES (4, $1, $2, $3) ON CONFLICT (id) DO NOTHING`, ['Cyber Chef', 'CC-JP-01', 'Cyber Chef']);
 
         // 5. Tables & Secure Tokens (FINAL RESET)
         await pool.query(`DROP TABLE IF EXISTS tables CASCADE;`);

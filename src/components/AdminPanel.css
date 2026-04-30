@@ -910,8 +910,8 @@
 
 .inv-btn-edit,
 .inv-btn-status {
-  width: 36px;
-  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -1826,8 +1826,8 @@
 .inv-btn-edit,
 .inv-btn-toggle,
 .inv-btn-delete {
-  width: 34px;
-  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   border-radius: 10px;
   display: flex;
   align-items: center;
