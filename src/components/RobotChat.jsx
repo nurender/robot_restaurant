@@ -292,9 +292,29 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     )
                     .filter((i) => (i.qty || 0) > 0)
             );
+            return;
+        }
+
+        if (name === 'update_item_quantity') {
+            const target = findMenuItemByName(args?.name);
+            if (!target) return;
+            const quantity = Math.max(0, Number(args?.quantity));
+            setCurrentCart((prev) => {
+                const existing = prev.find((i) => String(i.id) === String(target.id));
+                if (quantity === 0) {
+                    return prev.filter((i) => String(i.id) !== String(target.id));
+                }
+                if (existing) {
+                    return prev.map((i) =>
+                        String(i.id) === String(target.id) ? { ...i, qty: quantity } : i
+                    );
+                }
+                return [...prev, { ...target, qty: quantity }];
+            });
+            setShowMenuPopup(true);
         }
     }
-  });
+  }, currentCart);
 
   const toggleCategory = (cat) => {
     setExpandedCats(prev => {

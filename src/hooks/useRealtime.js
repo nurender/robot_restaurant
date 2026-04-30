@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { API_URL } from '../config';
 
-const useRealtime = (restaurantId, _tableNumber, handlers = {}) => {
+const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [analyzer, setAnalyzer] = useState(null);
@@ -121,7 +121,11 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}) => {
     try {
       setIsConnecting(true);
       // 1. Get Ephemeral Token
-      const sessionResponse = await fetch(`${API_URL}/api/session?restaurantId=${restaurantId}`, { method: 'POST' });
+      const sessionResponse = await fetch(`${API_URL}/api/session`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId, cart: currentCart })
+      });
       const data = await sessionResponse.json();
 
       if (!sessionResponse.ok) throw new Error(data.error || 'Failed to initialize session');
@@ -181,7 +185,7 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}) => {
       console.error('Realtime error:', err);
       stopSession();
     }
-  }, [isSessionActive, isConnecting, restaurantId, onRealtimeEvent, stopSession]);
+  }, [isSessionActive, isConnecting, restaurantId, onRealtimeEvent, stopSession, currentCart]);
 
   const sendEvent = useCallback((event) => {
     if (dataChannel.current && dataChannel.current.readyState === 'open') {

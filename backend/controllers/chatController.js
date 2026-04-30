@@ -120,7 +120,7 @@ const handleRealtimeSession = async (req, res) => {
             return res.status(500).json({ error: 'OPENAI_REALTIME_API_KEY is not set' });
         }
 
-        const { restaurantId } = req.query;
+        const { restaurantId, cart } = req.body;
         if (!restaurantId) return res.status(400).json({ error: "Missing restaurantId" });
 
         const menuResult = await pool.query('SELECT name, description, price FROM menu WHERE restaurant_id = $1', [restaurantId]);
@@ -133,9 +133,11 @@ const handleRealtimeSession = async (req, res) => {
             if (restRes.rows.length > 0) restaurantName = restRes.rows[0].name;
         } catch (e) { console.error("Rest Name Fetch Error:", e.message); }
 
-        let basePrompt = await getAiSystemPrompt();
-        basePrompt = basePrompt.replace('{{RESTAURANT_NAME}}', restaurantName);
-        basePrompt = basePrompt.replace('{{FLAT_MENU}}', flatMenu);
+        let cartStatus = "The cart is currently empty.";
+        if (cart && Array.isArray(cart) && cart.length > 0) {
+            cartStatus = "Current Cart Items:\n" + cart.map(i => `- ${i.name}: ${i.qty || i.quantity || 1}`).join('\n');
+        }
+        console.log("Current Cart for Session:", cartStatus);
 
         // Voice session specific instructions (Exactly as they were in server.js)
         const voicePrompt = `
@@ -147,6 +149,8 @@ YOUR PERSONALITY:
 
 THE MENU (GROUND TRUTH - ONLY ORDER FROM HERE):
 ${flatMenu}
+
+${cartStatus}
 
 🚨 STRICT ORDERING RULES:
 - YOU ARE FORBIDDEN FROM ADDING ANY ITEM NOT ON THE LIST ABOVE.
@@ -191,17 +195,18 @@ Treat phrases like "order le aao", "le aao", "confirm kar do", "place order" as 
 🛒 CART AWARENESS:
 
 - If user asks "kya kya add hua hai" / "mera order kya hai":
-  → Show current cart items (from context if available)
+  → Summarize the items they have ordered so far.
 
-- If user adds same item again:
-  → Increase quantity instead of duplicate entry
+- If user adds an item:
+  → Use the 'add_item_to_cart' tool. Specify the name and quantity.
 
-- If user says "remove chai" or "cancel item":
-  → You MUST find the ID of that item from the menu list.
-  → Include it in items_to_add with qty: -1 (to remove one) or specify the total quantity to subtract.
-  → Example: if user has 2 chai and says "remove 1 chai" → items_to_add: [{"id": "t1", "qty": -1}]
-  → Example: if user says "remove chai" → items_to_add: [{"id": "t1", "qty": -100}] (to ensure it goes to 0)
-  → reply should confirm removal.
+- If user says "remove [item]" or "cancel [item]":
+  → Use the 'remove_item_from_cart' tool.
+
+- If user specifies a total quantity (e.g., "sirf 1 chai chahiye", "total 2 coffee kar do"):
+  → Use the 'update_item_quantity' tool to set the absolute quantity.
+
+- Always confirm the action to the user in your reply.
 
 
 💵 BILLING SUPPORT:
@@ -368,6 +373,19 @@ User: "aur ek aur wahi"
                         parameters: {
                             type: 'object',
                             properties: {}
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'update_item_quantity',
+                        description: "Updates the absolute quantity of an item in the user's shopping cart.",
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' },
+                                quantity: { type: 'integer' }
+                            },
+                            required: ['name', 'quantity']
                         }
                     }
                 ],

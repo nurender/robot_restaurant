@@ -12,7 +12,7 @@ const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
  */
 async function getAiSystemPrompt() {
     const cacheKey = `global_ai_prompt`;
-    
+
     // 1. Check Memory Cache
     const cachedPrompt = cache.get(cacheKey);
     if (cachedPrompt) {
