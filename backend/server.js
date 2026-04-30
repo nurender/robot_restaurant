@@ -129,6 +129,8 @@ const orderRoutes = require('./routes/orderRoutes');
 const userRoutes = require('./routes/userRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const tableRoutes = require('./routes/tableRoutes');
+const monitoringRoutes = require('./routes/monitoringRoutes');
+const mgmtRoutes = require('./routes/mgmtRoutes');
 
 // Pass socket.io instance to controllers via app
 app.set('socketio', io);
@@ -141,6 +143,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api', tableRoutes);
 app.use('/api', userRoutes);       // /api/login, /api/users, /api/restaurants
+app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/mgmt', mgmtRoutes);
 
 // 🔄 Route Aliases for Compatibility
 app.use('/api/auth/login', (req, res) => {

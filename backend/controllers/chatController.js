@@ -17,30 +17,39 @@ function flattenMenu(categories) {
 }
 
 const handleChat = async (req, res) => {
-    const { transcript, menuContext, cartContext, textLanguage, chatHistory = [], restaurantId, isIOS } = req.body;
+    const { transcript, menuContext, cartContext, textLanguage, chatHistory = [], restaurantId, isIOS, phone } = req.body;
     let restaurantName = "Cyber Chef";
+    let userPrefContext = "";
 
+    // 1. Fetch Restaurant & User Details
     if (restaurantId) {
         try {
-            const restRes = await pool.query("SELECT name FROM restaurants WHERE id = $1", [restaurantId]);
+            const [restRes, prefRes] = await Promise.all([
+                pool.query("SELECT name FROM restaurants WHERE id = $1", [restaurantId]),
+                phone ? pool.query("SELECT preferences FROM user_preferences WHERE phone = $1", [phone]) : Promise.resolve({ rows: [] })
+            ]);
+            
             if (restRes.rows.length > 0) restaurantName = restRes.rows[0].name;
-            console.log(`🔍 AI for ${restaurantName} (ID: ${restaurantId})`);
-        } catch (e) { console.error("Rest Name Fetch Error:", e.message); }
+            if (prefRes.rows.length > 0) {
+                const prefs = prefRes.rows[0].preferences;
+                userPrefContext = `CUSTOMER PREFERENCES: ${JSON.stringify(prefs)}`;
+                console.log(`🧠 AI recalled preferences for ${phone}`);
+            }
+        } catch (e) { console.error("Data Fetch Error:", e.message); }
     }
 
     const provider = process.env.AI_PROVIDER || 'GEMINI';
     const flatMenu = flattenMenu(menuContext);
-    console.log(`🤖 AI Processing [${provider}]: "${transcript}"`);
-
-    // Dynamic Prompt from DB via Cache Service (Global)
+    
+    // 2. Build Intelligent Prompt
     let basePrompt = await getAiSystemPrompt();
-
-    // Inject dynamic variables
     basePrompt = basePrompt.replace('{{RESTAURANT_NAME}}', restaurantName);
     basePrompt = basePrompt.replace('{{FLAT_MENU}}', flatMenu);
 
     const contextPrompt = `
 ${basePrompt}
+
+${userPrefContext}
 
 CONTEXT:
 ${chatHistory.map(h => `${h.role}: ${h.text}`).join('\n')}
@@ -49,18 +58,19 @@ USER REQUEST:
 "${transcript}"
 `;
 
-    // 🚨 Ensure response follows strictly this schema
     const schemaInstructions = `
 You MUST return ONLY a raw JSON object with this exact structure:
 {
-    "reply": "Your conversational response in Hinglish",
+    "reply": "Your Hinglish response",
     "items_to_add": [
         { "id": "item_id_from_menu_list", "qty": number }
     ],
     "action": "PLACE_ORDER" | "EXPAND_CATEGORY" | null,
-    "category": "Category name if EXPAND_CATEGORY" | null
+    "mood": "happy" | "neutral" | "angry" | "sad",
+    "detected_preference": { "key": "value" } | null
 }
-Never include markdown formatting (\`\`\`json) or extra text.
+Mood Analysis: Adjust tone based on mood. If angry, be extra apologetic.
+Never include markdown formatting or extra text.
 `;
 
     try {
@@ -139,81 +149,60 @@ const handleRealtimeSession = async (req, res) => {
         }
         console.log("Current Cart for Session:", cartStatus);
 
-        // Voice session specific instructions (Exactly as they were in server.js)
+        // Voice session specific instructions
         const voicePrompt = `
 You are Robo, a highly intelligent, premium neural concierge at ${restaurantName}.
 
 YOUR PERSONALITY:
 - Warm, professional, human-like (no robot talk, no Sir, no excessive emojis).
 - STRONGLY PREFER HINGLISH (Natural mix of Hindi & English).
+- Your goal is to make the user smile and recover angry customers.
 
 THE MENU (GROUND TRUTH - ONLY ORDER FROM HERE):
 ${flatMenu}
 
 ${cartStatus}
 
-🚨 STRICT ORDERING RULES:
-- YOU ARE FORBIDDEN FROM ADDING ANY ITEM NOT ON THE LIST ABOVE.
-- Example: If a user asks for "Chai" but it is NOT in the list → You MUST say it's not available. DO NOT ADD IT.
-- INTERNAL VERIFICATION: Before responding, ask yourself: "Is this item exactly in the bulleted list?" If NO → items_to_add MUST be [].
+🚀 ADVANCED BUSINESS OBJECTIVES:
+- Detect hunger urgency (suggest quick items).
+- Detect group ordering (suggest combos/family packs).
+- Detect budget sensitivity (suggest value meals/budget items under ₹200).
+- Increase Average Order Value (upsell complementary items).
+- Recover angry customers with empathy and fast solutions.
 
-YOUR PERSONALITY:
-- Warm, professional neural concierge (no robot talk, no Sir, no excessive emojis).
-- STRONGLY PREFER HINGLISH.
-- If an item is missing, say: "Maafi chahta hoon, ye item hamare menu mein nahi hai. Aap [Suggestion from Menu] try karna chahenge?"
+🛒 CART OPERATIONS (USE TOOLS ONLY):
+- To ADD an item: Use 'add_item_to_cart'.
+- To REMOVE an item: Use 'remove_item_from_cart'.
+- To SET a total (e.g. "total 1 chai"): Use 'update_item_quantity'.
+- To CLEAR the whole cart: Use 'clear_cart'.
 
-🧾 KNOWLEDGE RULE:
+🎁 OFFERS & DISCOUNTS:
+- If user asks for offers/deals: Use 'show_offers'.
+- To apply a coupon: Use 'apply_coupon'.
 
-- You are allowed to explain general cooking process of items present in menu
-- Keep explanation short (2–4 lines max)
-- No complex chef-level recipe
-- Friendly Hinglish tone
+📈 RECOMMENDATIONS & LOYALTY:
+- To show famous/popular items: Use 'show_best_sellers'.
+- To repeat previous order: Use 'repeat_last_order'.
+- To track a previous order: Use 'track_order'.
+- To save preferences (e.g. "no onion", "less sugar"): Use 'save_user_preference'.
 
+🧠 SMART CART RULES:
+- If "budget < 200": Suggest budget-friendly menu.
+- If "healthy": Filter for healthy items.
+- If "urgent/jaldi": Suggest items with fast prep time.
 
-🧠 ORDER CONFIRMATION INTENT (IMPORTANT):
+🔎 SMART MATCHING:
+- Handle variations like "chai/tea", "coffee/cofee" by matching to the closest menu item.
+- If ambiguous, ask for clarification.
 
-
-Treat the following phrases as FINAL ORDER CONFIRMATION:
-
-- "order le aao"
-- "le aao"
-- "bhijwa do"
-- "confirm kar do"
-- "final kar do"
-- "order kar do"
-- "place order"
-- "checkout"
-
-
-Treat phrases like "order le aao", "le aao", "confirm kar do", "place order" as the intent to finalize the cart.
-👉 Use the confirm_order tool in these cases.
-👉 CRITICAL: You MUST tell the user to fill out their Name and Phone number in the 'Booking Details' form appearing on the screen to process checkout. Say exactly: "Kripya screen par diye gaye 'Booking Details' form mein apna Name aur Phone Number enter kijiye, taaki aapka order confirm ho sake!"
-
-👉 In ALL these cases:
-- action MUST be "PLACE_ORDER"
-
-🛒 CART AWARENESS:
-
-- If user asks "kya kya add hua hai" / "mera order kya hai":
-  → Summarize the items they have ordered so far.
-
-- If user adds an item:
-  → Use the 'add_item_to_cart' tool. Specify the name and quantity.
-
-- If user says "remove [item]" or "cancel [item]":
-  → Use the 'remove_item_from_cart' tool.
-
-- If user specifies a total quantity (e.g., "sirf 1 chai chahiye", "total 2 coffee kar do"):
-  → Use the 'update_item_quantity' tool to set the absolute quantity.
-
-- Always confirm the action to the user in your reply.
-
+🗣️ TONE & STYLE:
+- Keep replies short (1-2 lines).
+- Confirm every action.
+- Suggest 1 relevant item after adding (Upsell).
+- If order confirmed, say: "Kripya screen par diye gaye 'Booking Details' form mein apna Name aur Phone Number enter kijiye, taaki aapka order confirm ho sake!"
 
 💵 BILLING SUPPORT:
-
-- If user asks:
-  "total kitna hua", "bill batao", "kitna pay karna hai"
-
+- If user asks: "total kitna hua", "bill batao", "kitna pay karna hai"
 👉 Then:
 - Show short summary (item names + total)
 - DO NOT add new items
@@ -221,9 +210,7 @@ Treat phrases like "order le aao", "le aao", "confirm kar do", "place order" as 
 - action = null
 
 🍽️ SMART SUGGESTIONS:
-
-- After adding an item:
-  → Suggest 1 relevant item from menu
+- After adding an item: → Suggest 1 relevant item from menu
 
 Example:
 "Ek Elaichi Chai add kar di hai 🙂 Aap iske saath Samosa try karna chahenge?"
@@ -386,6 +373,59 @@ User: "aur ek aur wahi"
                                 quantity: { type: 'integer' }
                             },
                             required: ['name', 'quantity']
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'show_best_sellers',
+                        description: 'Displays the most popular and trending items from the menu.',
+                        parameters: { type: 'object', properties: {} }
+                    },
+                    {
+                        type: 'function',
+                        name: 'apply_coupon',
+                        description: 'Applies a discount coupon to the current order.',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                code: { type: 'string', description: 'The coupon code to apply' }
+                            }
+                        }
+                    },
+                    {
+                        type: 'function',
+                        name: 'repeat_last_order',
+                        description: 'Automatically populates the cart with the items from the user\'s last successful order.',
+                        parameters: { type: 'object', properties: {} }
+                    },
+                    {
+                        type: 'function',
+                        name: 'track_order',
+                        description: 'Shows the real-time status and ETA of the active order.',
+                        parameters: { type: 'object', properties: {} }
+                    },
+                    {
+                        type: 'function',
+                        name: 'clear_cart',
+                        description: 'Removes all items from the current shopping cart.',
+                        parameters: { type: 'object', properties: {} }
+                    },
+                    {
+                        type: 'function',
+                        name: 'show_offers',
+                        description: 'Displays all active promotional offers and deals.',
+                        parameters: { type: 'object', properties: {} }
+                    },
+                    {
+                        type: 'function',
+                        name: 'save_user_preference',
+                        description: 'Saves user-specific preferences like food choices, spice levels, or allergies.',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                preference: { type: 'string', description: 'The preference to save (e.g., "no onion", "extra spicy")' }
+                            },
+                            required: ['preference']
                         }
                     }
                 ],

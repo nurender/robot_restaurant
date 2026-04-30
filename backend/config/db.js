@@ -61,6 +61,8 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'cash'`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS order_items (
             id SERIAL PRIMARY KEY,
@@ -306,6 +308,77 @@ const connectDB = async () => {
         `);
 
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS coupons (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                code TEXT UNIQUE NOT NULL,
+                discount_type TEXT NOT NULL, -- 'flat' or 'percent'
+                discount_value DECIMAL(10,2) NOT NULL,
+                min_order_value DECIMAL(10,2) DEFAULT 0,
+                usage_limit INTEGER,
+                expiry_date DATE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS customers (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                name TEXT,
+                phone TEXT UNIQUE NOT NULL,
+                email TEXT,
+                total_orders INTEGER DEFAULT 0,
+                total_spend DECIMAL(10,2) DEFAULT 0,
+                last_order_date TIMESTAMP,
+                is_blocked BOOLEAN DEFAULT false,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS chat_logs (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                table_number TEXT,
+                customer_transcript TEXT,
+                ai_reply TEXT,
+                action_taken TEXT,
+                mode TEXT DEFAULT 'voice', -- 'voice' or 'text'
+                duration_seconds INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 100`);
+        await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER DEFAULT 10`);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                customer_phone TEXT,
+                message TEXT,
+                type TEXT, -- 'order_placed', 'order_dispatched', 'promotion'
+                status TEXT DEFAULT 'sent',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                id SERIAL PRIMARY KEY,
+                phone TEXT UNIQUE NOT NULL,
+                preferences JSONB DEFAULT '{}', -- { "spicy": true, "no_onion": true, "favorite": "Cold Coffee" }
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`ALTER TABLE chat_logs ADD COLUMN IF NOT EXISTS customer_mood TEXT`);
+
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS menu_import_history (
                 id SERIAL PRIMARY KEY,
                 restaurant_id INTEGER DEFAULT 4,
@@ -321,6 +394,52 @@ const connectDB = async () => {
     } catch (err) {
         console.error("Error connecting to PostgreSQL database: " + err.message);
     }
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS riders (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                phone TEXT UNIQUE NOT NULL,
+                status TEXT DEFAULT 'offline', -- 'online', 'offline', 'busy'
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_id INTEGER REFERENCES riders(id) ON DELETE SET NULL`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS customer_feedback (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                table_number TEXT,
+                customer_phone TEXT,
+                customer_name TEXT,
+                rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
 };
 
 module.exports = { pool, connectDB };
+
+// Finalizing Schema with Restaurant Settings
+const setupSettings = async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS restaurant_settings (
+                restaurant_id INTEGER PRIMARY KEY,
+                ai_tone TEXT DEFAULT 'friendly',
+                voice_enabled BOOLEAN DEFAULT true,
+                language_mode TEXT DEFAULT 'hinglish',
+                upsell_enabled BOOLEAN DEFAULT true,
+                company_logo TEXT,
+                theme_color TEXT DEFAULT '#7c3aed',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        await pool.query(`INSERT INTO restaurant_settings (restaurant_id) VALUES (4) ON CONFLICT DO NOTHING;`);
+    } catch (e) { console.error("Settings Table Error:", e); }
+};
+setupSettings();

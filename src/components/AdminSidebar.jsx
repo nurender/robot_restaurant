@@ -11,35 +11,43 @@ import {
     Package,
     BarChart2,
     Settings,
-    Store as StoreIcon
+    Store as StoreIcon,
+    Bike,
+    CreditCard,
+    Star
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout }) => {
     const menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'orders', label: 'Orders Hub', icon: ListTodo },
-        { id: 'menu', label: 'Menu Management', icon: UtensilsCrossed },
-        { id: 'ai_prompt', label: 'AI Intelligence', icon: Bot },
-        { id: 'inventory', label: 'Inventory', icon: Package },
-        { id: 'reports', label: 'Reports', icon: BarChart2 },
-        { id: 'qr_codes', label: 'Tables & QR Codes', icon: StoreIcon },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'manager'] },
+        { id: 'orders', label: 'Order Management', icon: ListTodo, roles: ['super_admin', 'manager', 'staff'] },
+        { id: 'monitor', label: 'Neural Live Feed', icon: Bot, roles: ['super_admin', 'manager', 'staff'] },
+        { id: 'robo_control', label: 'AI Robo Control', icon: Settings, roles: ['super_admin', 'manager'] },
+        { id: 'menu', label: 'Menu Management', icon: UtensilsCrossed, roles: ['super_admin', 'manager'] },
+        { id: 'coupons', label: 'Offers & Coupons', icon: StoreIcon, roles: ['super_admin', 'manager'] },
+        { id: 'customers', label: 'Customer Insights', icon: Users, roles: ['super_admin', 'manager'] },
+        { id: 'rider_fleet', label: 'Rider Fleet', icon: Bike, roles: ['super_admin', 'manager'] },
+        { id: 'inventory', label: 'Smart Inventory', icon: Package, roles: ['super_admin', 'manager'] },
+        { id: 'reports', label: 'Reports & Analytics', icon: BarChart2, roles: ['super_admin', 'manager'] },
+        { id: 'qr_codes', label: 'Tables & QR Codes', icon: StoreIcon, roles: ['super_admin', 'manager'] },
+        { id: 'feedback', label: 'Customer Feedback', icon: Star, roles: ['super_admin', 'manager'] },
+        { id: 'ai_prompt', label: 'Prompt Engineer', icon: Bot, roles: ['super_admin'] },
+        { id: 'settings', label: 'General Settings', icon: Settings, roles: ['super_admin', 'manager'] },
+        { id: 'restaurants', label: 'Our Branches', icon: StoreIcon, roles: ['super_admin'] },
+        { id: 'staff', label: 'Team Members', icon: Users, roles: ['super_admin'] },
     ];
 
-    if (adminUser.role === 'super_admin') {
-        menuItems.push({ id: 'restaurants', label: 'Our Branches', icon: StoreIcon });
-        menuItems.push({ id: 'staff', label: 'Team Members', icon: Users });
-    }
+    const filteredItems = menuItems.filter(item => item.roles.includes(adminUser.role));
 
     return (
-        <aside className="admin-sidebar shadow-premium">
+        <aside className="admin-sidebar shadow-premium" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div className="sidebar-brand">
                 <div className="brand-logo"><ChefHat size={28} color="white" /></div>
                 <h2>AI RESTO</h2>
             </div>
 
-            <nav className="sidebar-nav">
-                {menuItems.map((item) => (
+            <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }} className="scrollbar-hidden">
+                {filteredItems.map((item) => (
                     <button
                         key={item.id}
                         className={`nav-item ${activeTab === item.id ? 'active' : ''}`}

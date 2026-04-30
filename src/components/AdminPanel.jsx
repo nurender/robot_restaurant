@@ -28,7 +28,11 @@ import {
   ChevronDown,
   ChevronRight,
   Package,
-  BarChart2
+  BarChart2,
+  Bike,
+  CreditCard,
+  Phone,
+  Star
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import axios from 'axios';
@@ -65,6 +69,24 @@ const AdminPanel = () => {
   ]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [collapsedCats, setCollapsedCats] = useState(new Set());
+  const [chatLogs, setChatLogs] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [riders, setRiders] = useState([]);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [roboSettings, setRoboSettings] = useState({
+    ai_tone: 'friendly',
+    voice_enabled: true,
+    language_mode: 'hinglish',
+    upsell_enabled: true,
+    theme_color: '#7c3aed'
+  });
+  const [advancedStats, setAdvancedStats] = useState({
+    totalRevenue: 0,
+    avgOrderValue: 0,
+    conversionRate: 0,
+    popularItems: []
+  });
 
   // UI States
   const [showMenuPopup, setShowMenuPopup] = useState(false);
@@ -99,6 +121,17 @@ const AdminPanel = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showImportReview, setShowImportReview] = useState(false);
+  const [showCouponPopup, setShowCouponPopup] = useState(false);
+  const [showRiderPopup, setShowRiderPopup] = useState(false);
+  const [newRider, setNewRider] = useState({ name: '', phone: '' });
+  const [newCoupon, setNewCoupon] = useState({
+    code: '',
+    discount_type: 'percent',
+    discount_value: '',
+    min_order_value: '',
+    usage_limit: '',
+    expiry_date: ''
+  });
 
   const formatDate = (dateStr) => {
     try {
@@ -139,26 +172,56 @@ const AdminPanel = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 'feedback') {
+        fetchData();
+    }
+  }, [activeTab]);
+
   const fetchData = async () => {
     try {
       const auth = { params: { restaurant_id: adminUser.restaurant_id } };
-      const [ordersRes, menuRes, catRes, staffRes, restRes, tablesRes] = await Promise.all([
-        axios.get(`${API_URL}/api/orders`, auth),
-        axios.get(`${API_URL}/api/menu`, auth),
-        axios.get(`${API_URL}/api/menu/categories`, auth),
-        axios.get(`${API_URL}/api/users`, auth),
-        axios.get(`${API_URL}/api/restaurants`),
-        axios.get(`${API_URL}/api/tables`, auth)
+      
+      const fetchHelper = (url) => axios.get(url, auth).catch(err => {
+          console.warn(`⚠️ Partial Fetch Failure for ${url}:`, err.message);
+          return { data: { data: [] } }; // Return empty data on failure
+      });
+
+      const [ordersRes, menuRes, catRes, staffRes, restRes, tablesRes, chatLogsRes, statsRes, couponsRes, customersRes, settingsRes, ridersRes, feedbackRes] = await Promise.all([
+        fetchHelper(`${API_URL}/api/orders`),
+        fetchHelper(`${API_URL}/api/menu`),
+        fetchHelper(`${API_URL}/api/menu/categories`),
+        fetchHelper(`${API_URL}/api/users`),
+        axios.get(`${API_URL}/api/restaurants`).catch(() => ({ data: { data: [] } })),
+        fetchHelper(`${API_URL}/api/tables`),
+        fetchHelper(`${API_URL}/api/monitoring/chat-logs`),
+        fetchHelper(`${API_URL}/api/monitoring/stats`),
+        fetchHelper(`${API_URL}/api/mgmt/coupons`),
+        fetchHelper(`${API_URL}/api/mgmt/customers`),
+        fetchHelper(`${API_URL}/api/mgmt/settings`),
+        fetchHelper(`${API_URL}/api/mgmt/riders`),
+        fetchHelper(`${API_URL}/api/mgmt/feedback`)
       ]);
+
       setOrders(ordersRes.data.data || []);
       setMenuItems(menuRes.data.data || []);
       setCategories(catRes.data.data || []);
       setStaffList(staffRes.data.data || []);
       setRestaurantsList(restRes.data.data || []);
+      setChatLogs(chatLogsRes.data.data || []);
+      setAdvancedStats(statsRes.data.data || {});
+      setCoupons(couponsRes.data.data || []);
+      setCustomers(customersRes.data.data || []);
+      setRoboSettings(settingsRes.data.data || {});
+      setRiders(ridersRes.data.data || []);
+      setFeedbackList(feedbackRes.data.data || []);
+
       if (tablesRes.data && tablesRes.data.length > 0) {
         setRestaurantTables(tablesRes.data.map(t => ({ table: `Table ${t.table_number}`, token: t.secret_token })));
       }
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { 
+      console.error("Critical Fetch Error:", e); 
+    }
   };
 
   const handleLogout = () => {
@@ -319,6 +382,33 @@ const AdminPanel = () => {
     } catch (e) { console.error(e); }
   };
 
+  const getPermittedTabs = (role) => {
+    const permissions = {
+        super_admin: ['dashboard', 'orders', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants'],
+        manager: ['dashboard', 'orders', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
+        staff: ['orders', 'monitor']
+    };
+    return permissions[role] || ['orders'];
+  };
+
+  if (!getPermittedTabs(adminUser.role).includes(activeTab)) {
+    return (
+        <div className="admin-layout" style={{ background: 'var(--bg-deep)', color: 'white', display: 'flex', minHeight: '100vh' }}>
+            <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} adminUser={adminUser} onLogout={handleLogout} />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                <div className="glass-panel text-center animate-slide-up" style={{ maxWidth: '440px', padding: '60px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '32px' }}>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                        <AlertCircle size={40} style={{ color: '#ef4444' }} />
+                    </div>
+                    <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '12px', color: 'white' }}>ACCESS RESTRICTED</h2>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '15px', lineHeight: '1.6' }}>Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong style={{ color: 'var(--accent-primary)' }}>{activeTab}</strong> module.</p>
+                    <button className="btn-primary" onClick={() => handleTabChange('orders')} style={{ width: '100%', padding: '14px', borderRadius: '14px' }}>Return to Safety</button>
+                </div>
+            </div>
+        </div>
+    );
+  }
+
   return (
     <div className="admin-layout animate-fade-in">
       <style>{`
@@ -361,6 +451,8 @@ const AdminPanel = () => {
           border: 1px solid var(--input-border) !important;
           color: var(--text-main) !important;
         }
+        .scrollbar-hidden::-webkit-scrollbar { display: none; }
+        .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       <AdminSidebar
         activeTab={activeTab}
@@ -530,13 +622,13 @@ const AdminPanel = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', alignItems: 'start', marginTop: '24px' }}>
-                {['pending', 'preparing', 'completed'].map(columnStatus => (
-                  <div key={columnStatus} style={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '20px', minHeight: '600px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'start', marginTop: '24px', overflowX: 'auto', paddingBottom: '20px' }}>
+                {['pending', 'accepted', 'preparing', 'out_for_delivery', 'completed', 'cancelled'].map(columnStatus => (
+                  <div key={columnStatus} style={{ minWidth: '320px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '20px', minHeight: '600px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '2px solid var(--card-border)' }}>
-                      <h3 style={{ textTransform: 'uppercase', fontSize: '14px', fontWeight: '800', color: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'preparing' ? 'var(--accent-primary)' : 'var(--success)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'preparing' ? 'var(--accent-primary)' : 'var(--success)' }} />
-                        {columnStatus === 'pending' ? 'Waiting' : columnStatus === 'preparing' ? 'In Progress' : 'Success'}
+                      <h3 style={{ textTransform: 'uppercase', fontSize: '13px', fontWeight: '800', color: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'completed' ? 'var(--success)' : columnStatus === 'cancelled' ? 'var(--error)' : 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'completed' ? 'var(--success)' : columnStatus === 'cancelled' ? 'var(--error)' : 'var(--accent-primary)' }} />
+                        {columnStatus.replace(/_/g, ' ')}
                       </h3>
                       <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>
                         {orders.filter(o => o.status === columnStatus && safeGetISODate(o) === selectedDate).length}
@@ -585,24 +677,47 @@ const AdminPanel = () => {
                                 <Printer size={16} />
                               </button>
 
-                              {columnStatus === 'pending' && (
-                                <button 
-                                  onClick={() => updateOrderStatus(order.id, 'preparing')}
-                                  style={{ padding: '6px 12px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  Commit
-                                </button>
+                              {order.status === 'pending' && (
+                                <button onClick={() => updateOrderStatus(order.id, 'accepted')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>Accept</button>
                               )}
-                              {columnStatus === 'preparing' && (
-                                <button 
-                                  onClick={() => updateOrderStatus(order.id, 'completed')}
-                                  style={{ padding: '6px 12px', background: 'linear-gradient(135deg, var(--success) 0%, #059669 100%)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  Finalize
-                                </button>
+                              {order.status === 'accepted' && (
+                                <button onClick={() => updateOrderStatus(order.id, 'preparing')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: 'var(--accent-secondary)' }}>Start Preparing</button>
+                              )}
+                              {order.status === 'preparing' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <select 
+                                        className="rider-select"
+                                        onChange={async (e) => {
+                                            const rId = e.target.value;
+                                            if (!rId) return;
+                                            try {
+                                                await axios.post(`${API_URL}/api/mgmt/orders/assign-rider`, { order_id: order.id, rider_id: rId });
+                                                fetchData();
+                                            } catch(e) { alert("Assignment failed"); }
+                                        }}
+                                        style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-deep)', color: 'white', border: '1px solid var(--card-border)', fontSize: '11px', outline: 'none' }}
+                                    >
+                                        <option value="">Assign Rider</option>
+                                        {riders.filter(r => r.status !== 'offline').map(r => (
+                                            <option key={r.id} value={r.id}>{r.name} ({r.status})</option>
+                                        ))}
+                                    </select>
+                                    <button onClick={() => updateOrderStatus(order.id, 'out_for_delivery')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: '#3b82f6' }}>Dispatch</button>
+                                </div>
+                              )}
+                              {order.status === 'out_for_delivery' && (
+                                <button onClick={() => updateOrderStatus(order.id, 'completed')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>Mark Delivered</button>
+                              )}
+                              {order.status !== 'completed' && order.status !== 'cancelled' && (
+                                <button onClick={() => updateOrderStatus(order.id, 'cancelled')} style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--error)', color: 'var(--error)', background: 'transparent', cursor: 'pointer' }}>Cancel</button>
                               )}
                             </div>
                           </div>
+                          {(order.customerPhone || order.customer_phone) && (
+                            <a href={`tel:${order.customerPhone || order.customer_phone}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', marginTop: '10px' }}>
+                                <Phone size={14} /> Call Customer
+                            </a>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -758,8 +873,14 @@ const AdminPanel = () => {
                                   </div>
                                 </div>
                                 <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
-                                <div className="inv-meta">
+                                <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                                   <div className="inv-price text-xl">₹{item.price}</div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
+                                      <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
+                                          {item.stock_quantity} Left
+                                      </span>
+                                  </div>
                                 </div>
                               </div>
                               <div className="inv-actions">
@@ -832,15 +953,27 @@ const AdminPanel = () => {
                                 )}
                               </div>
                               <div className="inv-details">
-                                <div className="inv-main">
                                   <div className="flex justify-between items-start">
-                                    <strong className="text-lg">{item.name}</strong>
+                                    <div className="flex flex-col">
+                                        <strong className="text-lg">{item.name}</strong>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div style={{ width: '12px', height: '12px', border: `1px solid ${item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981'}`, padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981' }} />
+                                            </div>
+                                            {item.is_featured && <span style={{ fontSize: '10px', fontWeight: '800', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>BESTSELLER</span>}
+                                        </div>
+                                    </div>
                                     <span className="inv-cat-tag shadow-sm">{item.category || 'Unassigned'}</span>
                                   </div>
-                                </div>
                                 <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
-                                <div className="inv-meta">
+                                <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                                   <div className="inv-price text-xl">₹{item.price}</div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
+                                      <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
+                                          {item.stock_quantity} Left
+                                      </span>
+                                  </div>
                                 </div>
                               </div>
                               <div className="inv-actions">
@@ -953,6 +1086,164 @@ const AdminPanel = () => {
             <PromptManager />
           )}
 
+          {activeTab === 'customers' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+                <div className="view-header-row mb-8">
+                    <div className="header-left">
+                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Customer Directory</h1>
+                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Database of neural network customer profiles and behavior.</p>
+                    </div>
+                </div>
+
+                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
+                                <th style={{ padding: '20px' }}>NAME</th>
+                                <th style={{ padding: '20px' }}>PHONE</th>
+                                <th style={{ padding: '20px' }}>LAST ORDER</th>
+                                <th style={{ padding: '20px' }}>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {customers.map((c, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
+                                    <td style={{ padding: '20px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '12px' }}>
+                                                {c.name?.charAt(0)}
+                                            </div>
+                                            <span style={{ fontWeight: '700' }}>{c.name}</span>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '20px', color: 'var(--text-dim)' }}>{c.phone}</td>
+                                    <td style={{ padding: '20px', fontSize: '13px' }}>{c.last_order_date ? new Date(c.last_order_date).toLocaleDateString() : 'N/A'}</td>
+                                    <td style={{ padding: '20px' }}>
+                                        <button className="inv-btn-edit" style={{ padding: '6px 12px', fontSize: '12px' }}>View Profile</button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {customers.length === 0 && (
+                                <tr>
+                                    <td colSpan="4" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        <Users size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
+                                        <p>No neural profiles found in this node.</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+          )}
+
+          {activeTab === 'coupons' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+                <div className="view-header-row mb-8">
+                    <div className="header-left">
+                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Neural Promotions</h1>
+                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Manage active discount protocols and customer incentives.</p>
+                    </div>
+                    <button className="btn-primary">
+                        <Plus size={20} />
+                        <span>Create Coupon</span>
+                    </button>
+                </div>
+
+                <div className="inventory-grid">
+                    {coupons.map((c, i) => (
+                        <div key={i} className="inventory-card glass-panel shadow-premium">
+                            <div className="inv-icon-box" style={{ background: 'var(--accent-primary)' }}>
+                                <CreditCard size={28} />
+                            </div>
+                            <div className="inv-details">
+                                <strong className="text-lg">{c.code}</strong>
+                                <span className="text-sm text-muted block mt-1">{c.discount_percent}% Discount</span>
+                                <div className="mt-4">
+                                    <span className="branch-id-tag">EXPIRES: {new Date(c.expiry_date).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {coupons.length === 0 && (
+                        <div style={{ gridColumn: '1/-1', padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <CreditCard size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
+                            <p>No active neural coupons found.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+          )}
+
+          {activeTab === 'robo_control' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+                <div className="view-header-row mb-8">
+                    <div className="header-left">
+                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>AI Robo Control</h1>
+                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Neural personality adjustment and operational parameters.</p>
+                    </div>
+                </div>
+
+                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '32px', maxWidth: '600px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '16px' }}>Neural Tone & Personality</label>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                {['friendly', 'professional', 'funny', 'robotic'].map(tone => (
+                                    <button 
+                                        key={tone}
+                                        onClick={() => setRoboSettings({...roboSettings, ai_tone: tone})}
+                                        style={{ flex: 1, padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)', background: roboSettings.ai_tone === tone ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: roboSettings.ai_tone === tone ? 'white' : 'var(--text-muted)', fontWeight: '700', textTransform: 'capitalize', cursor: 'pointer', transition: 'all 0.3s' }}
+                                    >
+                                        {tone}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                            <div>
+                                <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Voice Synthesis</strong>
+                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Enable neural voice communication.</span>
+                            </div>
+                            <div 
+                                onClick={() => setRoboSettings({...roboSettings, voice_enabled: !roboSettings.voice_enabled})}
+                                style={{ width: '56px', height: '30px', background: roboSettings.voice_enabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
+                            >
+                                <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.voice_enabled ? '30px' : '4px', transition: '0.3s' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                            <div>
+                                <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Auto-Accept Orders</strong>
+                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Bypass manual accept for fast processing.</span>
+                            </div>
+                            <div 
+                                onClick={() => setRoboSettings({...roboSettings, auto_accept_orders: !roboSettings.auto_accept_orders})}
+                                style={{ width: '56px', height: '30px', background: roboSettings.auto_accept_orders ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
+                            >
+                                <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.auto_accept_orders ? '30px' : '4px', transition: '0.3s' }} />
+                            </div>
+                        </div>
+
+                        <button 
+                            className="btn-primary" 
+                            style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '16px' }}
+                            onClick={async () => {
+                                try {
+                                    await axios.post(`${API_URL}/api/mgmt/settings`, { ...roboSettings, restaurant_id: adminUser.restaurant_id });
+                                    alert("Neural parameters synchronized successfully!");
+                                } catch (e) { alert("Sync failed"); }
+                            }}
+                        >
+                            Synchronize Parameters
+                        </button>
+                    </div>
+                </div>
+            </div>
+          )}
+
           {activeTab === 'inventory' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
@@ -961,31 +1252,208 @@ const AdminPanel = () => {
                   <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Automated restaurant stock operations.</p>
                 </div>
               </div>
-
               <SmartInventory />
+            </div>
+          )}
+
+          {activeTab === 'monitor' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Neural Live Feed</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Real-time monitoring of AI interactions and customer sentiment.</p>
+                </div>
+                <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '10px 18px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                    <span style={{ fontWeight: '700', fontSize: '14px' }}>Live Connection Active</span>
+                </div>
+              </div>
+
+              <div className="glass-panel scrollbar-hidden" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '0', boxShadow: 'var(--shadow-md)', overflowY: 'auto', maxHeight: 'calc(100vh - 250px)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)', zIndex: 10 }}>
+                    <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
+                      <th style={{ padding: '20px' }}>TIMESTAMP</th>
+                      <th style={{ padding: '20px' }}>TABLE</th>
+                      <th style={{ padding: '20px' }}>CUSTOMER SAID</th>
+                      <th style={{ padding: '20px' }}>ROBOT REPLIED</th>
+                      <th style={{ padding: '20px' }}>MOOD</th>
+                      <th style={{ padding: '20px' }}>ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chatLogs.map((log) => (
+                      <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', fontSize: '14px', transition: 'background 0.2s' }}>
+                        <td style={{ padding: '20px', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{formatDate(log.created_at)}</td>
+                        <td style={{ padding: '20px' }}>
+                           <span style={{ background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '8px', fontWeight: '800' }}>Table {log.table_number}</span>
+                        </td>
+                        <td style={{ padding: '20px', color: 'var(--text-main)', maxWidth: '300px' }}>{log.customer_transcript}</td>
+                        <td style={{ padding: '20px', color: 'var(--text-dim)', maxWidth: '400px' }}>{log.ai_reply}</td>
+                        <td style={{ padding: '20px', textAlign: 'center' }}>
+                            <span title={log.customer_mood} style={{ fontSize: '20px' }}>
+                                {log.customer_mood === 'happy' ? '😊' : log.customer_mood === 'angry' ? '😠' : log.customer_mood === 'sad' ? '😔' : '😐'}
+                            </span>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                           <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '11px', background: log.action_taken === 'CHAT' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)', color: log.action_taken === 'CHAT' ? '#60a5fa' : 'var(--success)', fontWeight: '700' }}>{log.action_taken}</span>
+                        </td>
+                      </tr>
+                    ))}
+                    {chatLogs.length === 0 && (
+                        <tr>
+                            <td colSpan="5" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                <Bot size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                                <p>No neural logs detected yet in this branch.</p>
+                            </td>
+                        </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'rider_fleet' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+                <div className="view-header-row mb-8">
+                    <div className="header-left">
+                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Rider Fleet</h1>
+                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Manage your delivery force and real-time logistics.</p>
+                    </div>
+                    <button className="btn-primary" onClick={() => setShowRiderPopup(true)}>
+                        <Plus size={20} />
+                        <span>Recruit Rider</span>
+                    </button>
+                </div>
+
+                <div className="inventory-grid">
+                    {riders.map(rider => (
+                        <div key={rider.id} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <div style={{ width: '60px', height: '60px', borderRadius: '18px', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                <Bike size={32} className="text-accent" />
+                                <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '16px', height: '16px', borderRadius: '50%', background: rider.status === 'online' ? 'var(--success)' : rider.status === 'busy' ? 'var(--warning)' : 'var(--text-muted)', border: '3px solid var(--card-bg)' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{rider.name}</div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginTop: '2px' }}>{rider.phone}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800', marginTop: '6px' }}>Status: {rider.status}</div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <button className="inv-btn-edit"><Edit2 size={16} /></button>
+                                <button className="inv-btn-delete"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+                    ))}
+                    {riders.length === 0 && (
+                        <div style={{ gridColumn: '1/-1', padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <Bike size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                            <p>No riders in your fleet. Recruit your first rider to enable delivery.</p>
+                        </div>
+                    )}
+                </div>
             </div>
           )}
 
           {activeTab === 'reports' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-              <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Network Yield Analytics</h1>
-              <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Financial oversight modules.</p>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Network Yield Analytics</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Detailed financial oversight and AI performance metrics.</p>
+                </div>
+                <button className="btn-primary" style={{ padding: '12px 24px', borderRadius: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Printer size={18} /> Export PDF Report
+                </button>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px', boxShadow: 'var(--shadow-md)' }}>
-                  <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px' }}>Aggregate Taxation</h4>
-                  <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '700', color: 'var(--text-dim)' }}>Calculated GST (18%)</span>
-                    <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '20px' }}>₹12,052.98</span>
+              {/* KPI Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+                {[
+                  { title: 'Gross Revenue', value: `₹${Number(advancedStats.totalRevenue).toLocaleString()}`, sub: 'Total sales across node', icon: DollarSign, color: 'purple' },
+                  { title: 'Avg Order Value', value: `₹${advancedStats.avgOrderValue}`, sub: 'Per transaction average', icon: TrendingUp, color: 'blue' },
+                  { title: 'AI Conversion', value: `${advancedStats.conversionRate}%`, sub: 'Chat to Order success', icon: Bot, color: 'green' },
+                  { title: 'Tax Liability', value: `₹${(Number(advancedStats.totalRevenue) * 0.18).toFixed(2)}`, sub: 'Calculated GST (18%)', icon: AlertCircle, color: 'orange' }
+                ].map((s, i) => (
+                  <div key={i} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{s.title}</span>
+                        <s.icon size={20} className={s.color === 'purple' ? 'text-accent' : s.color === 'blue' ? 'text-info' : s.color === 'green' ? 'text-success' : 'text-warning'} />
+                    </div>
+                    <h3 style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)' }}>{s.value}</h3>
+                    <p style={{ fontSize: '13px', color: 'var(--text-dim)' }}>{s.sub}</p>
                   </div>
+                ))}
+              </div>
+
+              {/* Charts & Distribution */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
+                    <h4 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <CreditCard className="text-info" /> Financial Distribution
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {[
+                            { label: 'Cash Payments', value: orders.filter(o => o.payment_method === 'cash').reduce((acc, curr) => acc + parseFloat(curr.total || 0), 0), color: '#10b981' },
+                            { label: 'Online / UPI', value: orders.filter(o => o.payment_method === 'online' || o.payment_method === 'upi').reduce((acc, curr) => acc + parseFloat(curr.total || 0), 0), color: '#3b82f6' }
+                        ].map((p, i) => {
+                            const total = orders.reduce((acc, curr) => acc + parseFloat(curr.total || 0), 0);
+                            const percent = total > 0 ? (p.value / total) * 100 : 0;
+                            return (
+                                <div key={i}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: '700' }}>
+                                        <span>{p.label}</span>
+                                        <span>₹{p.value.toLocaleString()} ({Math.round(percent)}%)</span>
+                                    </div>
+                                    <div style={{ height: '8px', background: 'var(--bg-deep)', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${percent}%`, height: '100%', background: p.color }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px', boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <button className="btn-primary" style={{ padding: '12px 24px', borderRadius: '14px', fontWeight: '700', fontSize: '14px', border: 'none', cursor: 'pointer' }}>
-                    Download Q2 Financial PDF
-                  </button>
+                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
+                    <h4 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px' }}>Top Performing Items</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {advancedStats.popularItems && advancedStats.popularItems.map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'var(--accent-primary)' }}>{i+1}</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.name}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.order_count} units synchronized</div>
+                                </div>
+                                <div style={{ fontWeight: '800', color: 'var(--text-main)' }}>{Math.round((item.order_count / Math.max(1, orders.length)) * 100)}%</div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
               </div>
+
+              {/* Voice Analytics */}
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
+                  <h4 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Bot className="text-accent" /> Neural Voice Intelligence Analytics
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                      {[
+                          { label: 'Total Voice Calls', value: advancedStats.voice?.totalCalls || 0, icon: Phone, color: '#3b82f6' },
+                          { label: 'Voice Conversion', value: `${advancedStats.voice?.conversion || 0}%`, icon: Sparkles, color: '#10b981' },
+                          { label: 'Avg Call Duration', value: `${advancedStats.voice?.avgDuration || 0}s`, icon: Clock, color: '#f59e0b' },
+                          { label: 'Success Sessions', value: Math.round((advancedStats.voice?.totalCalls || 0) * (advancedStats.voice?.conversion || 0) / 100), icon: CheckCircle, color: '#8b5cf6' }
+                      ].map((v, i) => (
+                          <div key={i} style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '18px', border: '1px solid var(--card-border)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                  <v.icon size={16} style={{ color: v.color }} />
+                                  <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{v.label}</span>
+                              </div>
+                              <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{v.value}</div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+
             </div>
           )}
 
@@ -1066,6 +1534,60 @@ const AdminPanel = () => {
                   );
                 })}
               </div>
+            </div>
+          )}
+          {activeTab === 'feedback' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+                <div className="view-header-row mb-8">
+                    <div className="header-left">
+                        <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Customer Sentiments</h1>
+                        <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Direct qualitative feedback from neural session endpoints.</p>
+                    </div>
+                </div>
+
+                <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
+                                <th style={{ padding: '20px' }}>TIMESTAMP</th>
+                                <th style={{ padding: '20px' }}>CUSTOMER</th>
+                                <th style={{ padding: '20px' }}>TABLE</th>
+                                <th style={{ padding: '20px' }}>RATING</th>
+                                <th style={{ padding: '20px' }}>COMMENT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {feedbackList.map((f, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-main)' }}>
+                                    <td style={{ padding: '20px', fontSize: '13px' }}>{new Date(f.created_at).toLocaleString()}</td>
+                                    <td style={{ padding: '20px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontWeight: '700', fontSize: '14px' }}>{f.customer_name || 'Anonymous'}</span>
+                                            <span style={{ fontSize: '12px', opacity: 0.6 }}>{f.customer_phone || 'N/A'}</span>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '20px' }}><span className="branch-id-tag">TABLE {f.table_number}</span></td>
+                                    <td style={{ padding: '20px' }}>
+                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                            {[1, 2, 3, 4, 5].map(s => (
+                                                <Star key={s} size={14} fill={s <= f.rating ? '#f1c40f' : 'none'} color={s <= f.rating ? '#f1c40f' : 'var(--text-muted)'} />
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '20px', fontSize: '14px', maxWidth: '400px' }}>{f.comment || <span style={{ opacity: 0.3 }}>No verbal feedback provided.</span>}</td>
+                                </tr>
+                            ))}
+                            {feedbackList.length === 0 && (
+                                <tr>
+                                    <td colSpan="5" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        <Star size={48} style={{ opacity: 0.1, marginBottom: '16px' }} />
+                                        <p>No customer sentiments recorded yet.</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
           )}
 
@@ -1295,6 +1817,15 @@ const AdminPanel = () => {
                   onChange={(e) => setNewDish({ ...newDish, sku: e.target.value })}
                   style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
                 />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '28px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={newDish.is_featured} 
+                    onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })} 
+                    style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--warning)' }} 
+                  />
+                  <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer' }}>⭐ Mark as Bestseller</label>
               </div>
             </div>
 
@@ -1660,6 +2191,80 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Coupon Modal */}
+      {showCouponPopup && (
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '500px', width: '90%', padding: '32px', borderRadius: '24px' }}>
+            <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Create New Offer</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>COUPON CODE</label>
+                <input type="text" placeholder="e.g. WELCOME50" value={newCoupon.code} onChange={(e) => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>TYPE</label>
+                  <select value={newCoupon.discount_type} onChange={(e) => setNewCoupon({...newCoupon, discount_type: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
+                    <option value="percent">% Discount</option>
+                    <option value="flat">Flat ₹ Discount</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>VALUE</label>
+                  <input type="number" placeholder="Value" value={newCoupon.discount_value} onChange={(e) => setNewCoupon({...newCoupon, discount_value: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>MIN ORDER VALUE (₹)</label>
+                <input type="number" value={newCoupon.min_order_value} onChange={(e) => setNewCoupon({...newCoupon, min_order_value: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>EXPIRY DATE</label>
+                <input type="date" value={newCoupon.expiry_date} onChange={(e) => setNewCoupon({...newCoupon, expiry_date: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                <button className="btn-secondary" onClick={() => setShowCouponPopup(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn-primary" onClick={async () => {
+                    try {
+                        await axios.post(`${API_URL}/api/mgmt/coupons`, { ...newCoupon, restaurant_id: adminUser.restaurant_id });
+                        setShowCouponPopup(false);
+                        fetchData();
+                    } catch(e) { alert("Failed to create coupon"); }
+                }} style={{ flex: 1 }}>Publish Offer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rider Modal */}
+      {showRiderPopup && (
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '400px', width: '90%', padding: '32px', borderRadius: '24px' }}>
+            <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>Recruit New Rider</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>RIDER NAME</label>
+                <input type="text" placeholder="Full Name" value={newRider.name} onChange={(e) => setNewRider({...newRider, name: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
+                <input type="text" placeholder="+91 XXXXX XXXXX" value={newRider.phone} onChange={(e) => setNewRider({...newRider, phone: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                <button className="btn-secondary" onClick={() => setShowRiderPopup(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn-primary" onClick={async () => {
+                    try {
+                        await axios.post(`${API_URL}/api/mgmt/riders`, { ...newRider, restaurant_id: adminUser.restaurant_id });
+                        setShowRiderPopup(false);
+                        fetchData();
+                    } catch(e) { alert("Failed to recruit rider"); }
+                }} style={{ flex: 1 }}>Onboard Rider</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

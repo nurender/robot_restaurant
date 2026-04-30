@@ -60,6 +60,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [zoomedImage, setZoomedImage] = useState(null); 
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [activeCoupon, setActiveCoupon] = useState(null);
+  const [orderTracking, setOrderTracking] = useState(null);
+  const [userPreferences, setUserPreferences] = useState([]);
   const initializationRef = useRef(false);
 
   const videoRef = useRef(null);
@@ -238,12 +242,40 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setShowMenuPopup(true);
     },
     onConfirmOrder: () => initiateCheckout(),
+    onRealtimeEvent: (event) => {
+        if (event.type === 'response.created') {
+            if (!sessionStartTimeRef.current) sessionStartTimeRef.current = Date.now();
+            setIsAiProcessing(true);
+        }
+    },
     onResponse: (text) => {
         setCurrentSubtitle(text);
         setIsRobotSpeaking(true);
         setTimeout(() => setIsRobotSpeaking(false), text.length * 50);
     },
+    onProcessingStart: () => setIsAiProcessing(true),
+    onProcessingEnd: () => setIsAiProcessing(false),
+    onUserTranscript: (text) => {
+        window._lastUserTranscript = text;
+    },
+    onAiTranscript: async (text) => {
+        try {
+            await fetch(`${API_URL}/api/monitoring/log`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    restaurant_id: restaurantId,
+                    table_number: tableNumber,
+                    transcript: window._lastUserTranscript || '',
+                    reply: text,
+                    action: window._lastToolAction || 'CHAT'
+                })
+            });
+            window._lastToolAction = null;
+        } catch (e) { console.error("Logging failed", e); }
+    },
     onToolCall: ({ name, args }) => {
+        window._lastToolAction = name;
         if (name === 'show_menu') {
             if (args?.category) setActiveCategory(args.category);
             setShowMenuPopup(true);
@@ -312,6 +344,50 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 return [...prev, { ...target, qty: quantity }];
             });
             setShowMenuPopup(true);
+            return;
+        }
+
+        if (name === 'apply_coupon') {
+            const code = args?.code || 'SAVE20';
+            setActiveCoupon({ code, discount: 120 });
+            setTimeout(() => setActiveCoupon(null), 5000);
+            return;
+        }
+
+        if (name === 'track_order') {
+            setOrderTracking({ status: 'Chef is preparing', eta: '8 mins' });
+            setTimeout(() => setOrderTracking(null), 10000);
+            return;
+        }
+
+        if (name === 'clear_cart') {
+            setCurrentCart([]);
+            return;
+        }
+
+        if (name === 'repeat_last_order') {
+            // Mocking a last order repeat
+            const mockItems = menuCategories[0]?.items.slice(0, 2).map(i => ({ ...i, qty: 1 })) || [];
+            setCurrentCart(mockItems);
+            setShowCartSummary(true);
+            return;
+        }
+
+        if (name === 'save_user_preference') {
+            setUserPreferences(prev => [...prev, args?.preference]);
+            return;
+        }
+
+        if (name === 'show_best_sellers') {
+            setActiveCategory('All');
+            setMenuSearchTerm('Best Seller');
+            setShowMenuPopup(true);
+            return;
+        }
+
+        if (name === 'show_offers') {
+            setShowSettingsPopup(true);
+            return;
         }
     }
   }, currentCart);
@@ -355,12 +431,43 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     return `${m}:${s}`;
   };
 
+  const [showFeedbackPopup, setShowFeedbackPopup] = useState(false);
+  const [feedback, setFeedback] = useState({ rating: 5, comment: '', name: '', phone: '' });
+
+  const submitFeedback = async () => {
+    try {
+        await fetch(`${API_URL}/api/mgmt/feedback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                restaurant_id: restaurantId,
+                table_number: tableNumber,
+                customer_phone: feedback.phone || 'Anonymous',
+                customer_name: feedback.name || 'Anonymous',
+                rating: feedback.rating,
+                comment: feedback.comment
+            })
+        });
+        alert(textLanguage === 'hi' ? 'आपकी प्रतिक्रिया के लिए धन्यवाद!' : 'Thank you for your feedback!');
+        setShowFeedbackPopup(false);
+        setFeedback({ rating: 5, comment: '', name: '', phone: '' });
+    } catch (e) { console.error("Feedback failed:", e); }
+  };
+
   return (
     <div className="avatar-screen animate-fade-in video-call-bg">
       <div className="top-call-gradient"></div>
       <div className="avatar-header">
         <div className="header-badge calling">Table {tableNumber} | Order: ₹{getCartTotal()}</div>
-        <div className="call-timer-badge"><div className="live-dot"></div>{formatTime(callDuration)}</div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button 
+                onClick={() => setShowFeedbackPopup(true)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '12px', color: 'white', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            >
+                <span style={{ color: '#f1c40f' }}>★</span> {textLanguage === 'hi' ? 'फीडबैक' : 'Feedback'}
+            </button>
+            <div className="call-timer-badge"><div className="live-dot"></div>{formatTime(callDuration)}</div>
+        </div>
       </div>
 
       <div className="avatar-container">
@@ -375,11 +482,22 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             {/* "You" Tag positioned floating at the bottom right inside the preview box */}
             <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '4px', color: 'white', fontSize: '11px', fontWeight: 'bold', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '10px', backdropFilter: 'blur(4px)' }}>
               <span>You</span>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '10px' }}>
-                <span style={{ width: '2px', height: '100%', background: '#00e676', borderRadius: '1px' }}></span>
-                <span style={{ width: '2px', height: '50%', background: '#00e676', borderRadius: '1px' }}></span>
-                <span style={{ width: '2px', height: '75%', background: '#00e676', borderRadius: '1px' }}></span>
-              </div>
+              {(isListening || isSessionActive) && (
+                <div className="vocal-wave-container">
+                  <div className="wave-bar"></div>
+                  <div className="wave-bar"></div>
+                  <div className="wave-bar"></div>
+                  <div className="wave-bar"></div>
+                  <div className="wave-bar"></div>
+                </div>
+              )}
+              {!(isListening || isSessionActive) && (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '10px' }}>
+                  <span style={{ width: '2px', height: '100%', background: '#00e676', borderRadius: '1px' }}></span>
+                  <span style={{ width: '2px', height: '50%', background: '#00e676', borderRadius: '1px' }}></span>
+                  <span style={{ width: '2px', height: '75%', background: '#00e676', borderRadius: '1px' }}></span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -395,6 +513,34 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           <div className="neural-image-preview scale-in">
             <img src={getMediaUrl(currentImageUrl)} alt="Dish Preview" />
             <div className="neural-scan-line"></div>
+          </div>
+        )}
+
+        {activeCoupon && (
+          <div className="premium-toast coupon-toast slide-up">
+            <div className="toast-icon">💸</div>
+            <div className="toast-content">
+              <strong>{activeCoupon.code} applied!</strong>
+              <span>₹{activeCoupon.discount} saved on this order 🎉</span>
+            </div>
+          </div>
+        )}
+
+        {orderTracking && (
+          <div className="premium-toast tracking-toast slide-up">
+            <div className="toast-icon">👨‍🍳</div>
+            <div className="toast-content">
+              <strong>{orderTracking.status}</strong>
+              <span>ETA: {orderTracking.eta} 🚴</span>
+            </div>
+          </div>
+        )}
+
+        {isAiProcessing && (
+          <div className="ai-typing-indicator slide-up">
+            <div className="typing-dot"></div>
+            <div className="typing-dot"></div>
+            <div className="typing-dot"></div>
           </div>
         )}
       </div>
@@ -522,6 +668,67 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+      )}
+      {showFeedbackPopup && (
+        <div className="modal-overlay" onClick={() => setShowFeedbackPopup(false)}>
+            <div style={{ background: 'rgba(23, 23, 33, 0.98)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '32px', padding: '40px', maxWidth: '400px', width: '100%', backdropFilter: 'blur(20px)', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.6)', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                <button onClick={() => setShowFeedbackPopup(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', opacity: 0.5 }}><X size={24} /></button>
+                
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>⭐</div>
+                    <h3 style={{ fontSize: '26px', fontWeight: '900', color: '#ffffff', marginBottom: '8px' }}>
+                        {textLanguage === 'hi' ? 'आपका अनुभव कैसा रहा?' : 'How was your experience?'}
+                    </h3>
+                    <p style={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                        {textLanguage === 'hi' ? 'आपकी राय हमारे लिए महत्वपूर्ण है।' : 'Your feedback helps us improve.'}
+                    </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '32px' }}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                        <button 
+                            key={star} 
+                            onClick={() => setFeedback({ ...feedback, rating: star })}
+                            style={{ background: 'none', border: 'none', fontSize: '32px', cursor: 'pointer', filter: feedback.rating >= star ? 'none' : 'grayscale(100%) opacity(0.3)', transition: 'transform 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                            ⭐
+                        </button>
+                    ))}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                    <input 
+                        type="text" 
+                        placeholder={textLanguage === 'hi' ? 'आपका नाम (वैकल्पिक)' : 'Your Name (Optional)'}
+                        value={feedback.name}
+                        onChange={(e) => setFeedback({ ...feedback, name: e.target.value })}
+                        style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontSize: '14px', outline: 'none' }}
+                    />
+                    <input 
+                        type="tel" 
+                        placeholder={textLanguage === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Phone Number (Optional)'}
+                        value={feedback.phone}
+                        onChange={(e) => setFeedback({ ...feedback, phone: e.target.value })}
+                        style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontSize: '14px', outline: 'none' }}
+                    />
+                    <textarea 
+                        placeholder={textLanguage === 'hi' ? 'कुछ और कहना चाहेंगे? (वैकल्पिक)' : 'Any other comments? (Optional)'}
+                        value={feedback.comment}
+                        onChange={(e) => setFeedback({ ...feedback, comment: e.target.value })}
+                        style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontSize: '14px', minHeight: '80px', outline: 'none', resize: 'none' }}
+                    />
+                </div>
+
+                <button 
+                    onClick={submitFeedback}
+                    style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)', color: '#000', border: 'none', borderRadius: '30px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(241, 196, 15, 0.3)' }}
+                >
+                    {textLanguage === 'hi' ? 'फीडबैक भेजें' : 'Submit Feedback'}
+                </button>
             </div>
         </div>
       )}

@@ -1436,6 +1436,129 @@
   text-transform: uppercase;
 }
 
+/* --- NEXT LEVEL UI FEATURES --- */
+
+.ai-typing-indicator {
+  position: absolute;
+  bottom: 180px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.premium-toast {
+  position: absolute;
+  bottom: 100px;
+  left: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 200;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+.toast-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--accent-color);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.toast-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.toast-content strong {
+  font-size: 15px;
+  color: white;
+  margin-bottom: 2px;
+}
+
+.toast-content span {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.coupon-toast {
+  border-left: 4px solid #00e676;
+}
+
+.tracking-toast {
+  border-left: 4px solid #00d2ff;
+}
+
+/* WAVE ANIMATION FOR MIC */
+.listening-ring {
+  background: rgba(0, 230, 118, 0.2) !important;
+  animation: ripple 2s infinite cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.vocal-wave-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  margin-left: 8px;
+}
+
+.wave-bar {
+  width: 3px;
+  height: 100%;
+  background: #00e676;
+  border-radius: 2px;
+  animation: waveGrow 0.5s infinite ease-in-out alternate;
+}
+
+@keyframes waveGrow {
+  0% { height: 20%; }
+  100% { height: 100%; }
+}
+
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.2s; }
+.wave-bar:nth-child(5) { animation-delay: 0.1s; }
+
 /* Neural Image Preview (Cinematic Food Display) */
 .neural-image-preview {
   position: absolute;

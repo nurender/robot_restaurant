@@ -57,6 +57,22 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
   const onRealtimeEvent = useCallback((event) => {
     if (!event || typeof event !== 'object') return;
 
+    if (event.type === 'response.created') {
+      handlersRef.current.onProcessingStart?.();
+    }
+
+    if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      handlersRef.current.onUserTranscript?.(event.transcript);
+    }
+
+    if (event.type === 'response.audio_transcription.completed') {
+      handlersRef.current.onAiTranscript?.(event.transcript);
+    }
+
+    if (event.type === 'response.done') {
+      handlersRef.current.onProcessingEnd?.();
+    }
+
     if (event.type?.includes('response') && typeof event.text === 'string') {
       handlersRef.current.onResponse?.(event.text);
     }
