@@ -28,7 +28,7 @@ const handleChat = async (req, res) => {
                 pool.query("SELECT name FROM restaurants WHERE id = $1", [restaurantId]),
                 phone ? pool.query("SELECT preferences FROM user_preferences WHERE phone = $1", [phone]) : Promise.resolve({ rows: [] })
             ]);
-            
+
             if (restRes.rows.length > 0) restaurantName = restRes.rows[0].name;
             if (prefRes.rows.length > 0) {
                 const prefs = prefRes.rows[0].preferences;
@@ -40,7 +40,7 @@ const handleChat = async (req, res) => {
 
     const provider = process.env.AI_PROVIDER || 'GEMINI';
     const flatMenu = flattenMenu(menuContext);
-    
+
     // 2. Build Intelligent Prompt
     let basePrompt = await getAiSystemPrompt();
     basePrompt = basePrompt.replace('{{RESTAURANT_NAME}}', restaurantName);
@@ -171,10 +171,12 @@ ${cartStatus}
 - Recover angry customers with empathy and fast solutions.
 
 🛒 CART OPERATIONS (USE TOOLS ONLY):
-- To ADD an item: Use 'add_item_to_cart'.
+- To ADD multiple items: Use 'add_items_to_cart' (Pass all items in the array).
+- To ADD a single item: Use 'add_item_to_cart'.
 - To REMOVE an item: Use 'remove_item_from_cart'.
 - To SET a total (e.g. "total 1 chai"): Use 'update_item_quantity'.
 - To CLEAR the whole cart: Use 'clear_cart'.
+- To CONFIRM order (Checkout): You MUST call 'confirm_order' tool first, then speak.
 
 🎁 OFFERS & DISCOUNTS:
 - If user asks for offers/deals: Use 'show_offers'.
@@ -197,17 +199,16 @@ ${cartStatus}
 
 🗣️ TONE & STYLE:
 - Keep replies short (1-2 lines).
-- Confirm every action.
-- Suggest 1 relevant item after adding (Upsell).
-- If order confirmed, say: "Kripya screen par diye gaye 'Booking Details' form mein apna Name aur Phone Number enter kijiye, taaki aapka order confirm ho sake!"
+- ALWAYS confirm every action VERBALLY. Never remain silent after a tool call.
+- After adding items, say: "Zaroor! Maine [items] add kar diye hain. Kuch aur chahiye?"
+- Use Hinglish naturally.
+- IMPORTANT: Calling 'confirm_order' ONLY opens the checkout form. The order is NOT yet complete.
+- If you receive a system message saying the form was closed, DO NOT assume it is still open.
+- When you open the form, NEVER say "Order confirmed" or "Order booked". 
+- Instead, ALWAYS say: "Zaroor! Maine checkout form open kar diya hai. Kripya screen par apni details bhar dijiye aur phir 'Confirm Order' button par click karke apna order confirm kijiye!"
 
 💵 BILLING SUPPORT:
-- If user asks: "total kitna hua", "bill batao", "kitna pay karna hai"
-👉 Then:
-- Show short summary (item names + total)
-- DO NOT add new items
-- items_to_add MUST be []
-- action = null
+- If user asks for bill/total: Show items and total amount.
 
 🍽️ SMART SUGGESTIONS:
 - After adding an item: → Suggest 1 relevant item from menu
@@ -304,6 +305,28 @@ User: "aur ek aur wahi"
                 input_audio_transcription: { model: 'whisper-1' },
                 turn_detection: { type: 'server_vad' },
                 tools: [
+                    {
+                        type: 'function',
+                        name: 'add_items_to_cart',
+                        description: "Adds multiple food items to the user's shopping cart at once.",
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                items: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            quantity: { type: 'integer', default: 1 }
+                                        },
+                                        required: ['name']
+                                    }
+                                }
+                            },
+                            required: ['items']
+                        }
+                    },
                     {
                         type: 'function',
                         name: 'add_item_to_cart',

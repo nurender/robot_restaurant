@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { API_URL } from '../config';
 
-const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []) => {
+const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = [], restaurantName = 'Cyber Chef') => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [analyzer, setAnalyzer] = useState(null);
@@ -11,7 +11,7 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
   const audioElRef = useRef(null);
   const toolCallStateRef = useRef(new Map());
   const handledToolCallsRef = useRef(new Set());
-  
+
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
@@ -39,8 +39,33 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
   const emitToolCall = useCallback((name, args = {}, callId) => {
     if (!name) return;
     if (callId && handledToolCallsRef.current.has(callId)) return;
-    if (callId) handledToolCallsRef.current.add(callId);
-    handlersRef.current.onToolCall?.({ name, args, callId });
+
+    const result = handlersRef.current.onToolCall?.({ name, args, callId });
+
+    if (callId) {
+      handledToolCallsRef.current.add(callId);
+
+      // Send tool output back to OpenAI via Data Channel
+      if (dataChannel.current && dataChannel.current.readyState === 'open') {
+        const outputEvent = {
+          type: 'conversation.item.create',
+          item: {
+            type: 'function_call_output',
+            call_id: callId,
+            output: JSON.stringify(result || { success: true })
+          }
+        };
+        dataChannel.current.send(JSON.stringify(outputEvent));
+
+        // Trigger a new response from the model to confirm the action
+        dataChannel.current.send(JSON.stringify({ 
+          type: 'response.create',
+          response: {
+            instructions: "Verbalize the action you just took based on the tool result. If you just opened the checkout form (confirm_order), you MUST tell the user to fill their details and click 'Finalize & Book Order' to finish. Never say the order is already confirmed at this stage."
+          }
+        }));
+      }
+    }
   }, []);
 
   const parseArgs = (rawArgs) => {
@@ -137,7 +162,7 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
     try {
       setIsConnecting(true);
       // 1. Get Ephemeral Token
-      const sessionResponse = await fetch(`${API_URL}/api/session`, { 
+      const sessionResponse = await fetch(`${API_URL}/api/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ restaurantId, cart: currentCart })
@@ -170,6 +195,34 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
       // 5. Data Channel
       const dc = pc.createDataChannel('oai-events');
       dataChannel.current = dc;
+      
+      dc.onopen = () => {
+        console.log("✅ Data Channel Open - Triggering Greeting");
+        // Send a message to the AI to start the conversation
+        const greetingEvent = {
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text: 'Hi! I am ready to order.'
+              }
+            ]
+          }
+        };
+        dc.send(JSON.stringify(greetingEvent));
+        
+        // Force response
+        dc.send(JSON.stringify({ 
+          type: 'response.create',
+          response: {
+            instructions: `The user just joined. Greet them warmly in Hinglish as Robo, the neural concierge of ${restaurantName}. Ask what they would like to have from the menu. Keep it short and friendly.`
+          }
+        }));
+      };
+
       dc.onmessage = (e) => {
         try {
           const event = JSON.parse(e.data);

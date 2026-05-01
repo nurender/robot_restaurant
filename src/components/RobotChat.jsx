@@ -62,6 +62,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [activeCoupon, setActiveCoupon] = useState(null);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderTracking, setOrderTracking] = useState(null);
   const [userPreferences, setUserPreferences] = useState([]);
   const initializationRef = useRef(false);
@@ -183,6 +184,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         return;
     }
     
+    if (isSubmittingOrder) return;
+    setIsSubmittingOrder(true);
+    
     try {
         const orderData = {
             restaurant_id: restaurantId,
@@ -208,13 +212,22 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             setTimeout(() => setOrderConfirmedUI(false), 5000);
             if (IS_OPENAI_REALTIME) stopSession();
         }
-    } catch (e) { console.error("Order Failed:", e); }
+    } catch (e) { 
+        console.error("Order Failed:", e); 
+        alert(textLanguage === 'hi' ? 'ऑर्डर करने में कुछ समस्या आई। कृपया पुनः प्रयास करें।' : 'Something went wrong while placing the order. Please try again.');
+    } finally {
+        setIsSubmittingOrder(false);
+    }
   };
 
   const initiateCheckout = () => {
-      if (getCartCount() === 0) return;
+      if (getCartCount() === 0) {
+          speak(textLanguage === 'hi' ? 'आपका कार्ट अभी खाली है। कृपया पहले कुछ आर्डर करें।' : 'Your cart is empty. Please add some items first.', voiceLanguage);
+          return;
+      }
       setShowCustomerForm(true);
-      setShowCartSummary(false); // Hide cart summary if open
+      setShowCartSummary(false);
+      setShowMenuPopup(false);
   };
 
   const { 
@@ -296,9 +309,36 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             return;
         }
 
+        if (name === 'add_items_to_cart') {
+            const itemsToAdd = args?.items || [];
+            if (itemsToAdd.length === 0) return;
+
+            setCurrentCart((prev) => {
+                let updatedCart = [...prev];
+                itemsToAdd.forEach(newItem => {
+                    const target = findMenuItemByName(newItem.name);
+                    if (!target) return;
+                    const quantity = Math.max(1, Number(newItem.quantity) || 1);
+                    const existingIdx = updatedCart.findIndex((i) => String(i.id) === String(target.id));
+                    
+                    if (existingIdx > -1) {
+                        updatedCart[existingIdx] = {
+                            ...updatedCart[existingIdx],
+                            qty: (updatedCart[existingIdx].qty || 0) + quantity
+                        };
+                    } else {
+                        updatedCart.push({ ...target, qty: quantity });
+                    }
+                });
+                return updatedCart;
+            });
+            setShowCartSummary(true);
+            return { success: true, message: `Successfully added ${itemsToAdd.length} items to cart.` };
+        }
+
         if (name === 'add_item_to_cart') {
             const target = findMenuItemByName(args?.name);
-            if (!target) return;
+            if (!target) return { error: "Item not found in menu." };
             const quantity = Math.max(1, Number(args?.quantity) || 1);
             setCurrentCart((prev) => {
                 const existing = prev.find((i) => String(i.id) === String(target.id));
@@ -309,13 +349,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 }
                 return [...prev, { ...target, qty: quantity }];
             });
-            setShowMenuPopup(true);
-            return;
+            setShowCartSummary(true);
+            return { success: true, message: `Added ${quantity} ${target.name} to cart.` };
         }
 
         if (name === 'remove_item_from_cart') {
             const target = findMenuItemByName(args?.name);
-            if (!target) return;
+            if (!target) return { error: "Item not found in cart." };
             const quantity = Math.max(1, Number(args?.quantity) || 1);
             setCurrentCart((prev) =>
                 prev
@@ -324,12 +364,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     )
                     .filter((i) => (i.qty || 0) > 0)
             );
-            return;
+            setShowCartSummary(true);
+            return { success: true, message: `Removed ${quantity} ${target.name} from cart.` };
         }
 
         if (name === 'update_item_quantity') {
             const target = findMenuItemByName(args?.name);
-            if (!target) return;
+            if (!target) return { error: "Item not found in menu." };
             const quantity = Math.max(0, Number(args?.quantity));
             setCurrentCart((prev) => {
                 const existing = prev.find((i) => String(i.id) === String(target.id));
@@ -343,8 +384,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 }
                 return [...prev, { ...target, qty: quantity }];
             });
-            setShowMenuPopup(true);
-            return;
+            setShowCartSummary(true);
+            return { success: true, message: `Updated ${target.name} quantity to ${quantity}.` };
         }
 
         if (name === 'apply_coupon') {
@@ -390,7 +431,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             return;
         }
     }
-  }, currentCart);
+  }, currentCart, restaurantName || 'Cyber Chef');
 
   const toggleCategory = (cat) => {
     setExpandedCats(prev => {
@@ -419,7 +460,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const startListening = () => {
     if (!initializationRef.current) {
         initializationRef.current = true;
-        speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+        if (!IS_OPENAI_REALTIME) {
+            speak(dialogs[voiceLanguage].welcome, voiceLanguage);
+        }
         setHasGreeted(true);
     }
     setIsListening(!isListening);
@@ -627,7 +670,20 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       )}
 
       {showCustomerForm && (
-        <div className="modal-overlay" onClick={() => setShowCustomerForm(false)}>
+        <div className="modal-overlay" onClick={() => {
+            setShowCustomerForm(false);
+            if (IS_OPENAI_REALTIME) {
+                sendEvent({
+                    type: 'conversation.item.create',
+                    item: {
+                        type: 'message',
+                        role: 'user',
+                        content: [{ type: 'input_text', text: '[System: User closed the checkout form without finishing. It is no longer visible.]' }]
+                    }
+                });
+                sendEvent({ type: 'response.create' });
+            }
+        }}>
             <div style={{ background: 'rgba(23, 23, 33, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', padding: '32px', maxWidth: '440px', width: '100%', backdropFilter: 'blur(16px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', marginBottom: '8px', letterSpacing: '-0.5px' }}>
                     {textLanguage === 'hi' ? 'बुकिंग डिटेल्स' : 'Booking Details'}
@@ -660,11 +716,51 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                         />
                     </div>
                     <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
-                        <button type="button" style={{ flex: 1, padding: '14px', background: '#ffffff', color: '#0f172a', border: 'none', borderRadius: '30px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', transition: 'all 0.3s' }} onClick={() => setShowCustomerForm(false)}>
+                        <button type="button" style={{ flex: 1, padding: '14px', background: '#ffffff', color: '#0f172a', border: 'none', borderRadius: '30px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', transition: 'all 0.3s' }} onClick={() => {
+                            setShowCustomerForm(false);
+                            if (IS_OPENAI_REALTIME) {
+                                sendEvent({
+                                    type: 'conversation.item.create',
+                                    item: {
+                                        type: 'message',
+                                        role: 'user',
+                                        content: [{ type: 'input_text', text: '[System: User closed the checkout form without finishing. It is no longer visible.]' }]
+                                    }
+                                });
+                                sendEvent({ type: 'response.create' });
+                            }
+                        }}>
                             {textLanguage === 'hi' ? 'रद्द करें' : 'Cancel'}
                         </button>
-                        <button type="submit" style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', color: '#ffffff', border: 'none', borderRadius: '30px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.4)', transition: 'all 0.3s' }}>
-                            {textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'}
+                        <button 
+                            type="submit" 
+                            disabled={isSubmittingOrder}
+                            style={{ 
+                                flex: 1, 
+                                padding: '14px', 
+                                background: isSubmittingOrder ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)', 
+                                color: '#ffffff', 
+                                border: 'none', 
+                                borderRadius: '30px', 
+                                fontWeight: '700', 
+                                fontSize: '15px', 
+                                cursor: isSubmittingOrder ? 'not-allowed' : 'pointer', 
+                                boxShadow: isSubmittingOrder ? 'none' : '0 8px 16px -4px rgba(124, 58, 237, 0.4)', 
+                                transition: 'all 0.3s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            {isSubmittingOrder ? (
+                                <>
+                                    <div className="button-loader"></div>
+                                    {textLanguage === 'hi' ? 'प्रोसेसिंग...' : 'Processing...'}
+                                </>
+                            ) : (
+                                textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'
+                            )}
                         </button>
                     </div>
                 </form>
