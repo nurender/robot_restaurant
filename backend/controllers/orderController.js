@@ -12,19 +12,11 @@ const createOrder = async (req, res) => {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
-            
-            // Backward-compatible safety: ensure required columns exist in old DB schemas.
-            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb`);
-            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name TEXT`);
-            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
-            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'`);
-            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS total DECIMAL(10,2) NOT NULL DEFAULT 0.00`);
-            await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
             const orderRes = await client.query(
                 `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status, customer_name, customer_phone) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-                [finalRestId, tableNumber, JSON.stringify(items), total, Date.now().toString(), status || 'pending', customerName || '', customerPhone || '']
+                [finalRestId, tableNumber, JSON.stringify(items), total, new Date(), status || 'pending', customerName || '', customerPhone || '']
             );
             const orderId = orderRes.rows[0].id;
 
@@ -92,7 +84,7 @@ const getOrders = async (req, res) => {
             } catch (e) {
                 console.error("Error parsing items for order", row.id);
             }
-            
+
             return {
                 ...row,
                 tableNumber: row.tablenumber,
@@ -117,18 +109,18 @@ const updateOrderStatus = async (req, res) => {
 
     try {
         await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, id]);
-        
+
         // 🌾 Recipe Based Smart Inventory Deductions
         if (status === 'preparing') {
             const orderRes = await pool.query("SELECT items FROM orders WHERE id = $1", [id]);
             if (orderRes.rows.length > 0) {
                 let items = orderRes.rows[0].items;
                 items = typeof items === 'string' ? JSON.parse(items) : items;
-                
+
                 for (const item of items) {
                     const itemName = (item.name || '').toLowerCase();
                     const qty = Number(item.qty || item.quantity || 1);
-                    
+
                     if (itemName.includes('burger')) {
                         await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%bun%' OR LOWER(name) LIKE '%patty%'", [qty]);
                     } else if (itemName.includes('tea') || itemName.includes('chai')) {

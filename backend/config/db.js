@@ -297,10 +297,12 @@ const connectDB = async () => {
             id SERIAL PRIMARY KEY,
             order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
             menu_item_id TEXT NOT NULL REFERENCES menu(id) ON DELETE CASCADE,
+            name TEXT,
             quantity INTEGER NOT NULL DEFAULT 1,
             unit_price DECIMAL(10,2) NOT NULL
         )`);
         await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS menu_item_id TEXT`);
+        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS name TEXT`);
         await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2)`);
         await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS subtotal DECIMAL(10,2) NOT NULL DEFAULT 0`);
 

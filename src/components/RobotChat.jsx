@@ -221,7 +221,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             tableNumber,
             items: currentCart,
             total: getCartTotal(),
-            timestamp: Date.now(),
             status: 'pending',
             customerName: customerInfo.name,
             customerPhone: customerInfo.phone
