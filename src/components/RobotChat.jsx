@@ -30,6 +30,7 @@ const getDialogs = (restaurantName) => ({
 });
 
 const RobotChat = ({ tableNumber, restaurantId }) => {
+  const [restaurantData, setRestaurantData] = useState(null);
   const [restaurantName, setRestaurantName] = useState(null);
   const [hasGreeted, setHasGreeted] = useState(false);
   const dialogs = getDialogs(restaurantName || 'Cyber Chef');
@@ -100,7 +101,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         const res = await fetch(`${API_URL}/api/restaurants`);
         const data = await res.json();
         const mine = (data.data || []).find(r => String(r.id) === String(restaurantId));
-        if (mine) setRestaurantName(mine.name);
+        if (mine) {
+          setRestaurantName(mine.name);
+          setRestaurantData(mine);
+        }
       } catch (e) { console.error("Rest Info Error:", e); }
     };
     fetchRestaurantInfo();
@@ -126,7 +130,31 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     synthRef.current.speak(ut);
   };
 
-  const getCartTotal = () => currentCart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const getCartSubtotal = () => currentCart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  
+  const getCartTax = () => {
+    const subtotal = getCartSubtotal();
+    const cgstRate = Number(restaurantData?.cgst || 0) / 100;
+    const sgstRate = Number(restaurantData?.sgst || 0) / 100;
+    return {
+      cgst: subtotal * cgstRate,
+      sgst: subtotal * sgstRate
+    };
+  };
+
+  const getCartTotal = () => {
+    const subtotal = getCartSubtotal();
+    const { cgst, sgst } = getCartTax();
+    let total = subtotal + cgst + sgst;
+    
+    if (restaurantData?.is_round_off) {
+      // User example: 100.60 -> 100. This is Math.floor or Math.round?
+      // Usually it's Math.round for "round to nearest integer". 
+      // But if user explicitly said "100.60 to 100", I'll use Math.floor as requested.
+      return Math.floor(total);
+    }
+    return Number(total.toFixed(2));
+  };
   const getCartCount = () => currentCart.reduce((acc, item) => acc + item.qty, 0);
 
   const handleManualCartUpdate = (item, delta) => {
@@ -619,6 +647,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           setZoomedImage={setZoomedImage}
           handleManualCartUpdate={handleManualCartUpdate}
           getCartTotal={getCartTotal}
+          getCartSubtotal={getCartSubtotal}
+          getCartTax={getCartTax}
+          restaurantData={restaurantData}
           completeOrderProcess={initiateCheckout}
         />
       )}

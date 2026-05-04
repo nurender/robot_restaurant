@@ -61,7 +61,15 @@ import { API_URL } from '../config';
 const socket = io(API_URL, { autoConnect: true });
 
 const AdminPanel = () => {
-  const [adminUser, setAdminUser] = useState(JSON.parse(localStorage.getItem('admin_token')) || {});
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_token');
+      if (!saved || saved === 'undefined') return {};
+      return JSON.parse(saved) || {};
+    } catch (e) {
+      return {};
+    }
+  });
   const [activeTab, setActiveTab] = useState(localStorage.getItem('admin_active_tab') || 'dashboard');
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -149,8 +157,8 @@ const AdminPanel = () => {
     },
     is_24x7: false, is_temp_closed: false,
     delivery_available: true, pickup_available: true, dine_in_available: true,
-    delivery_radius: 5, min_order_amount: 149, delivery_charges: 29, free_delivery_above: 499, avg_delivery_time: 30,
-    gst_number: '', tax_percent: 5, currency: '₹', invoice_prefix: 'INV-', bill_footer: 'Thank you for dining with us!',
+    cgst: 2.5, sgst: 2.5, is_round_off: true,
+    gst_number: '', currency: '₹', invoice_prefix: 'INV-', bill_footer: 'Thank you for dining with us!',
     ai_enabled: true, ai_greeting: 'Welcome to Cyber Chef! Kya khilayein?', ai_language: 'Hinglish', ai_upsell_enabled: true, ai_tone: 'friendly',
     logo_url: '', cover_url: ''
   });
@@ -595,7 +603,8 @@ const AdminPanel = () => {
         is_24x7: false, is_temp_closed: false,
         delivery_available: true, pickup_available: true, dine_in_available: true,
         delivery_radius: 5, min_order_amount: 149, delivery_charges: 29, free_delivery_above: 499, avg_delivery_time: 30,
-        gst_number: '', tax_percent: 5, currency: '₹', invoice_prefix: 'INV-', bill_footer: 'Thank you for dining with us!',
+        cgst: 2.5, sgst: 2.5, is_round_off: true,
+        gst_number: '', currency: '₹', invoice_prefix: 'INV-', bill_footer: 'Thank you for dining with us!',
         ai_enabled: true, ai_greeting: 'Welcome to Cyber Chef! Kya khilayein?', ai_language: 'Hinglish', ai_upsell_enabled: true, ai_tone: 'friendly',
         logo_url: '', cover_url: ''
       });
@@ -3113,7 +3122,7 @@ const AdminPanel = () => {
                     <span style={{ fontWeight: '700' }}>24x7 Operational</span>
                     <input type="checkbox" checked={newNode.is_24x7} onChange={(e) => setNewNode({ ...newNode, is_24x7: e.target.checked })} />
                   </div>
-                  {!newNode.is_24x7 && Object.keys(newNode.working_hours).map(day => (
+                  {!newNode.is_24x7 && Object.keys(newNode.working_hours || {}).map(day => (
                     <div key={day} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', alignItems: 'center' }}>
                       <span style={{ textTransform: 'capitalize', fontWeight: '700', fontSize: '13px' }}>{day}</span>
                       <input type="time" value={newNode.working_hours[day].open} onChange={(e) => {
@@ -3162,21 +3171,34 @@ const AdminPanel = () => {
                     <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>GST NUMBER</label>
                     <input type="text" placeholder="22AAAAA0000A1Z5" value={newNode.gst_number} onChange={(e) => setNewNode({ ...newNode, gst_number: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>TAX PERCENT (%)</label>
-                      <input type="number" value={newNode.tax_percent} onChange={(e) => setNewNode({ ...newNode, tax_percent: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>CGST (%)</label>
+                      <input type="number" value={newNode.cgst} onChange={(e) => setNewNode({ ...newNode, cgst: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>INVOICE PREFIX</label>
-                      <input type="text" value={newNode.invoice_prefix} onChange={(e) => setNewNode({ ...newNode, invoice_prefix: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>SGST (%)</label>
+                      <input type="number" value={newNode.sgst} onChange={(e) => setNewNode({ ...newNode, sgst: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>ROUND OFF BILL</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                        <input type="checkbox" checked={newNode.is_round_off} onChange={(e) => setNewNode({ ...newNode, is_round_off: e.target.checked })} style={{ width: '20px', height: '20px' }} />
+                        <span style={{ fontSize: '13px', fontWeight: '700' }}>Enabled</span>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BILL FOOTER NOTE</label>
-                    <input type="text" value={newNode.bill_footer} onChange={(e) => setNewNode({ ...newNode, bill_footer: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>INVOICE PREFIX</label>
+                        <input type="text" value={newNode.invoice_prefix} onChange={(e) => setNewNode({ ...newNode, invoice_prefix: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BILL FOOTER NOTE</label>
+                        <input type="text" value={newNode.bill_footer} onChange={(e) => setNewNode({ ...newNode, bill_footer: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                      </div>
+                    </div>
                   </div>
-                </div>
               )}
 
               {nodeActiveTab === 'ai' && (

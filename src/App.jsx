@@ -36,7 +36,15 @@ class ErrorBoundary extends React.Component {
 }
 
 function ProtectedRoute({ children }) {
-  const user = JSON.parse(localStorage.getItem('admin_token'));
+  const user = (() => {
+    try {
+      const saved = localStorage.getItem('admin_token');
+      if (!saved || saved === 'undefined') return null;
+      return JSON.parse(saved);
+    } catch (e) {
+      return null;
+    }
+  })();
   if (!user) return <Navigate to="/admin/login" replace />;
   return children;
 }

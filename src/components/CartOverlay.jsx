@@ -9,8 +9,13 @@ const CartOverlay = ({
     setZoomedImage,
     handleManualCartUpdate,
     getCartTotal,
+    getCartSubtotal,
+    getCartTax,
+    restaurantData,
     completeOrderProcess
 }) => {
+    const { cgst, sgst } = getCartTax();
+    const subtotal = getCartSubtotal();
     return (
         <div className="cart-summary-overlay animate-fade-in" onClick={() => setShowCartSummary(false)}>
             <div className="cart-summary-modal slide-up" onClick={e => e.stopPropagation()}>
@@ -60,9 +65,26 @@ const CartOverlay = ({
                     )}
                 </div>
 
-                <div className="cart-summary-footer">
+                <div className="cart-summary-footer" style={{ gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                            <span>Subtotal</span>
+                            <span>₹{subtotal.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                            <span>CGST ({restaurantData?.cgst || 0}%)</span>
+                            <span>₹{cgst.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                            <span>SGST ({restaurantData?.sgst || 0}%)</span>
+                            <span>₹{sgst.toFixed(2)}</span>
+                        </div>
+                    </div>
                     <div className="cart-final-total">
-                        <span>{textLanguage === 'en' ? 'Total Amount' : 'कुल राशि'}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span>{textLanguage === 'en' ? 'Total Amount' : 'कुल राशि'}</span>
+                            {restaurantData?.is_round_off && <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '700' }}>Rounded Off</span>}
+                        </div>
                         <strong>₹{getCartTotal()}</strong>
                     </div>
                     <button className="final-checkout-btn" onClick={() => {
