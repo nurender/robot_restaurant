@@ -74,7 +74,7 @@ const connectDB = async () => {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
-        
+
         // Migration: Ensure all new columns exist for existing deployments
         const restaurantColumns = [
             ['branch_code', 'TEXT UNIQUE'],
@@ -128,7 +128,11 @@ const connectDB = async () => {
 
         const restCheck = await pool.query("SELECT count(*) FROM restaurants");
         if (parseInt(restCheck.rows[0].count) === 0) {
-            await pool.query(`INSERT INTO restaurants (id, name, location) VALUES (1, $1, $2)`, ['Default Restaurant', 'Downtown']);
+            await pool.query(`
+  INSERT INTO restaurants (id, name, address, city) 
+  VALUES (1, $1, $2, $3)
+  ON CONFLICT (id) DO NOTHING
+`, ['Default Restaurant', 'Downtown Area', 'Jaipur']);
         }
         // Ensure Restaurant 4 exists for Demo
         await pool.query(`INSERT INTO restaurants (id, name, branch_code, brand_name) VALUES (4, $1, $2, $3) ON CONFLICT (id) DO NOTHING`, ['Cyber Chef', 'CC-JP-01', 'Cyber Chef']);
@@ -174,21 +178,6 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'cash'`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
 
-        await pool.query(`CREATE TABLE IF NOT EXISTS order_items (
-            id SERIAL PRIMARY KEY,
-            order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-            menu_item_id TEXT NOT NULL REFERENCES menu(id) ON DELETE CASCADE,
-            quantity INTEGER NOT NULL DEFAULT 1,
-            unit_price DECIMAL(10,2) NOT NULL
-        )`);
-        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS menu_item_id TEXT`);
-        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2)`);
-        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS subtotal DECIMAL(10,2) NOT NULL DEFAULT 0`);
-
-        await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS menu (
             id TEXT PRIMARY KEY,
@@ -304,6 +293,21 @@ const connectDB = async () => {
             `, item);
         }
 
+        await pool.query(`CREATE TABLE IF NOT EXISTS order_items (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+            menu_item_id TEXT NOT NULL REFERENCES menu(id) ON DELETE CASCADE,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            unit_price DECIMAL(10,2) NOT NULL
+        )`);
+        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS menu_item_id TEXT`);
+        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_price DECIMAL(10,2)`);
+        await pool.query(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS subtotal DECIMAL(10,2) NOT NULL DEFAULT 0`);
+
+        await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )`);
         // Ensure Categories table has correct constraints
         await pool.query(`DROP TABLE IF EXISTS categories CASCADE`);
         await pool.query(`CREATE TABLE categories (
@@ -504,7 +508,7 @@ const connectDB = async () => {
     } catch (err) {
         console.error("Error connecting to PostgreSQL database: " + err.message);
     }
-        await pool.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS riders (
                 id SERIAL PRIMARY KEY,
                 restaurant_id INTEGER NOT NULL,
@@ -515,10 +519,10 @@ const connectDB = async () => {
             );
         `);
 
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_id INTEGER REFERENCES riders(id) ON DELETE SET NULL`);
-        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_id INTEGER REFERENCES riders(id) ON DELETE SET NULL`);
+    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
 
-        await pool.query(`
+    await pool.query(`
             CREATE TABLE IF NOT EXISTS customer_feedback (
                 id SERIAL PRIMARY KEY,
                 restaurant_id INTEGER NOT NULL,
