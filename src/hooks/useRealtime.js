@@ -15,6 +15,8 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
+  const [error, setError] = useState(null);
+
   const stopSession = useCallback(() => {
     if (peerConnection.current) {
       peerConnection.current.close();
@@ -161,6 +163,7 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
 
     try {
       setIsConnecting(true);
+      setError(null);
       // 1. Get Ephemeral Token
       const sessionResponse = await fetch(`${API_URL}/api/session`, {
         method: 'POST',
@@ -188,7 +191,15 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
       pc.ontrack = (e) => { el.srcObject = e.streams[0]; };
 
       // 4. Audio Input
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+          throw new Error('mic_denied');
+        }
+        throw e;
+      }
       audioStream.current = stream;
       pc.addTrack(stream.getTracks()[0]);
 
@@ -252,9 +263,10 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
     } catch (err) {
       setIsConnecting(false);
       console.error('Realtime error:', err);
+      setError(err.message);
       stopSession();
     }
-  }, [isSessionActive, isConnecting, restaurantId, onRealtimeEvent, stopSession, currentCart]);
+  }, [isSessionActive, isConnecting, restaurantId, onRealtimeEvent, stopSession, currentCart, restaurantName]);
 
   const sendEvent = useCallback((event) => {
     if (dataChannel.current && dataChannel.current.readyState === 'open') {
@@ -270,7 +282,7 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
     startSession();
   }, [isSessionActive, startSession, stopSession]);
 
-  return { isSessionActive, isConnecting, handleToggleSession, stopSession, analyzer, sendEvent };
+  return { isSessionActive, isConnecting, handleToggleSession, stopSession, analyzer, sendEvent, error, setError };
 };
 
 export default useRealtime;

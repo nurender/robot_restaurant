@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { VideoOff, CheckCircle, X } from 'lucide-react';
+import { VideoOff, CheckCircle, X, AlertCircle } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 
@@ -267,7 +267,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     isConnecting, 
     handleToggleSession,
     isSessionActive,
-    stopSession
+    stopSession,
+    error,
+    setError
   } = useRealtime(restaurantId, tableNumber, {
     onCartUpdate: (items) => {
         const normalizedItems = (items || []).map((item) => {
@@ -862,6 +864,38 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     {textLanguage === 'hi' ? 'फीडबैक भेजें' : 'Submit Feedback'}
                 </button>
             </div>
+        </div>
+      )}
+      {/* Microphone Permission Modal */}
+      {error === 'mic_denied' && (
+        <div className="modal-overlay" style={{ zIndex: 10002 }}>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '440px', padding: '40px', textAlign: 'center', background: 'rgba(15, 15, 20, 0.95)', backdropFilter: 'blur(20px)' }}>
+            <div style={{ width: '80px', height: '80px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <AlertCircle size={40} color="#ef4444" />
+            </div>
+            <h3 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px', color: '#ffffff', letterSpacing: '-0.5px' }}>Microphone Access Required</h3>
+            <p style={{ color: 'var(--text-dim)', marginBottom: '12px', fontSize: '16px', lineHeight: '1.6' }}>
+              To speak with our digital concierge, we need your permission to use the microphone.
+            </p>
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '16px', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                💡 <strong>Desktop:</strong> Click the <strong>Lock icon</strong> in the address bar.
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px', margin: 0 }}>
+                📱 <strong>Mobile:</strong> Tap the <strong>Lock</strong> (Chrome) or <strong>AA</strong> (Safari) icon in the address bar and select <strong>"Allow"</strong> for the Microphone.
+              </p>
+            </div>
+            <button 
+              className="btn-primary" 
+              onClick={() => {
+                setError(null);
+                setTimeout(() => handleToggleSession(), 300);
+              }}
+              style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '16px', fontWeight: '800', boxShadow: '0 8px 24px var(--accent-glow)' }}
+            >
+              Try Again & Allow Access
+            </button>
+          </div>
         </div>
       )}
     </div>
