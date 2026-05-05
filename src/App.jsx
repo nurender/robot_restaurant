@@ -51,6 +51,10 @@ function ProtectedRoute({ children }) {
 
 function CustomerApp() {
   const [session, setSession] = useState(null);
+  const [isLoading, setIsLoading] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return !!params.get('s');
+  });
 
   // 🔎 Secure Token se Auto-Login
   React.useEffect(() => {
@@ -59,6 +63,7 @@ function CustomerApp() {
       const secretToken = params.get('s');
 
       if (secretToken) {
+        setIsLoading(true);
         try {
           const response = await fetch(`${API_URL}/api/verify-token/${secretToken}`);
           const data = await response.json();
@@ -69,6 +74,8 @@ function CustomerApp() {
           }
         } catch (err) {
           console.error("Token verification failed", err);
+        } finally {
+          setIsLoading(false);
         }
       }
     };
@@ -84,6 +91,39 @@ function CustomerApp() {
   const handleAdminLogin = () => {
     navigate('/admin/login');
   };
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        background: '#0a0a0b', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'white',
+        fontFamily: 'Inter, sans-serif'
+      }}>
+        <div className="premium-loader"></div>
+        <h2 style={{ marginTop: '20px', fontWeight: '300', letterSpacing: '2px', animation: 'pulse 2s infinite' }}>
+          VERIFYING SESSION
+        </h2>
+        <style>{`
+          .premium-loader {
+            width: 50px;
+            height: 50px;
+            border: 2px solid rgba(124, 58, 237, 0.1);
+            border-top: 2px solid #7c3aed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+          }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <>
