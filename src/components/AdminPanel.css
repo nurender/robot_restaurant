@@ -56,36 +56,70 @@
   z-index: 50;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
   border-right: 1px solid var(--sidebar-border);
-  transition: background 0.25s ease, border-color 0.25s ease;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease;
+  overflow: hidden;
+}
+
+.admin-sidebar.collapsed {
+  width: 80px;
 }
 
 
 .sidebar-brand {
-  padding: 40px 32px;
+  padding: 32px 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 100px;
+}
+
+.admin-sidebar.collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 32px 0;
 }
 
 .brand-logo {
   background: linear-gradient(135deg, var(--accent-color), #818cf8);
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 30px var(--accent-glow);
+  box-shadow: 0 0 20px var(--accent-glow);
+  flex-shrink: 0;
 }
 
 .sidebar-brand h2 {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  background: linear-gradient(to right, #fff, #94a3b8);
+  background: linear-gradient(to right, var(--text-main), var(--text-muted));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+.sidebar-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
 }
 
 .sidebar-nav {
@@ -100,17 +134,25 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border: none;
   background: transparent;
   color: var(--text-dim);
-  border-radius: 16px;
+  border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 15px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   position: relative;
+  white-space: nowrap;
+}
+
+.admin-sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 12px 0;
+  width: 48px;
+  margin: 0 auto;
 }
 
 .nav-item:hover {
@@ -263,7 +305,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-deep) !important;
-  transition: background 0.25s ease;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease;
 }
 
 .main-header {

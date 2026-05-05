@@ -97,6 +97,9 @@ const AdminPanel = () => {
   const [customers, setCustomers] = useState([]);
   const [riders, setRiders] = useState([]);
   const [feedbackList, setFeedbackList] = useState([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Authentication & Initial Fetch
   const [roboSettings, setRoboSettings] = useState({
     ai_tone: 'friendly',
     voice_enabled: true,
@@ -110,6 +113,13 @@ const AdminPanel = () => {
     conversionRate: 0,
     popularItems: []
   });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStates, setLoadingStates] = useState({});
+
+  const setActionLoading = (id, state) => {
+    setLoadingStates(prev => ({ ...prev, [id]: state }));
+  };
 
   // UI States
   const [showMenuPopup, setShowMenuPopup] = useState(false);
@@ -375,6 +385,7 @@ const AdminPanel = () => {
   }, [activeTab]);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       const auth = { params: { restaurant_id: adminUser.restaurant_id } };
 
@@ -417,6 +428,8 @@ const AdminPanel = () => {
       }
     } catch (e) {
       console.error("Critical Fetch Error:", e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -426,67 +439,92 @@ const AdminPanel = () => {
   };
 
   const updateOrderStatus = async (id, status) => {
+    setActionLoading(id, true);
     try {
       await axios.put(`${API_URL}/api/orders/${id}/status`, { status });
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update status");
+    } finally {
+      setActionLoading(id, false);
+    }
   };
   const handlePrintBill = (order) => {
-    const printWindow = window.open('', '_blank');
-    const itemsHtml = (order.items || []).map(item => `
-      <tr>
-        <td>${item.name}</td>
-        <td style="text-align: center;">${item.qty || 1}</td>
-        <td style="text-align: right;">₹${item.price * (item.qty || 1)}</td>
-      </tr>
-    `).join('');
+    try {
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (!printWindow) {
+        alert("🚨 Popup Blocked! Please allow popups for this site to print bills.");
+        return;
+      }
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Invoice - Table ${order.table_number || order.tableNumber}</title>
-          <style>
-            body { font-family: 'Courier New', monospace; padding: 20px; color: #000; }
-            .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
-            .title { font-size: 18px; font-weight: bold; margin: 0; }
-            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-            th, td { padding: 5px; font-size: 14px; }
-            .total { font-size: 16px; font-weight: bold; border-top: 1px dashed #000; padding-top: 10px; text-align: right; }
-            .footer { text-align: center; margin-top: 20px; font-size: 12px; border-top: 1px dashed #000; padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <p class="title">AI RESTO</p>
-            <p>Table: ${order.table_number || order.tableNumber}</p>
-            <p>Order ID: #${order.id}</p>
-          </div>
-          <table>
-            <thead>
-              <tr style="border-bottom: 1px dashed #000;">
-                <th style="text-align: left;">Item</th>
-                <th>Qty</th>
-                <th style="text-align: right;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
-          <div class="total">Grand Total: ₹${order.total}</div>
-          <div class="footer">
-            <p>Thank you for dining with us!</p>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.close();
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+      const itemsHtml = (order.items || []).map(item => `
+        <tr>
+          <td style="padding: 5px; font-size: 14px;">${item.name}</td>
+          <td style="padding: 5px; font-size: 14px; text-align: center;">${item.qty || 1}</td>
+          <td style="padding: 5px; font-size: 14px; text-align: right;">₹${item.price * (item.qty || 1)}</td>
+        </tr>
+      `).join('');
+
+      const html = `
+        <html>
+          <head>
+            <title>Invoice - Table ${order.table_number || order.tableNumber}</title>
+            <style>
+              body { font-family: 'Courier New', monospace; padding: 20px; color: #000; }
+              .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+              .title { font-size: 18px; font-weight: bold; margin: 0; }
+              table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+              .total { font-size: 16px; font-weight: bold; border-top: 1px dashed #000; padding-top: 10px; text-align: right; }
+              .footer { text-align: center; margin-top: 20px; font-size: 12px; border-top: 1px dashed #000; padding-top: 10px; }
+              @media print {
+                body { padding: 0; margin: 0; }
+                .no-print { display: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <p class="title">AI RESTO</p>
+              <p>Table: ${order.table_number || order.tableNumber}</p>
+              <p>Order ID: #${order.id}</p>
+              <p>Date: ${new Date().toLocaleString()}</p>
+            </div>
+            <table>
+              <thead>
+                <tr style="border-bottom: 1px dashed #000;">
+                  <th style="text-align: left; padding: 5px;">Item</th>
+                  <th style="padding: 5px;">Qty</th>
+                  <th style="text-align: right; padding: 5px;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+            <div class="total">Grand Total: ₹${order.total}</div>
+            <div class="footer">
+              <p>Thank you for dining with us!</p>
+              <p>Visit again soon!</p>
+            </div>
+            <script>
+              window.onload = function() {
+                setTimeout(() => {
+                  window.print();
+                  window.close();
+                }, 500);
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (e) {
+      console.error("Print Error:", e);
+      alert("Failed to initiate print process: " + e.message);
+    }
   };
 
   const validateForm = () => {
@@ -523,6 +561,7 @@ const AdminPanel = () => {
     }
     setFormError('');
 
+    setActionLoading('save_dish', true);
     try {
       if (editingDishId) {
         await axios.put(`${API_URL}/api/menu/${editingDishId}`, newDish);
@@ -531,35 +570,58 @@ const AdminPanel = () => {
       }
       setShowMenuPopup(false);
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e);
+      alert("Failed to save dish");
+    } finally {
+      setActionLoading('save_dish', false);
+    }
   };
 
   const deleteDish = async (id) => {
     if (!window.confirm("Are you sure you want to delete this neural dish?")) return;
+    setActionLoading(`delete_dish_${id}`, true);
     try {
       await axios.delete(`${API_URL}/api/menu/${id}`);
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e);
+      alert("Failed to delete dish");
+    } finally {
+      setActionLoading(`delete_dish_${id}`, false);
+    }
   };
 
   const toggleDishActive = async (item) => {
+    setActionLoading(`toggle_dish_${item.id}`, true);
     try {
       await axios.put(`${API_URL}/api/menu/${item.id}`, { ...item, is_active: !item.is_active });
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e);
+    } finally {
+      setActionLoading(`toggle_dish_${item.id}`, false);
+    }
   };
 
   const handleAddCategory = async () => {
     if (!newCatName) return;
+    setActionLoading('add_category', true);
     try {
       await axios.post(`${API_URL}/api/menu/categories`, { name: newCatName, restaurant_id: adminUser.restaurant_id });
       setNewCatName('');
       setShowCatPopup(false);
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e);
+      alert("Failed to add category");
+    } finally {
+      setActionLoading('add_category', false);
+    }
   };
   const handleAddStaff = async (e) => {
     e.preventDefault();
+    setActionLoading('save_staff', true);
     try {
       if (editingStaffId) {
         await axios.put(`${API_URL}/api/users/${editingStaffId}`, newStaff);
@@ -572,11 +634,17 @@ const AdminPanel = () => {
       setEditingStaffId(null);
       setNewStaff({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
       fetchData();
-    } catch (e) { console.error(e); alert("Action failed: " + e.message); }
+    } catch (e) { 
+      console.error(e); 
+      alert("Action failed: " + e.message); 
+    } finally {
+      setActionLoading('save_staff', false);
+    }
   };
 
   const handleAddNode = async (e) => {
     e.preventDefault();
+    setActionLoading('save_node', true);
     try {
       if (editingNodeId) {
         await axios.put(`${API_URL}/api/restaurants/${editingNodeId}`, newNode);
@@ -609,23 +677,38 @@ const AdminPanel = () => {
         logo_url: '', cover_url: ''
       });
       fetchData();
-    } catch (e) { console.error(e); alert("Action failed: " + e.message); }
+    } catch (e) { 
+      console.error(e); 
+      alert("Action failed: " + e.message); 
+    } finally {
+      setActionLoading('save_node', false);
+    }
   };
 
   const deleteUser = async (id) => {
     if (!window.confirm("Are you sure you want to terminate this neural contract?")) return;
+    setActionLoading(`delete_user_${id}`, true);
     try {
       await axios.delete(`${API_URL}/api/users/${id}`);
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e); 
+    } finally {
+      setActionLoading(`delete_user_${id}`, false);
+    }
   };
 
   const deleteRestaurant = async (id) => {
     if (!window.confirm("WARNING: Deleting this restaurant will wipe all associated data. Proceed?")) return;
+    setActionLoading(`delete_restaurant_${id}`, true);
     try {
       await axios.delete(`${API_URL}/api/restaurants/${id}`);
       fetchData();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error(e); 
+    } finally {
+      setActionLoading(`delete_restaurant_${id}`, false);
+    }
   };
 
   const handleEditRider = (rider) => {
@@ -695,6 +778,23 @@ const AdminPanel = () => {
 
   return (
     <div className="admin-layout animate-fade-in">
+      {isLoading && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          background: 'rgba(10, 10, 11, 0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, color: 'white', fontFamily: 'Inter, sans-serif'
+        }}>
+          <div className="premium-loader" style={{
+            width: '60px', height: '60px', border: '3px solid rgba(124, 58, 237, 0.1)',
+            borderTop: '3px solid #7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite',
+            boxShadow: '0 0 20px rgba(124, 58, 237, 0.3)'
+          }}></div>
+          <h2 style={{ marginTop: '24px', fontWeight: '300', letterSpacing: '4px', fontSize: '14px', animation: 'pulse 2s infinite' }}>
+            NEURAL HUB SYNCHRONIZING
+          </h2>
+        </div>
+      )}
       <style>{`
         /* smooth transitions for all themed elements */
         .admin-layout, .admin-main, .admin-sidebar,
@@ -737,15 +837,27 @@ const AdminPanel = () => {
         }
         .scrollbar-hidden::-webkit-scrollbar { display: none; }
         .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .spinner-small {
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(255,255,255,0.2);
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         adminUser={adminUser}
         onLogout={handleLogout}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      <main className="admin-main">
+      <main className={`admin-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="main-header">
           <div className="header-search">
             <Search size={20} color="var(--text-muted)" />
@@ -965,22 +1077,29 @@ const AdminPanel = () => {
                               </button>
 
                               {order.status === 'pending' && (
-                                <button onClick={() => updateOrderStatus(order.id, 'accepted')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>Accept</button>
+                                <button onClick={() => updateOrderStatus(order.id, 'accepted')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
+                                  {loadingStates[order.id] ? <div className="spinner-small" /> : 'Accept'}
+                                </button>
                               )}
                               {order.status === 'accepted' && (
-                                <button onClick={() => updateOrderStatus(order.id, 'preparing')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: 'var(--accent-secondary)' }}>Start Preparing</button>
+                                <button onClick={() => updateOrderStatus(order.id, 'preparing')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
+                                  {loadingStates[order.id] ? <div className="spinner-small" /> : 'Start Preparing'}
+                                </button>
                               )}
                               {order.status === 'preparing' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   <select
                                     className="rider-select"
+                                    disabled={loadingStates[order.id]}
                                     onChange={async (e) => {
                                       const rId = e.target.value;
                                       if (!rId) return;
+                                      setActionLoading(order.id, true);
                                       try {
                                         await axios.post(`${API_URL}/api/mgmt/orders/assign-rider`, { order_id: order.id, rider_id: rId });
                                         fetchData();
                                       } catch (e) { alert("Assignment failed"); }
+                                      finally { setActionLoading(order.id, false); }
                                     }}
                                     style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-deep)', color: 'white', border: '1px solid var(--card-border)', fontSize: '11px', outline: 'none' }}
                                   >
@@ -989,14 +1108,20 @@ const AdminPanel = () => {
                                       <option key={r.id} value={r.id}>{r.name} ({r.status})</option>
                                     ))}
                                   </select>
-                                  <button onClick={() => updateOrderStatus(order.id, 'out_for_delivery')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: '#3b82f6' }}>Dispatch</button>
+                                  <button onClick={() => updateOrderStatus(order.id, 'out_for_delivery')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', background: '#3b82f6', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
+                                    {loadingStates[order.id] ? <div className="spinner-small" /> : 'Dispatch'}
+                                  </button>
                                 </div>
                               )}
                               {order.status === 'out_for_delivery' && (
-                                <button onClick={() => updateOrderStatus(order.id, 'completed')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>Mark Delivered</button>
+                                <button onClick={() => updateOrderStatus(order.id, 'completed')} className="btn-primary" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
+                                  {loadingStates[order.id] ? <div className="spinner-small" /> : 'Mark Delivered'}
+                                </button>
                               )}
                               {order.status !== 'completed' && order.status !== 'cancelled' && (
-                                <button onClick={() => updateOrderStatus(order.id, 'cancelled')} style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--error)', color: 'var(--error)', background: 'transparent', cursor: 'pointer' }}>Cancel</button>
+                                <button onClick={() => updateOrderStatus(order.id, 'cancelled')} style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--error)', color: 'var(--error)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
+                                  {loadingStates[order.id] ? <div className="spinner-small" /> : 'Cancel'}
+                                </button>
                               )}
                             </div>
                           </div>
@@ -1190,7 +1315,9 @@ const AdminPanel = () => {
                                   setFormError('');
                                   setShowMenuPopup(true);
                                 }}><Edit2 size={16} /></button>
-                                <button className="inv-btn-delete" onClick={() => deleteDish(item.id)}><Trash2 size={16} /></button>
+                                <button onClick={() => deleteDish(item.id)} className="btn-icon text-error hover:bg-error/10" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
+                                  {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -1283,7 +1410,9 @@ const AdminPanel = () => {
                                   setFormError('');
                                   setShowMenuPopup(true);
                                 }}><Edit2 size={16} /></button>
-                                <button className="inv-btn-delete" onClick={() => deleteDish(item.id)}><Trash2 size={16} /></button>
+                                <button onClick={() => deleteDish(item.id)} className="btn-icon text-error hover:bg-error/10" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
+                                  {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -1365,7 +1494,9 @@ const AdminPanel = () => {
                               setEditingStaffId(staff.id);
                               setShowStaffPopup(true);
                             }}><Edit2 size={16} /></button>
-                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)}><Trash2 size={16} /></button>
+                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)} disabled={loadingStates[`delete_user_${staff.id}`]}>
+                              {loadingStates[`delete_user_${staff.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                            </button>
                           </div>
                         </div>
                       )) : (
@@ -1414,7 +1545,9 @@ const AdminPanel = () => {
                               setEditingStaffId(staff.id);
                               setShowStaffPopup(true);
                             }}><Edit2 size={16} /></button>
-                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)}><Trash2 size={16} /></button>
+                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)} disabled={loadingStates[`delete_user_${staff.id}`]}>
+                              {loadingStates[`delete_user_${staff.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1454,7 +1587,9 @@ const AdminPanel = () => {
                               setEditingNodeId(res.id);
                               setShowNodePopup(true);
                             }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s' }}><Edit2 size={14} /></button>
-                            <button className="inv-btn-delete" title="Delete Restaurant" onClick={() => deleteRestaurant(res.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }}><Trash2 size={14} /></button>
+                            <button className="inv-btn-delete" title="Delete Restaurant" onClick={() => deleteRestaurant(res.id)} disabled={loadingStates[`delete_restaurant_${res.id}`]} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', cursor: loadingStates[`delete_restaurant_${res.id}`] ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                              {loadingStates[`delete_restaurant_${res.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={14} />}
+                            </button>
                           </div>
                         </div>
                         <div style={{ marginTop: '20px' }}>
@@ -2613,12 +2748,12 @@ const AdminPanel = () => {
                 type="button"
                 className="btn-primary"
                 onClick={handleSaveDish}
-                disabled={uploading}
-                style={{ padding: '14px 40px', borderRadius: '14px', fontWeight: '800', fontSize: '15px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', boxShadow: '0 10px 20px -5px rgba(124, 58, 237, 0.4)', transition: 'all 0.2s' }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                disabled={uploading || loadingStates['save_dish']}
+                style={{ padding: '14px 40px', borderRadius: '14px', fontWeight: '800', fontSize: '15px', border: 'none', cursor: (uploading || loadingStates['save_dish']) ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', boxShadow: '0 10px 20px -5px rgba(124, 58, 237, 0.4)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
+                onMouseOver={(e) => ! (uploading || loadingStates['save_dish']) && (e.currentTarget.style.transform = 'translateY(-2px)')}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                {uploading ? 'Processing...' : 'Save Menu Item'}
+                {(uploading || loadingStates['save_dish']) ? <div className="spinner-small" /> : 'Save Menu Item'}
               </button>
             </div>
           </div>
@@ -2800,9 +2935,10 @@ const AdminPanel = () => {
                 />
                 <button 
                   onClick={handleAddCategory}
-                  style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', border: 'none', padding: '12px 24px', borderRadius: '14px', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)' }}
+                  disabled={loadingStates['add_category']}
+                  style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', border: 'none', padding: '12px 24px', borderRadius: '14px', color: 'white', fontWeight: '800', cursor: loadingStates['add_category'] ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)' }}
                 >
-                  <Plus size={20} /> Add
+                  {loadingStates['add_category'] ? <div className="spinner-small" /> : <><Plus size={20} /> Add</>}
                 </button>
               </div>
 
@@ -2978,9 +3114,10 @@ const AdminPanel = () => {
                 <button
                   type="submit"
                   className="btn-primary"
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)' }}
+                  disabled={loadingStates['save_staff']}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: loadingStates['save_staff'] ? 'not-allowed' : 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
-                  Save Member
+                  {loadingStates['save_staff'] ? <div className="spinner-small" /> : 'Save Member'}
                 </button>
               </div>
             </form>
@@ -3253,9 +3390,10 @@ const AdminPanel = () => {
                 <button
                   type="submit"
                   className="btn-primary"
-                  style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 24px -6px rgba(124, 58, 237, 0.4)' }}
+                  disabled={loadingStates['save_node']}
+                  style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: loadingStates['save_node'] ? 'not-allowed' : 'pointer', boxShadow: '0 8px 24px -6px rgba(124, 58, 237, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
-                  {nodeActiveTab === 'branding' ? 'Deploy Node 🚀' : 'Next Step →'}
+                  {loadingStates['save_node'] ? <div className="spinner-small" /> : (nodeActiveTab === 'branding' ? 'Deploy Node 🚀' : 'Next Step →')}
                 </button>
               </div>
             </form>
@@ -3331,20 +3469,29 @@ const AdminPanel = () => {
 
               <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                 <button className="btn-secondary" onClick={() => { setShowCouponPopup(false); setEditingCouponId(null); }} style={{ flex: 1 }}>Cancel</button>
-                <button className="btn-primary" onClick={async () => {
-                  try {
-                    const payload = { ...newCoupon, restaurant_id: adminUser.restaurant_id };
-                    if (editingCouponId) {
-                      await axios.put(`${API_URL}/api/mgmt/coupons/${editingCouponId}`, payload);
-                    } else {
-                      await axios.post(`${API_URL}/api/mgmt/coupons`, payload);
-                    }
-                    setShowCouponPopup(false);
-                    setEditingCouponId(null);
-                    setNewCoupon({ code: '', discount_type: 'percent', discount_value: '', min_order_value: '', usage_limit: '', expiry_date: '', is_active: true });
-                    fetchData();
-                  } catch (e) { alert("Failed to save coupon"); }
-                }} style={{ flex: 1 }}>{editingCouponId ? 'Update Promotion' : 'Publish Offer'}</button>
+                <button 
+                  className="btn-primary" 
+                  disabled={loadingStates['save_coupon']}
+                  onClick={async () => {
+                    setActionLoading('save_coupon', true);
+                    try {
+                      const payload = { ...newCoupon, restaurant_id: adminUser.restaurant_id };
+                      if (editingCouponId) {
+                        await axios.put(`${API_URL}/api/mgmt/coupons/${editingCouponId}`, payload);
+                      } else {
+                        await axios.post(`${API_URL}/api/mgmt/coupons`, payload);
+                      }
+                      setShowCouponPopup(false);
+                      setEditingCouponId(null);
+                      setNewCoupon({ code: '', discount_type: 'percent', discount_value: '', min_order_value: '', usage_limit: '', expiry_date: '', is_active: true });
+                      fetchData();
+                    } catch (e) { alert("Failed to save coupon"); }
+                    finally { setActionLoading('save_coupon', false); }
+                  }} 
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {loadingStates['save_coupon'] ? <div className="spinner-small" /> : (editingCouponId ? 'Update Promotion' : 'Publish Offer')}
+                </button>
               </div>
             </div>
           </div>
@@ -3377,7 +3524,18 @@ const AdminPanel = () => {
               )}
               <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                 <button className="btn-secondary" onClick={() => setShowRiderPopup(false)} style={{ flex: 1 }}>Cancel</button>
-                <button className="btn-primary" onClick={handleSaveRider} style={{ flex: 1 }}>{editingRiderId ? 'Synchronize Data' : 'Onboard Rider'}</button>
+                <button 
+                  className="btn-primary" 
+                  disabled={loadingStates['save_rider']}
+                  onClick={async () => {
+                    setActionLoading('save_rider', true);
+                    try { await handleSaveRider(); } 
+                    finally { setActionLoading('save_rider', false); }
+                  }} 
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {loadingStates['save_rider'] ? <div className="spinner-small" /> : (editingRiderId ? 'Synchronize Data' : 'Onboard Rider')}
+                </button>
               </div>
             </div>
           </div>

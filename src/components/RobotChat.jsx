@@ -66,6 +66,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderTracking, setOrderTracking] = useState(null);
   const [userPreferences, setUserPreferences] = useState([]);
+  const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const initializationRef = useRef(false);
 
   const videoRef = useRef(null);
@@ -77,38 +78,43 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     return `${API_URL}${url}`;
   };
 
-  const fetchMenu = async () => {
-    if (!restaurantId) return;
-    try {
-      const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
-      const menuData = await menuRes.json();
-      const allItems = menuData.data || [];
-      const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
-      const grouped = uniqueCategoryNames.map(catName => ({
-        category: catName,
-        items: allItems.filter(item => (item.category || 'Other') === catName)
-      }));
-      grouped.sort((a, b) => a.category.localeCompare(b.category));
-      setMenuCategories(grouped.filter(g => g.items.length > 0));
-      setExpandedCats(new Set(uniqueCategoryNames));
-    } catch (error) { console.error("Menu fetch failed:", error); }
-  };
-
   useEffect(() => {
-    const fetchRestaurantInfo = async () => {
-      if (!restaurantId) return;
+    const initApp = async () => {
+      setIsGlobalLoading(true);
+      if (!restaurantId) {
+        setIsGlobalLoading(false);
+        return;
+      }
       try {
-        const res = await fetch(`${API_URL}/api/restaurants`);
-        const data = await res.json();
-        const mine = (data.data || []).find(r => String(r.id) === String(restaurantId));
+        // Fetch Restaurant Info
+        const restRes = await fetch(`${API_URL}/api/restaurants`);
+        const restData = await restRes.json();
+        const mine = (restData.data || []).find(r => String(r.id) === String(restaurantId));
         if (mine) {
           setRestaurantName(mine.name);
           setRestaurantData(mine);
         }
-      } catch (e) { console.error("Rest Info Error:", e); }
+
+        // Fetch Menu
+        const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
+        const menuData = await menuRes.json();
+        const allItems = menuData.data || [];
+        const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
+        const grouped = uniqueCategoryNames.map(catName => ({
+          category: catName,
+          items: allItems.filter(item => (item.category || 'Other') === catName)
+        }));
+        grouped.sort((a, b) => a.category.localeCompare(b.category));
+        setMenuCategories(grouped.filter(g => g.items.length > 0));
+        setExpandedCats(new Set(uniqueCategoryNames));
+
+      } catch (e) {
+        console.error("Initialization Error:", e);
+      } finally {
+        setIsGlobalLoading(false);
+      }
     };
-    fetchRestaurantInfo();
-    fetchMenu();
+    initApp();
   }, [restaurantId]);
 
   useEffect(() => {

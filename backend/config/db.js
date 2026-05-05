@@ -495,6 +495,37 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE chat_logs ADD COLUMN IF NOT EXISTS customer_mood TEXT`);
 
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS inventory (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                category TEXT,
+                qty DECIMAL(10,2) DEFAULT 0.00,
+                unit TEXT,
+                min_qty DECIMAL(10,2) DEFAULT 0.00,
+                cost DECIMAL(10,2) DEFAULT 0.00,
+                supplier TEXT,
+                expiry DATE,
+                batch TEXT,
+                status TEXT DEFAULT 'Optimal',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Seed inventory if empty
+        const invCheck = await pool.query("SELECT count(*) FROM inventory");
+        if (parseInt(invCheck.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO inventory (name, category, qty, unit, min_qty, cost, supplier, expiry, batch, status) VALUES 
+                ('Basmati Rice', 'Dry Goods', 45, 'Kg', 10, 65, 'Anand Grains', '2027-02-14', 'B-112', 'Optimal'),
+                ('Paneer Cubes', 'Dairy', 20, 'Kg', 15, 220, 'Krishna Dairy', '2026-05-01', 'B-098', 'Optimal'),
+                ('Spices Mix', 'Spices', 25, 'Kg', 5, 450, 'Masala Mart', '2026-11-20', 'B-001', 'Optimal'),
+                ('Burger Buns', 'Bakery', 100, 'Pcs', 20, 5, 'Daily Fresh', '2026-05-10', 'B-002', 'Optimal'),
+                ('Veg Patty', 'Frozen', 100, 'Pcs', 20, 15, 'Frozen Foods', '2026-08-10', 'B-003', 'Optimal'),
+                ('Milk', 'Dairy', 50, 'Ltr', 10, 50, 'Krishna Dairy', '2026-05-07', 'B-004', 'Optimal'),
+                ('Sugar', 'Dry Goods', 20, 'Kg', 5, 40, 'Anand Grains', '2027-01-01', 'B-005', 'Optimal')
+            `);
+        }
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS menu_import_history (
                 id SERIAL PRIMARY KEY,
                 restaurant_id INTEGER DEFAULT 4,
@@ -506,7 +537,6 @@ const connectDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-
     } catch (err) {
         console.error("Error connecting to PostgreSQL database: " + err.message);
     }
