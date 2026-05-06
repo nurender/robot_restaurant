@@ -39,32 +39,36 @@ const getAdvancedStats = async (req, res) => {
             ? ((orderCount.rows[0].count / chatCount.rows[0].count) * 100).toFixed(2)
             : 0;
 
-        // 5. Voice Specifics
+        // 5. Voice Specifics - Simplified (Removing is_voice check as column is missing)
         const voiceStats = await pool.query(`
             SELECT 
                 COUNT(*) as total_calls,
-                AVG(duration_seconds) as avg_duration,
-                (SELECT COUNT(*) FROM orders WHERE is_voice = true AND restaurant_id = $1) as voice_orders
+                AVG(duration_seconds) as avg_duration
             FROM chat_logs 
-            WHERE restaurant_id = $1 AND mode = 'voice'
+            WHERE ($1::int IS NULL OR restaurant_id = $1) AND mode = 'voice'
         `, [rId]);
 
         const totalCalls = voiceStats.rows[0].total_calls || 0;
-        const voiceConversion = totalCalls > 0 
-            ? ((voiceStats.rows[0].voice_orders / totalCalls) * 100).toFixed(2)
-            : 0;
 
-        // 6. Popular Items
-        const popularItems = await pool.query(`
-            SELECT m.name, COUNT(oi.id) as order_count 
-            FROM order_items oi
-            JOIN menu m ON oi.menu_item_id = m.id
-            JOIN orders o ON oi.order_id = o.id
-            WHERE o.restaurant_id = $1
-            GROUP BY m.name
-            ORDER BY order_count DESC
-            LIMIT 5
-        `, [rId]);
+        // 6. Popular Items (Parsing from JSON items column in orders table)
+        const allOrders = await pool.query("SELECT items FROM orders WHERE ($1::int IS NULL OR restaurant_id = $1) LIMIT 500", [rId]);
+        const itemCounts = {};
+        allOrders.rows.forEach(row => {
+            let items = [];
+            try {
+                items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+            } catch(e) {}
+            if (Array.isArray(items)) {
+                items.forEach(it => {
+                    itemCounts[it.name] = (itemCounts[it.name] || 0) + (it.qty || 1);
+                });
+            }
+        });
+
+        const popularItems = Object.entries(itemCounts)
+            .map(([name, count]) => ({ name, order_count: count }))
+            .sort((a, b) => b.order_count - a.order_count)
+            .slice(0, 5);
 
         res.json({
             success: true,
@@ -72,11 +76,11 @@ const getAdvancedStats = async (req, res) => {
                 totalRevenue: revenueRes.rows[0].total_revenue || 0,
                 avgOrderValue: parseFloat(aovRes.rows[0].avg_order_value || 0).toFixed(2),
                 conversionRate: conversionRate,
-                popularItems: popularItems.rows,
+                popularItems: popularItems,
                 voice: {
                     totalCalls: totalCalls,
                     avgDuration: Math.round(voiceStats.rows[0].avg_duration || 0),
-                    conversion: voiceConversion
+                    conversion: 0 // Placeholder
                 }
             }
         });

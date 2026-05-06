@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Settings,
@@ -33,7 +33,8 @@ import {
   CreditCard,
   Phone,
   Star,
-  Send
+  Send,
+  RefreshCw
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -61,6 +62,12 @@ import { API_URL } from '../config';
 const socket = io(API_URL, { autoConnect: true });
 
 const AdminPanel = () => {
+  const renderCount = useRef(0);
+  useEffect(() => {
+    renderCount.current += 1;
+    console.log(`🎨 AdminPanel Render #${renderCount.current} (Tab: ${activeTab})`);
+  });
+
   const [adminUser, setAdminUser] = useState(() => {
     try {
       const saved = localStorage.getItem('admin_token');
@@ -368,15 +375,39 @@ const AdminPanel = () => {
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
     socket.on('new_order', (order) => {
-      setOrders(prev => [order, ...prev]);
-      new Audio('/order-alert.mp3').play().catch(() => { });
+      console.log("📥 Admin Socket: new_order received", order);
+      const isMyRest = String(order.restaurant_id) === String(adminUser.restaurant_id);
+      const isSuper = adminUser.role === 'super_admin';
+      
+      if (isMyRest || isSuper) {
+        setOrders(prev => {
+          if (prev.find(o => o.id === order.id)) return prev;
+          return [order, ...prev];
+        });
+        new Audio('/order-alert.mp3').play().catch(() => { });
+      }
     });
+
+    socket.on('order_updated', (updatedOrder) => {
+      console.log("📥 Admin Socket: order_updated received", updatedOrder);
+      const isMyRest = String(updatedOrder.restaurant_id) === String(adminUser.restaurant_id);
+      const isSuper = adminUser.role === 'super_admin';
+
+      if (isMyRest || isSuper) {
+        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+      }
+    });
+
+    // Removed fallback polling to prevent frequent API calls
+    // Polling was at 60s, but user reported much more frequent calls
+    
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('new_order');
+      socket.off('order_updated');
     };
-  }, []);
+  }, [adminUser.id, adminUser.restaurant_id, activeTab]);
 
   useEffect(() => {
     if (activeTab === 'feedback') {
@@ -384,52 +415,64 @@ const AdminPanel = () => {
     }
   }, [activeTab]);
 
-  const fetchData = async () => {
+  const isFetching = useRef(false);
+  const fetchData = async (reason = 'Manual/Initial') => {
+    if (!adminUser.id || isFetching.current) return;
+    isFetching.current = true;
     setIsLoading(true);
     try {
       const auth = { params: { restaurant_id: adminUser.restaurant_id } };
-
       const fetchHelper = (url) => axios.get(url, auth).catch(err => {
         console.warn(`⚠️ Partial Fetch Failure for ${url}:`, err.message);
-        return { data: { data: [] } }; // Return empty data on failure
+        return { data: { data: [] } };
       });
 
-      const [ordersRes, menuRes, catRes, staffRes, restRes, tablesRes, chatLogsRes, statsRes, couponsRes, customersRes, settingsRes, ridersRes, feedbackRes] = await Promise.all([
+      // 1. Core Data (Always needed)
+      const [ordersRes, menuRes, catRes] = await Promise.all([
         fetchHelper(`${API_URL}/api/orders`),
         fetchHelper(`${API_URL}/api/menu`),
-        fetchHelper(`${API_URL}/api/menu/categories`),
-        fetchHelper(`${API_URL}/api/users`),
-        axios.get(`${API_URL}/api/restaurants`).catch(() => ({ data: { data: [] } })),
-        fetchHelper(`${API_URL}/api/tables`),
-        fetchHelper(`${API_URL}/api/monitoring/chat-logs`),
-        fetchHelper(`${API_URL}/api/monitoring/stats`),
-        fetchHelper(`${API_URL}/api/mgmt/coupons`),
-        fetchHelper(`${API_URL}/api/mgmt/customers`),
-        fetchHelper(`${API_URL}/api/mgmt/settings`),
-        fetchHelper(`${API_URL}/api/mgmt/riders`),
-        fetchHelper(`${API_URL}/api/mgmt/feedback`)
+        fetchHelper(`${API_URL}/api/menu/categories`)
       ]);
 
       setOrders(ordersRes.data.data || []);
       setMenuItems(menuRes.data.data || []);
       setCategories(catRes.data.data || []);
-      setStaffList(staffRes.data.data || []);
-      setRestaurantsList(restRes.data.data || []);
-      setChatLogs(chatLogsRes.data.data || []);
-      setAdvancedStats(statsRes.data.data || {});
-      setCoupons(couponsRes.data.data || []);
-      setCustomers(customersRes.data.data || []);
-      setRoboSettings(settingsRes.data.data || {});
-      setRiders(ridersRes.data.data || []);
-      setFeedbackList(feedbackRes.data.data || []);
 
-      if (tablesRes.data && tablesRes.data.length > 0) {
-        setRestaurantTables(tablesRes.data.map(t => ({ table: `Table ${t.table_number}`, token: t.secret_token })));
+      // 2. Tab Specific Data
+      if (activeTab === 'dashboard' || activeTab === 'reports') {
+        // Stats already fetched or handled via orders analytics in frontend
       }
-    } catch (e) {
-      console.error("Critical Fetch Error:", e);
+
+      if (activeTab === 'staff') {
+        const staffRes = await fetchHelper(`${API_URL}/api/users`);
+        setStaffList(staffRes.data.data || []);
+      }
+
+      if (activeTab === 'restaurants') {
+        const restRes = await axios.get(`${API_URL}/api/mgmt/restaurants`).catch(() => ({ data: { data: [] } }));
+        setRestaurantsList(restRes.data.data || []);
+      }
+
+      if (activeTab === 'feedback') {
+        const fbRes = await fetchHelper(`${API_URL}/api/mgmt/feedback`);
+        setFeedbackList(fbRes.data.data || []);
+      }
+
+      if (activeTab === 'rider_fleet') {
+        const ridersRes = await fetchHelper(`${API_URL}/api/mgmt/riders`);
+        setRidersList(ridersRes.data.data || []);
+      }
+
+      if (activeTab === 'monitor') {
+        const statsRes = await fetchHelper(`${API_URL}/api/monitoring/stats`);
+        setStatsData(statsRes.data.data || {});
+      }
+
+    } catch (error) {
+      console.error("Fetch Error:", error);
     } finally {
       setIsLoading(false);
+      isFetching.current = false;
     }
   };
 
@@ -998,7 +1041,22 @@ const AdminPanel = () => {
             <div className="view-container animate-slide-up">
               <div className="view-header-row">
                 <div className="header-left">
-                  <h1 className="view-title">Orders Hub</h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <h1 className="view-title">Orders Hub</h1>
+                    <button 
+                      onClick={fetchData}
+                      className="btn-icon"
+                      disabled={isLoading}
+                      title="Manual Refresh"
+                      style={{ 
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', 
+                        padding: '8px', borderRadius: '10px', color: 'var(--text-muted)', 
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                    >
+                      <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+                    </button>
+                  </div>
                   <p className="text-muted">Real-time neural order synchronization across the network.</p>
                 </div>
                 <div className="orders-filter-bar shadow-premium">

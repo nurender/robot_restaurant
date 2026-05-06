@@ -47,8 +47,16 @@ const createOrder = async (req, res) => {
 
             await client.query('COMMIT');
 
-            const fullOrder = { id: orderId, ...req.body };
-            if (io) io.emit('new_order', fullOrder);
+            const fullOrder = { 
+                id: orderId, 
+                ...req.body, 
+                tablenumber: tableNumber, // Ensure consistency
+                timestamp: new Date()
+            };
+            if (io) {
+                console.log(`📡 Emitting new_order for Order #${orderId}`);
+                io.emit('new_order', fullOrder);
+            }
 
             res.json({ success: true, id: orderId });
         } catch (e) {
@@ -134,11 +142,72 @@ const updateOrderStatus = async (req, res) => {
             }
         }
 
-        if (io) io.emit('order_status_update', { id: Number(id), status });
+        if (io) {
+            const updatedOrderRes = await pool.query("SELECT * FROM orders WHERE id = $1", [id]);
+            if (updatedOrderRes.rows.length > 0) {
+                const row = updatedOrderRes.rows[0];
+                let parsedItems = [];
+                try {
+                    parsedItems = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+                } catch (e) {}
+                
+                console.log(`📡 Emitting order_updated for Order #${id} (Status: ${status})`);
+                io.emit('order_updated', {
+                    ...row,
+                    tableNumber: row.tablenumber,
+                    timestamp: row.timestamp,
+                    customerName: row.customer_name,
+                    customerPhone: row.customer_phone,
+                    items: parsedItems
+                });
+            } else {
+                console.warn(`⚠️ Could not find order #${id} for emission`);
+            }
+        }
         res.json({ message: "Status updated successfully" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-module.exports = { createOrder, getOrders, updateOrderStatus };
+const trackTableOrder = async (req, res) => {
+    const { tableNumber } = req.params;
+    const { restaurant_id } = req.query;
+    const restId = restaurant_id || 1;
+
+    try {
+        // Find all orders for this table today that are NOT completed or cancelled
+        const query = `
+            SELECT * FROM orders 
+            WHERE restaurant_id = $1 
+              AND tablenumber = $2 
+              AND status != 'completed' 
+              AND status != 'cancelled'
+              AND timestamp::date = CURRENT_DATE
+            ORDER BY timestamp DESC
+        `;
+        const result = await pool.query(query, [restId, tableNumber]);
+
+        const orders = result.rows.map(row => {
+            let parsedItems = [];
+            try {
+                parsedItems = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+            } catch (e) {}
+            return {
+                ...row,
+                tableNumber: row.tablenumber,
+                timestamp: row.timestamp,
+                customerName: row.customer_name,
+                customerPhone: row.customer_phone,
+                items: parsedItems
+            };
+        });
+
+        res.json({ orders });
+    } catch (err) {
+        console.error("Tracking Error:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+module.exports = { createOrder, getOrders, updateOrderStatus, trackTableOrder };
