@@ -110,6 +110,45 @@ const getOrders = async (req, res) => {
     }
 };
 
+const updateOrder = async (req, res) => {
+    const { id } = req.params;
+    const { customer_name, customer_phone, items, status } = req.body;
+
+    try {
+        let query = "UPDATE orders SET ";
+        let params = [];
+        let updates = [];
+
+        if (customer_name !== undefined) {
+            updates.push(`customer_name = $${params.length + 1}`);
+            params.push(customer_name);
+        }
+        if (customer_phone !== undefined) {
+            updates.push(`customer_phone = $${params.length + 1}`);
+            params.push(customer_phone);
+        }
+        if (items !== undefined) {
+            updates.push(`items = $${params.length + 1}`);
+            params.push(typeof items === 'string' ? items : JSON.stringify(items));
+        }
+        if (status !== undefined) {
+            updates.push(`status = $${params.length + 1}`);
+            params.push(status);
+        }
+
+        if (updates.length === 0) return res.json({ success: true, message: "No changes" });
+
+        query += updates.join(", ") + ` WHERE id = $${params.length + 1}`;
+        params.push(id);
+
+        await pool.query(query, params);
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Update Order Error:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     const { id } = req.params;
@@ -210,4 +249,4 @@ const trackTableOrder = async (req, res) => {
     }
 };
 
-module.exports = { createOrder, getOrders, updateOrderStatus, trackTableOrder };
+module.exports = { createOrder, getOrders, updateOrderStatus, updateOrder, trackTableOrder };

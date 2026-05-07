@@ -14,6 +14,7 @@ import {
   Plus,
   Trash2,
   Edit2,
+  Edit,
   Users,
   Store,
   Bot,
@@ -190,6 +191,12 @@ const AdminPanel = () => {
   // AI Menu Import States
   const [isImporting, setIsImporting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tableSearch, setTableSearch] = useState('');
+  const [phoneSearch, setPhoneSearch] = useState('');
+  const [nameSearch, setNameSearch] = useState('');
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editFormData, setEditFormData] = useState({ name: '', phone: '' });
   const [showImportReview, setShowImportReview] = useState(false);
   const [showCouponPopup, setShowCouponPopup] = useState(false);
   const [showRiderPopup, setShowRiderPopup] = useState(false);
@@ -314,15 +321,25 @@ const AdminPanel = () => {
   const submitManualOrder = async () => {
     if (manualOrderData.items.length === 0) return alert("Please add at least one item");
     try {
-      await axios.post(`${API_URL}/api/orders`, {
-        ...manualOrderData,
-        restaurant_id: adminUser.restaurant_id,
-        status: 'pending'
-      });
+      if (isEditingOrder) {
+        await axios.put(`${API_URL}/api/orders/${manualOrderData.id}`, {
+          customer_name: manualOrderData.customerName,
+          customer_phone: manualOrderData.customerPhone,
+          items: manualOrderData.items,
+          tablenumber: manualOrderData.tableNumber
+        });
+      } else {
+        await axios.post(`${API_URL}/api/orders`, {
+          ...manualOrderData,
+          restaurant_id: adminUser.restaurant_id,
+          status: 'pending'
+        });
+      }
       setShowManualOrderPopup(false);
+      setIsEditingOrder(false);
       setManualOrderData({ tableNumber: '1', items: [], customerName: '', customerPhone: '', total: 0 });
       fetchData();
-    } catch (e) { alert("Failed to place order"); }
+    } catch (e) { alert(isEditingOrder ? "Failed to update order" : "Failed to place order"); }
   };
 
   const generateCouponCode = () => {
@@ -491,6 +508,21 @@ const AdminPanel = () => {
       alert("Failed to update status");
     } finally {
       setActionLoading(id, false);
+    }
+  };
+
+  const handleOrderUpdate = async (orderId) => {
+    try {
+      await axios.put(`${API_URL}/api/orders/${orderId}`, {
+        customer_name: editFormData.name,
+        customer_phone: editFormData.phone,
+        items: editFormData.items
+      });
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, customer_name: editFormData.name, customer_phone: editFormData.phone, customerName: editFormData.name, customerPhone: editFormData.phone, items: editFormData.items } : o));
+      setEditingOrderId(null);
+    } catch (err) {
+      console.error("Update failed:", err);
+      alert("Failed to update order");
     }
   };
   const handlePrintBill = (order) => {
@@ -1070,8 +1102,52 @@ const AdminPanel = () => {
                       style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
                     />
                   </div>
+                  <div className="filter-group">
+                    <label><Search size={14} /> Table #</label>
+                    <select
+                      className="filter-input"
+                      value={tableSearch}
+                      onChange={(e) => setTableSearch(e.target.value)}
+                      style={{ width: '130px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="">All Tables</option>
+                      {restaurantTables.map((t, idx) => (
+                        <option key={idx} value={t.table_number || (idx + 1)}>
+                          {t.name || t.table || `Table ${t.table_number || (idx + 1)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="filter-group">
+                    <label><Phone size={14} /> Phone</label>
+                    <input
+                      type="text"
+                      placeholder="9876..."
+                      className="filter-input"
+                      value={phoneSearch}
+                      onChange={(e) => setPhoneSearch(e.target.value)}
+                      style={{ width: '120px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+                  <div className="filter-group">
+                    <label><Users size={14} /> Name</label>
+                    <input
+                      type="text"
+                      placeholder="Customer Name..."
+                      className="filter-input"
+                      value={nameSearch}
+                      onChange={(e) => setNameSearch(e.target.value)}
+                      style={{ width: '150px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
                   <div className="filter-stats">
-                    Total Pending: <strong>{orders.filter(o => o.status === 'pending' && safeGetISODate(o) === selectedDate).length}</strong>
+                    Matches: <strong>{orders.filter(o => {
+                      const matchDate = safeGetISODate(o) === selectedDate;
+                      const matchTable = tableSearch ? (o.table_number || o.tableNumber || '').toString() === tableSearch.toString() : true;
+                      const matchPhone = phoneSearch ? (o.customer_phone || '').includes(phoneSearch) : true;
+                      const matchName = nameSearch ? (o.customer_name || '').toLowerCase().includes(nameSearch.toLowerCase()) : true;
+                      return matchDate && matchTable && matchPhone && matchName;
+                    }).length}</strong>
                   </div>
                   <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', marginLeft: '12px', height: '40px' }}>
                     <Plus size={18} /> New Order
@@ -1088,12 +1164,25 @@ const AdminPanel = () => {
                         {columnStatus.replace(/_/g, ' ')}
                       </h3>
                       <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>
-                        {orders.filter(o => o.status === columnStatus && safeGetISODate(o) === selectedDate).length}
+                        {orders.filter(o => {
+                          const matchStatus = o.status === columnStatus;
+                          const matchDate = safeGetISODate(o) === selectedDate;
+                          const matchTable = tableSearch ? (o.table_number || o.tableNumber || '').toString().toLowerCase().includes(tableSearch.toLowerCase()) : true;
+                          const matchPhone = phoneSearch ? (o.customer_phone || '').includes(phoneSearch) : true;
+                          return matchStatus && matchDate && matchTable && matchPhone;
+                        }).length}
                       </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }} className="scrollbar-hidden">
-                      {orders.filter(o => o.status === columnStatus && safeGetISODate(o) === selectedDate).map(order => (
+                      {orders.filter(o => {
+                        const matchStatus = o.status === columnStatus;
+                        const matchDate = safeGetISODate(o) === selectedDate;
+                        const matchTable = tableSearch ? (o.table_number || o.tableNumber || '').toString() === tableSearch.toString() : true;
+                        const matchPhone = phoneSearch ? (o.customer_phone || '').includes(phoneSearch) : true;
+                        const matchName = nameSearch ? (o.customer_name || '').toLowerCase().includes(nameSearch.toLowerCase()) : true;
+                        return matchStatus && matchDate && matchTable && matchPhone && matchName;
+                      }).map(order => (
                         <div key={order.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '16px', padding: '16px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ fontSize: '13px', fontWeight: '800', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '8px', color: 'var(--text-main)' }}>
@@ -1105,22 +1194,76 @@ const AdminPanel = () => {
                           </div>
 
                           {(order.customerName || order.customer_name || order.customerPhone || order.customer_phone) && (
-                            <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)' }}>
-                              {(order.customerName || order.customer_name) && <div><span style={{ color: 'var(--text-muted)' }}>Customer:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerName || order.customer_name}</strong></div>}
-                              {(order.customerPhone || order.customer_phone) && <div><span style={{ color: 'var(--text-muted)' }}>Phone:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerPhone || order.customer_phone}</strong></div>}
+                            <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)', position: 'relative' }}>
+                              {editingOrderId === order.id ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <input 
+                                    className="filter-input"
+                                    value={editFormData.name}
+                                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                    placeholder="Name"
+                                    style={{ padding: '2px 8px', fontSize: '11px', height: '28px' }}
+                                  />
+                                  <input 
+                                    className="filter-input"
+                                    value={editFormData.phone}
+                                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                    placeholder="Phone"
+                                    style={{ padding: '2px 8px', fontSize: '11px', height: '28px' }}
+                                  />
+                                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                    <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '2px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '10px' }}>Save</button>
+                                    <button onClick={() => setEditingOrderId(null)} style={{ padding: '2px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '10px' }}>Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={() => {
+                                      setEditingOrderId(order.id);
+                                      setEditFormData({ 
+                                        name: order.customerName || order.customer_name || '', 
+                                        phone: order.customerPhone || order.customer_phone || ''
+                                      });
+                                    }}
+                                    style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.5 }}
+                                  >
+                                    <Edit2 size={11} />
+                                  </button>
+                                  {(order.customerName || order.customer_name) && <div><span style={{ color: 'var(--text-muted)' }}>Customer:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerName || order.customer_name}</strong></div>}
+                                  {(order.customerPhone || order.customer_phone) && <div><span style={{ color: 'var(--text-muted)' }}>Phone:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerPhone || order.customer_phone}</strong></div>}
+                                </>
+                              )}
                             </div>
                           )}
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            {(order.items || []).map((item, idx) => (
-                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
-                                  <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name}</span>
-                                </div>
-                                <span style={{ color: 'var(--text-dim)' }}>₹{item.price * (item.qty || 1)}</span>
-                              </div>
-                            ))}
+                                {(order.items || []).map((item, idx) => (
+                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
+                                        <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name}</span>
+                                      </div>
+                                      <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
+                                    </div>
+                                ))}
+                                <button 
+                                  onClick={() => {
+                                    setIsEditingOrder(true);
+                                    setManualOrderData({
+                                      id: order.id,
+                                      tableNumber: (order.table_number || order.tableNumber || '1').toString(),
+                                      customerName: order.customerName || order.customer_name || '',
+                                      customerPhone: order.customerPhone || order.customer_phone || '',
+                                      items: [...(order.items || [])],
+                                      total: order.total
+                                    });
+                                    setShowManualOrderPopup(true);
+                                  }}
+                                  style={{ marginTop: '8px', background: 'rgba(124, 58, 237, 0.05)', border: '1px dashed var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '8px', padding: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                                >
+                                  <Edit size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Edit Items
+                                </button>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1929,6 +2072,46 @@ const AdminPanel = () => {
                           Table {order.tableNumber}
                         </div>
                         <h2 style={{ fontSize: '24px', fontWeight: '900', marginTop: '4px' }}>Order #{order.id}</h2>
+                          <div style={{ fontSize: '14px', fontWeight: '700', position: 'relative' }}>
+                            {editingOrderId === order.id ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <input 
+                                  className="filter-input"
+                                  value={editFormData.name}
+                                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                  placeholder="Name"
+                                  style={{ padding: '4px 8px', fontSize: '12px' }}
+                                />
+                                <input 
+                                  className="filter-input"
+                                  value={editFormData.phone}
+                                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                  placeholder="Phone"
+                                  style={{ padding: '4px 8px', fontSize: '12px' }}
+                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '4px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Save</button>
+                                  <button onClick={() => setEditingOrderId(null)} style={{ padding: '4px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {order.customer_name || 'Guest'}
+                                  <button 
+                                    onClick={() => {
+                                      setEditingOrderId(order.id);
+                                      setEditFormData({ name: order.customer_name || '', phone: order.customer_phone || '' });
+                                    }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                                  >
+                                    <Edit2 size={12} />
+                                  </button>
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{order.customer_phone}</div>
+                              </>
+                            )}
+                          </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning)', fontWeight: '800', fontSize: '18px' }}>
@@ -2410,14 +2593,22 @@ const AdminPanel = () => {
                 <button
                   onClick={async () => {
                     const nextId = restaurantTables.length + 1;
+                    const tableName = prompt("Enter Table Name/Label:", `Table ${nextId}`);
+                    if (!tableName) return;
+                    
                     const randomSecret = `T${nextId}-R4-DINE${Math.floor(1000 + Math.random() * 9000)}`;
                     try {
-                      await axios.post(`${API_URL}/api/tables`, {
+                      const res = await axios.post(`${API_URL}/api/tables`, {
                         table_number: nextId,
                         secret_token: randomSecret,
-                        restaurant_id: adminUser.restaurant_id || 4
+                        restaurant_id: adminUser.restaurant_id || 4,
+                        name: tableName
                       });
-                      setRestaurantTables([...restaurantTables, { table: `Table ${nextId}`, token: randomSecret }]);
+                      setRestaurantTables([...restaurantTables, { 
+                        table: tableName, 
+                        token: randomSecret,
+                        table_number: nextId
+                      }]);
                     } catch (err) { alert("Persistence failed"); }
                   }}
                   className="btn-primary"
@@ -2439,7 +2630,7 @@ const AdminPanel = () => {
                           style={{ width: '130px', height: '130px', objectFit: 'contain' }}
                         />
                       </div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{t.table}</h3>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{t.name || t.table}</h3>
                       <div style={{ fontSize: '12px', background: 'var(--bg-deep)', padding: '8px 12px', borderRadius: '8px', color: 'var(--accent-primary)', fontWeight: '700', wordBreak: 'break-all' }}>{t.token}</div>
 
                       <button
@@ -2476,6 +2667,40 @@ const AdminPanel = () => {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Table List Section */}
+              <div className="glass-panel" style={{ marginTop: '48px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                  <ListTodo size={24} className="text-accent" />
+                  <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Dine-In Hub: Master Table List</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                    <thead>
+                      <tr style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'left' }}>
+                        <th style={{ padding: '12px 20px' }}>Table #</th>
+                        <th style={{ padding: '12px 20px' }}>Name/Label</th>
+                        <th style={{ padding: '12px 20px' }}>Secret Token</th>
+                        <th style={{ padding: '12px 20px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {restaurantTables.map((t, idx) => (
+                        <tr key={idx} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                          <td style={{ padding: '16px 20px', fontWeight: '800', color: 'var(--accent-primary)', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
+                            #{t.table_number || (idx + 1)}
+                          </td>
+                          <td style={{ padding: '16px 20px', fontWeight: '700' }}>{t.name || t.table}</td>
+                          <td style={{ padding: '16px 20px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-dim)' }}>{t.token}</td>
+                          <td style={{ padding: '16px 20px', textAlign: 'right', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
+                             <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); alert("Copied!"); }} style={{ background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>Copy URL</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -3679,10 +3904,19 @@ const AdminPanel = () => {
             <div style={{ flex: 1, padding: '32px', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>Order Summary</h3>
-                <button onClick={() => setShowManualOrderPopup(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                  <Trash2 size={24} />
-                </button>
-              </div>
+                  <button
+                    onClick={() => {
+                      if (isEditingOrder) {
+                        setIsEditingOrder(false);
+                        setManualOrderData({ tableNumber: '1', items: [], customerName: '', customerPhone: '', total: 0 });
+                      }
+                      setShowManualOrderPopup(false);
+                    }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={24} />
+                  </button>
+                </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1fr', gap: '10px' }}>
                 <div>
@@ -3753,7 +3987,7 @@ const AdminPanel = () => {
                   className="btn-primary"
                   style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '18px', fontWeight: '800', background: 'linear-gradient(135deg, var(--accent-primary), #4f46e5)' }}
                 >
-                  Confirm & Place Order
+                  {isEditingOrder ? 'Update Order' : 'Confirm & Place Order'}
                 </button>
               </div>
             </div>

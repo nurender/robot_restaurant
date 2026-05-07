@@ -3,7 +3,7 @@ const { pool } = require('../config/db');
 exports.getTables = async (req, res) => {
     const { restaurant_id } = req.query;
     try {
-        let query = "SELECT id, restaurant_id, table_number, secret_token FROM tables";
+        let query = "SELECT id, restaurant_id, table_number, secret_token, name FROM tables";
         const params = [];
         if (restaurant_id) {
             query += " WHERE restaurant_id = $1";
@@ -16,11 +16,11 @@ exports.getTables = async (req, res) => {
 };
 
 exports.createTable = async (req, res) => {
-    const { table_number, secret_token, restaurant_id } = req.body;
+    const { table_number, secret_token, restaurant_id, name } = req.body;
     try {
         const result = await pool.query(
-            "INSERT INTO tables (restaurant_id, table_number, secret_token) VALUES ($1, $2, $3) RETURNING *",
-            [restaurant_id || 4, table_number, secret_token]
+            "INSERT INTO tables (restaurant_id, table_number, secret_token, name) VALUES ($1, $2, $3, $4) RETURNING *",
+            [restaurant_id || 4, table_number, secret_token, name || `Table ${table_number}`]
         );
         res.json(result.rows[0]);
     } catch (e) { res.status(500).json({ error: e.message }); }
