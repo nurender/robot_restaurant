@@ -50,7 +50,7 @@ const MenuSystem = ({
                     <input
                         type="text"
                         className="menu-search-input"
-                        placeholder={textLanguage === 'en' ? 'Search for dishes or ingredients...' : 'डिश या सामग्री सर्च करें...'}
+                        placeholder={textLanguage === 'en' ? 'Search...' : 'खोजें...'}
                         value={menuSearchTerm}
                         onChange={(e) => setMenuSearchTerm(e.target.value)}
                     />
@@ -59,18 +59,18 @@ const MenuSystem = ({
                     )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', padding: '0 16px 12px' }}>
+                <div className="veg-filters-row">
                     <button
                         onClick={() => setVegFilter('all')}
-                        style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: vegFilter === 'all' ? '2px solid var(--accent-primary)' : '1px solid var(--card-border)', background: vegFilter === 'all' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.02)', color: vegFilter === 'all' ? 'var(--accent-primary)' : 'var(--text-main)' }}
+                        className={`veg-btn ${vegFilter === 'all' ? 'active all' : ''}`}
                     >All</button>
                     <button
                         onClick={() => setVegFilter('veg')}
-                        style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: vegFilter === 'veg' ? '2px solid #22c55e' : '1px solid var(--card-border)', background: vegFilter === 'veg' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.02)', color: vegFilter === 'veg' ? '#22c55e' : 'var(--text-main)' }}
+                        className={`veg-btn ${vegFilter === 'veg' ? 'active veg' : ''}`}
                     >🟢 Veg</button>
                     <button
                         onClick={() => setVegFilter('nonveg')}
-                        style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: vegFilter === 'nonveg' ? '2px solid #ef4444' : '1px solid var(--card-border)', background: vegFilter === 'nonveg' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.02)', color: vegFilter === 'nonveg' ? '#ef4444' : 'var(--text-main)' }}
+                        className={`veg-btn ${vegFilter === 'nonveg' ? 'active nonveg' : ''}`}
                     >🔴 Non-Veg</button>
                 </div>
 

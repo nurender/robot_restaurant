@@ -164,48 +164,49 @@ const useRealtime = (restaurantId, _tableNumber, handlers = {}, currentCart = []
     try {
       setIsConnecting(true);
       setError(null);
-      // 1. Get Ephemeral Token
-      const sessionResponse = await fetch(`${API_URL}/api/session`, {
+
+      // Start fetching session token and user media in parallel to reduce delay
+      const sessionPromise = fetch(`${API_URL}/api/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ restaurantId, cart: currentCart })
+      }).then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to initialize session');
+        return data;
       });
-      const data = await sessionResponse.json();
 
-      if (!sessionResponse.ok) throw new Error(data.error || 'Failed to initialize session');
+      const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true }).catch(e => {
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+          throw new Error('mic_denied');
+        }
+        throw e;
+      });
 
-      const EPHEMERAL_KEY = data.client_secret?.value;
-      if (!EPHEMERAL_KEY) throw new Error('No ephemeral key received');
-
-      // 2. Peer Connection
+      // 1. Peer Connection Initialization (While waiting for promises)
       const pc = new RTCPeerConnection();
       peerConnection.current = pc;
 
-      // 3. Audio Output
+      // 2. Audio Output Element
       const el = document.createElement('audio');
       el.autoplay = true;
       el.style.display = 'none';
       document.body.appendChild(el);
       audioElRef.current = el;
-
       pc.ontrack = (e) => { el.srcObject = e.streams[0]; };
 
-      // 4. Audio Input
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (e) {
-        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-          throw new Error('mic_denied');
-        }
-        throw e;
-      }
-      audioStream.current = stream;
-      pc.addTrack(stream.getTracks()[0]);
-
-      // 5. Data Channel
+      // 3. Data Channel
       const dc = pc.createDataChannel('oai-events');
       dataChannel.current = dc;
+
+      // Wait for both session data and audio stream in parallel
+      const [data, stream] = await Promise.all([sessionPromise, streamPromise]);
+
+      const EPHEMERAL_KEY = data.client_secret?.value;
+      if (!EPHEMERAL_KEY) throw new Error('No ephemeral key received');
+
+      audioStream.current = stream;
+      pc.addTrack(stream.getTracks()[0]);
       
       dc.onopen = () => {
         console.log("✅ Data Channel Open - Triggering Greeting");

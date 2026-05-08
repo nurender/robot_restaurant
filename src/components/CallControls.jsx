@@ -69,19 +69,7 @@ const CallControls = ({
                     <button 
                         onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening}
                         disabled={isConnecting}
-                        style={{ 
-                            width: '76px', 
-                            height: '76px', 
-                            borderRadius: '50%', 
-                            background: (isListening) ? '#00e676' : 'rgba(255,255,255,0.15)', 
-                            border: '1px solid rgba(255,255,255,0.2)', 
-                            color: 'white', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            cursor: 'pointer',
-                            boxShadow: (isListening) ? '0 0 30px rgba(0, 230, 118, 0.6)' : 'none',
-                        }}
+                        className={`speak-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`}
                     >
                         {isConnecting ? <div className="hud-loader"></div> : <Mic size={32} />}
                     </button>

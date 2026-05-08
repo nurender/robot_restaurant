@@ -168,13 +168,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       console.log("📥 Received socket update:", updatedOrder);
       const isMyTable = String(updatedOrder.tableNumber) === String(tableNumber);
       const isMyRest = String(updatedOrder.restaurant_id) === String(restaurantId);
-      
+
       if (isMyTable && isMyRest) {
         setActiveOrders(prev => {
           if (updatedOrder.status === 'completed' || updatedOrder.status === 'cancelled') {
             return prev.filter(o => o.id !== updatedOrder.id);
           }
-          
+
           const exists = prev.find(o => o.id === updatedOrder.id);
           if (exists) {
             return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
@@ -301,6 +301,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setShowCustomerForm(false);
         setCustomerInfo({ name: '', phone: '' });
         speak(dialogs[voiceLanguage].confirm(orderData.total), voiceLanguage);
+
+        // Refresh orders immediately so tracking badge shows up
+        fetchTrackingStatus();
+
         setTimeout(() => setOrderConfirmedUI(false), 5000);
         if (IS_OPENAI_REALTIME) stopSession();
       }
@@ -595,33 +599,26 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     <div className="avatar-screen animate-fade-in video-call-bg">
       <div className="top-call-gradient"></div>
       <div className="avatar-header">
-        <div className="header-badge calling">Table {tableNumber} | Order: ₹{getCartTotal()}</div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="header-badge">
+          <span style={{ opacity: 0.7 }}>Table</span> {tableNumber}
+          <span style={{ opacity: 0.3, margin: '0 4px' }}>|</span>
+          <span style={{ color: '#00e676' }}>₹{getCartTotal()}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           {activeOrders.length > 0 && (
             <button
               onClick={() => setShowOrderTracking(true)}
-              style={{ 
-                background: 'rgba(124, 58, 237, 0.2)', 
-                border: '1px solid rgba(124, 58, 237, 0.4)', 
-                padding: '6px 12px', 
-                borderRadius: '12px', 
-                color: 'white', 
-                fontSize: '12px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px', 
-                cursor: 'pointer',
-                position: 'relative'
-              }}
+              className="robot-header-btn tracking"
             >
-              <Clock size={14} color="#a78bfa" /> 
-              {textLanguage === 'hi' ? 'ट्रैकिंग' : 'Tracking'}
+              <Clock size={14} color="#a78bfa" />
+              <span>{textLanguage === 'hi' ? 'ट्रैकिंग' : 'Tracking'}</span>
               {activeOrders.length > 0 && (
-                <span style={{ 
-                  position: 'absolute', top: '-5px', right: '-5px', 
-                  background: '#ef4444', color: 'white', fontSize: '9px', 
+                <span style={{
+                  position: 'absolute', top: '-5px', right: '-5px',
+                  background: '#ef4444', color: 'white', fontSize: '9px',
                   fontWeight: '900', padding: '1px 4px', borderRadius: '6px',
-                  boxShadow: '0 0 5px rgba(239, 68, 68, 0.5)'
+                  boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
+                  border: '1.5px solid #000'
                 }}>
                   {activeOrders.length}
                 </span>
@@ -630,11 +627,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           )}
           <button
             onClick={() => setShowFeedbackPopup(true)}
-            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '12px', color: 'white', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            className="robot-header-btn"
           >
-            <span style={{ color: '#f1c40f' }}>★</span> {textLanguage === 'hi' ? 'फीडबैक' : 'Feedback'}
+            <span style={{ color: '#f1c40f' }}>★</span>
+            <span>{textLanguage === 'hi' ? 'फीडबैक' : 'Feedback'}</span>
           </button>
-          <div className="call-timer-badge"><div className="live-dot"></div>{formatTime(callDuration)}</div>
         </div>
       </div>
 
@@ -643,14 +640,49 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         <img src="/avatar.png" alt="AI Waiter Avatar" className={`waiter-avatar breathing-idle ${isRobotSpeaking ? 'animate-talk' : ''}`} />
 
         {!hasCameraError && (
-          <div className="customer-pip-card" style={{ position: 'absolute', top: '80px', right: '20px', width: '110px', height: '150px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,0.2)', zIndex: 30 }}>
+          <div className="customer-pip-card" style={{
+            position: 'absolute',
+            top: '80px',
+            right: '20px',
+            width: '125px',
+            height: '160px',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            border: '1.5px solid rgba(255,255,255,0.2)',
+            zIndex: 30,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+          }}>
             <video ref={videoRef} autoPlay playsInline muted className={`pip-video ${!isCameraOn ? 'muted-video' : ''}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             {!isCameraOn && <div className="pip-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VideoOff size={20} color="white" /></div>}
 
-            {/* "You" Tag positioned floating at the bottom right inside the preview box */}
-            <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', alignItems: 'center', gap: '4px', color: 'white', fontSize: '11px', fontWeight: 'bold', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '10px', backdropFilter: 'blur(4px)' }}>
+
+            {/* "You" Tag */}
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '8px',
+              left: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              background: 'rgba(0,0,0,0.75)',
+              padding: '4px 6px',
+              borderRadius: '10px',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              whiteSpace: 'nowrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#00e676' }}>
+                <div className="live-dot" style={{ width: '4px', height: '4px', backgroundColor: '#00e676' }}></div>
+                <span>{formatTime(callDuration)}</span>
+              </div>
+              <span style={{ opacity: 0.2 }}>|</span>
               <span>You</span>
-              {(isListening || isSessionActive) && (
+              {(isListening || isSessionActive) ? (
                 <div className="vocal-wave-container">
                   <div className="wave-bar"></div>
                   <div className="wave-bar"></div>
@@ -658,12 +690,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   <div className="wave-bar"></div>
                   <div className="wave-bar"></div>
                 </div>
-              )}
-              {!(isListening || isSessionActive) && (
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '10px' }}>
-                  <span style={{ width: '2px', height: '100%', background: '#00e676', borderRadius: '1px' }}></span>
-                  <span style={{ width: '2px', height: '50%', background: '#00e676', borderRadius: '1px' }}></span>
-                  <span style={{ width: '2px', height: '75%', background: '#00e676', borderRadius: '1px' }}></span>
+              ) : (
+                <div className="vocal-wave-container static">
+                  <div className="wave-bar"></div>
+                  <div className="wave-bar"></div>
+                  <div className="wave-bar"></div>
                 </div>
               )}
             </div>
@@ -704,13 +735,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           </div>
         )}
 
-        {isAiProcessing && (
+        {/* {isAiProcessing && (
           <div className="ai-typing-indicator slide-up">
             <div className="typing-dot"></div>
             <div className="typing-dot"></div>
             <div className="typing-dot"></div>
           </div>
-        )}
+        )} */}
       </div>
 
       {showMenuPopup && (
@@ -812,39 +843,39 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             sendEvent({ type: 'response.create' });
           }
         }}>
-          <div style={{ background: 'rgba(23, 23, 33, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', padding: '32px', maxWidth: '440px', width: '100%', backdropFilter: 'blur(16px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', marginBottom: '8px', letterSpacing: '-0.5px' }}>
+          <div className="booking-modal-content" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">
               {textLanguage === 'hi' ? 'बुकिंग डिटेल्स' : 'Booking Details'}
             </h3>
-            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '24px', lineHeight: '1.5' }}>
+            <p className="modal-subtitle">
               {textLanguage === 'hi' ? 'आर्डर बुक करने के लिए कृपया अपनी जानकारी दें।' : 'Please provide your details to confirm the order.'}
             </p>
-            <form onSubmit={(e) => { e.preventDefault(); completeOrderProcess(); }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
+            <form onSubmit={(e) => { e.preventDefault(); completeOrderProcess(); }} className="modal-form">
+              <div className="form-group">
+                <label>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
                 <input
                   type="text"
                   required
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '14px 16px', borderRadius: '12px', color: '#ffffff', fontSize: '15px', outline: 'none', transition: 'all 0.3s' }}
+                  className="modal-input"
                   placeholder={textLanguage === 'hi' ? 'अपना नाम लिखें' : 'Enter your name'}
                   value={customerInfo.name}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
+              <div className="form-group">
+                <label>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
                 <input
                   type="tel"
                   required
                   pattern="[0-9]{10}"
-                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '14px 16px', borderRadius: '12px', color: '#ffffff', fontSize: '15px', outline: 'none', transition: 'all 0.3s' }}
+                  className="modal-input"
                   placeholder={textLanguage === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
                   value={customerInfo.phone}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
-                <button type="button" style={{ flex: 1, padding: '14px', background: '#ffffff', color: '#0f172a', border: 'none', borderRadius: '30px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', transition: 'all 0.3s' }} onClick={() => {
+              <div className="modal-actions-row">
+                <button type="button" className="btn-secondary flex-1" onClick={() => {
                   setShowCustomerForm(false);
                   if (IS_OPENAI_REALTIME) {
                     sendEvent({
@@ -863,23 +894,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 <button
                   type="submit"
                   disabled={isSubmittingOrder}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: isSubmittingOrder ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '30px',
-                    fontWeight: '700',
-                    fontSize: '15px',
-                    cursor: isSubmittingOrder ? 'not-allowed' : 'pointer',
-                    boxShadow: isSubmittingOrder ? 'none' : '0 8px 16px -4px rgba(124, 58, 237, 0.4)',
-                    transition: 'all 0.3s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
+                  className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`}
                 >
                   {isSubmittingOrder ? (
                     <>
@@ -897,62 +912,67 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       )}
       {showFeedbackPopup && (
         <div className="modal-overlay" onClick={() => setShowFeedbackPopup(false)}>
-          <div style={{ background: 'rgba(23, 23, 33, 0.98)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '32px', padding: '40px', maxWidth: '400px', width: '100%', backdropFilter: 'blur(20px)', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.6)', position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowFeedbackPopup(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', opacity: 0.5 }}><X size={24} /></button>
+          <div className="feedback-modal-content" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowFeedbackPopup(false)} className="close-modal-btn"><X size={24} /></button>
 
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⭐</div>
-              <h3 style={{ fontSize: '26px', fontWeight: '900', color: '#ffffff', marginBottom: '8px' }}>
+            <div className="feedback-header">
+              <div className="feedback-emoji">⭐</div>
+              <h3 className="modal-title">
                 {textLanguage === 'hi' ? 'आपका अनुभव कैसा रहा?' : 'How was your experience?'}
               </h3>
-              <p style={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.5)' }}>
+              <p className="modal-subtitle">
                 {textLanguage === 'hi' ? 'आपकी राय हमारे लिए महत्वपूर्ण है।' : 'Your feedback helps us improve.'}
               </p>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '32px' }}>
+            <div className="star-rating-row">
               {[1, 2, 3, 4, 5].map(star => (
                 <button
                   key={star}
                   onClick={() => setFeedback({ ...feedback, rating: star })}
-                  style={{ background: 'none', border: 'none', fontSize: '32px', cursor: 'pointer', filter: feedback.rating >= star ? 'none' : 'grayscale(100%) opacity(0.3)', transition: 'transform 0.2s' }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  className={`star-btn ${feedback.rating >= star ? 'active' : ''}`}
                 >
                   ⭐
                 </button>
               ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-              <input
-                type="text"
-                placeholder={textLanguage === 'hi' ? 'आपका नाम (वैकल्पिक)' : 'Your Name (Optional)'}
-                value={feedback.name}
-                onChange={(e) => setFeedback({ ...feedback, name: e.target.value })}
-                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontSize: '14px', outline: 'none' }}
-              />
-              <input
-                type="tel"
-                placeholder={textLanguage === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Phone Number (Optional)'}
-                value={feedback.phone}
-                onChange={(e) => setFeedback({ ...feedback, phone: e.target.value })}
-                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontSize: '14px', outline: 'none' }}
-              />
-              <textarea
-                placeholder={textLanguage === 'hi' ? 'कुछ और कहना चाहेंगे? (वैकल्पिक)' : 'Any other comments? (Optional)'}
-                value={feedback.comment}
-                onChange={(e) => setFeedback({ ...feedback, comment: e.target.value })}
-                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontSize: '14px', minHeight: '80px', outline: 'none', resize: 'none' }}
-              />
-            </div>
-
-            <button
-              onClick={submitFeedback}
-              style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)', color: '#000', border: 'none', borderRadius: '30px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(241, 196, 15, 0.3)' }}
-            >
-              {textLanguage === 'hi' ? 'फीडबैक भेजें' : 'Submit Feedback'}
-            </button>
+            <form onSubmit={(e) => { e.preventDefault(); submitFeedback(); }} className="modal-form">
+              <div className="form-group">
+                <input
+                  type="text"
+                  className="modal-input"
+                  placeholder={textLanguage === 'hi' ? 'आपका नाम (वैकल्पिक)' : 'Your Name (Optional)'}
+                  value={feedback.name}
+                  onChange={(e) => setFeedback({ ...feedback, name: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="tel"
+                  className="modal-input"
+                  placeholder={textLanguage === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Phone Number (Optional)'}
+                  value={feedback.phone}
+                  onChange={(e) => setFeedback({ ...feedback, phone: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <textarea
+                  className="modal-input textarea"
+                  placeholder={textLanguage === 'hi' ? 'कुछ और कहना चाहेंगे? (वैकल्पिक)' : 'Any other comments? (Optional)'}
+                  value={feedback.comment}
+                  onChange={(e) => setFeedback({ ...feedback, comment: e.target.value })}
+                  rows="3"
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn-primary full-width"
+                style={{ background: 'linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)', color: '#000' }}
+              >
+                {textLanguage === 'hi' ? 'फीडबैक भेजें' : 'Submit Feedback'}
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -991,44 +1011,43 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       {/* Tracking Modal - Redesigned for Multiple Orders */}
       {showOrderTracking && activeOrders.length > 0 && (
         <div className="modal-overlay" style={{ zIndex: 10003 }}>
-          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '480px', width: '94%', padding: '0', borderRadius: '32px', background: 'rgba(10, 10, 15, 0.98)', overflow: 'hidden' }}>
-            <div style={{ padding: '32px', background: 'linear-gradient(135deg, var(--accent-primary), #4f46e5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: '24px', fontWeight: '900', color: 'white', margin: 0 }}>Active Orders</h3>
-                <p style={{ margin: '4px 0 0 0', color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: '600' }}>Table {tableNumber} • Today</p>
+          <div className="tracking-modal animate-slide-up">
+            <div className="tracking-header">
+              <div className="tracking-header-info">
+                <h3>Active Orders</h3>
+                <p>Table {tableNumber} • Today</p>
               </div>
-              <button onClick={() => setShowOrderTracking(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <button className="close-tracking-btn" onClick={() => setShowOrderTracking(false)}>
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ padding: '32px', maxHeight: '60vh', overflowY: 'auto' }} className="scrollbar-hidden">
+            <div className="tracking-body scrollbar-hidden">
               {activeOrders.map((order, orderIdx) => (
-                <div key={order.id} style={{ marginBottom: orderIdx === activeOrders.length - 1 ? 0 : '40px', paddingBottom: orderIdx === activeOrders.length - 1 ? 0 : '40px', borderBottom: orderIdx === activeOrders.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>#ORDER-{order.id}</span>
-                      <span style={{ fontSize: '14px', fontWeight: '800', color: 'white', marginTop: '4px' }}>₹{order.total}</span>
+                <div key={order.id} className="order-tracking-card">
+                  <div className="order-id-row">
+                    <div className="order-id-meta">
+                      <span className="order-id-badge">#ORDER-{order.id}</span>
+                      <span className="order-amount-text">₹{order.total}</span>
                     </div>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="order-time-text">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
 
-                  {/* Items List */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '16px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Ordered Items</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="ordered-items-box">
+                    <p className="box-label">Ordered Items</p>
+                    <div className="items-list-tiny">
                       {order.items.map((item, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: '600' }}>{item.qty}x {item.name}</span>
-                          <span style={{ color: 'white', fontWeight: '700' }}>₹{item.price * item.qty}</span>
+                        <div key={i} className="tiny-item-row">
+                          <span className="item-name-qty">{item.qty}x {item.name}</span>
+                          <span className="item-price-sum">₹{item.price * item.qty}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div style={{ position: 'relative', paddingLeft: '40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                    <div style={{ position: 'absolute', left: '14px', top: '10px', bottom: '10px', width: '2px', background: 'rgba(255,255,255,0.05)' }} />
-                    
+                  <div className="timeline-container">
+                    <div className="timeline-line" />
+
                     {[
                       { key: 'pending', label: 'Placed', icon: ListTodo },
                       { key: 'accepted', label: 'Accepted', icon: CheckCircle },
@@ -1042,28 +1061,15 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                       const isActive = step.key === order.status;
 
                       return (
-                        <div key={i} style={{ position: 'relative', opacity: isCompleted || isActive ? 1 : 0.3 }}>
-                          <div style={{ 
-                            position: 'absolute', left: '-33px', top: '4px', 
-                            width: '12px', height: '12px', borderRadius: '50%',
-                            background: isCompleted ? 'var(--success)' : isActive ? 'var(--accent-primary)' : '#333',
-                            border: '3px solid rgba(10,10,15,1)',
-                            boxShadow: isActive ? '0 0 12px var(--accent-glow)' : 'none',
-                            zIndex: 2,
-                            transition: 'all 0.3s'
-                          }} />
-                          
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ 
-                              width: '36px', height: '36px', borderRadius: '12px', 
-                              background: isActive ? 'rgba(124, 58, 237, 0.1)' : 'rgba(255,255,255,0.03)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: isCompleted ? 'var(--success)' : isActive ? 'var(--accent-primary)' : 'white'
-                            }}>
+                        <div key={i} className={`timeline-step ${isCompleted || isActive ? 'active' : ''}`}>
+                          <div className={`step-dot ${isCompleted ? 'completed' : isActive ? 'current' : ''}`} />
+
+                          <div className="step-content">
+                            <div className={`step-icon-box ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
                               <step.icon size={18} />
                             </div>
-                            <span style={{ fontSize: '15px', fontWeight: '700', color: isCompleted ? 'var(--success)' : 'white' }}>{step.label}</span>
-                            {isActive && <div className="status-dot-glow" style={{ marginLeft: 'auto' }} />}
+                            <span className={`step-label ${isCompleted ? 'completed' : ''}`}>{step.label}</span>
+                            {isActive && <div className="status-dot-glow" />}
                           </div>
                         </div>
                       );
@@ -1073,11 +1079,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               ))}
             </div>
 
-            <div style={{ padding: '32px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <button 
-                className="btn-primary" 
+            <div className="tracking-footer">
+              <button
+                className="close-tracking-footer-btn"
                 onClick={() => setShowOrderTracking(false)}
-                style={{ width: '100%', padding: '16px', borderRadius: '16px', fontWeight: '800' }}
               >
                 Close Tracking
               </button>
