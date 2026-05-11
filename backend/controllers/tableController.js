@@ -39,3 +39,23 @@ exports.verifyToken = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.updateTable = async (req, res) => {
+    const { id } = req.params;
+    const { name, table_number, secret_token } = req.body;
+    try {
+        const result = await pool.query(
+            "UPDATE tables SET name = $1, table_number = $2, secret_token = $3 WHERE id = $4 RETURNING *",
+            [name, table_number, secret_token, id]
+        );
+        res.json(result.rows[0]);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+exports.deleteTable = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query("DELETE FROM tables WHERE id = $1", [id]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};

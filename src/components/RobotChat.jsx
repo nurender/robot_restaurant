@@ -555,6 +555,130 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
   };
 
+  const recognitionRef = useRef(null);
+
+  // 🎙️ Setup Legacy Speech Recognition
+  useEffect(() => {
+    if (IS_OPENAI_REALTIME) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn("Speech Recognition not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = voiceLanguage === 'hi' ? 'hi-IN' : 'en-US';
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        handleLegacyChat(transcript);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech Recognition Error:", event.error);
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, [voiceLanguage]);
+
+  const handleLegacyChat = async (transcript) => {
+    setIsAiProcessing(true);
+    setCurrentSubtitle(transcript);
+    try {
+      const res = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript,
+          restaurantId,
+          textLanguage,
+          menuContext: menuCategories,
+          cartContext: currentCart
+        })
+      });
+
+      const data = await res.json();
+      
+      // 1. Handle Response Text
+      const replyText = data.reply || data.reply_text;
+      if (replyText) {
+        setCurrentSubtitle(replyText);
+        speak(replyText, voiceLanguage);
+      }
+
+      // 2. Handle Actions
+      if (data.action === 'PLACE_ORDER' || data.action === 'confirm_order') {
+        initiateCheckout();
+      }
+
+      if (data.action === 'EXPAND_CATEGORY' && data.category) {
+        setActiveCategory(data.category);
+        setShowMenuPopup(true);
+      }
+
+      // 3. Handle Items to Add
+      if (data.items_to_add && data.items_to_add.length > 0) {
+        setCurrentCart((prev) => {
+          let updatedCart = [...prev];
+          data.items_to_add.forEach(newItem => {
+            const target = findMenuItemByName(newItem.name) || 
+                           menuCategories.flatMap(c => c.items).find(i => String(i.id) === String(newItem.id)) ||
+                           (newItem.price ? newItem : null);
+            if (!target) return;
+            
+            const quantity = Math.max(1, Number(newItem.qty || newItem.quantity) || 1);
+            const existingIdx = updatedCart.findIndex((i) => String(i.id) === String(target.id));
+
+            if (existingIdx > -1) {
+              updatedCart[existingIdx] = {
+                ...updatedCart[existingIdx],
+                qty: (updatedCart[existingIdx].qty || 0) + quantity
+              };
+            } else {
+              updatedCart.push({ ...target, qty: quantity });
+            }
+          });
+          return updatedCart;
+        });
+        setShowCartSummary(true);
+      }
+
+      // 4. Handle Items to Remove
+      if (data.items_to_remove && data.items_to_remove.length > 0) {
+        setCurrentCart((prev) => {
+          let updatedCart = [...prev];
+          data.items_to_remove.forEach(removeItem => {
+            const targetId = removeItem.id;
+            const targetName = normalizeName(removeItem.name || '');
+            
+            updatedCart = updatedCart.filter(item => {
+              const matchesId = targetId && String(item.id) === String(targetId);
+              const matchesName = targetName && normalizeName(item.name) === targetName;
+              return !(matchesId || matchesName);
+            });
+          });
+          return updatedCart;
+        });
+        setShowCartSummary(true);
+      }
+
+    } catch (e) {
+      console.error("Legacy Chat Error:", e);
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
   const startListening = () => {
     if (!initializationRef.current) {
       initializationRef.current = true;
@@ -563,7 +687,22 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       }
       setHasGreeted(true);
     }
-    setIsListening(!isListening);
+
+    if (!IS_OPENAI_REALTIME) {
+      if (isListening) {
+        recognitionRef.current?.stop();
+        setIsListening(false);
+      } else {
+        try {
+          recognitionRef.current?.start();
+          setIsListening(true);
+        } catch (e) {
+          console.error("Failed to start recognition:", e);
+        }
+      }
+    } else {
+      setIsListening(!isListening);
+    }
   };
 
   const formatTime = (secs) => {

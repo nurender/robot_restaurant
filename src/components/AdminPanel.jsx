@@ -27,6 +27,7 @@ import {
   Check,
   Sparkles,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Package,
   BarChart2,
@@ -90,14 +91,7 @@ const AdminPanel = () => {
   const [staffList, setStaffList] = useState([]);
   const [restaurantsList, setRestaurantsList] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [restaurantTables, setRestaurantTables] = useState([
-    { table: 'Table 1', token: 'T1-R4-SECRET' },
-    { table: 'Table 2', token: 'T2-R4-SECRET' },
-    { table: 'Table 3', token: 'T3-R4-SECRET' },
-    { table: 'Table 4', token: 'T4-R4-SECRET' },
-    { table: 'Table 5', token: 'T5-R4-SECRET' },
-    { table: 'Table 6', token: 'T6-R4-SECRET' },
-  ]);
+  const [restaurantTables, setRestaurantTables] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [collapsedCats, setCollapsedCats] = useState(new Set());
   const [chatLogs, setChatLogs] = useState([]);
@@ -106,6 +100,12 @@ const AdminPanel = () => {
   const [riders, setRiders] = useState([]);
   const [feedbackList, setFeedbackList] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [orderedMenu, setOrderedMenu] = useState([]);
+  const [orderedSidebar, setOrderedSidebar] = useState([]);
+  const [dragItemIndex, setDragItemIndex] = useState(null);
+  const [dbRoles, setDbRoles] = useState([]);
+  const [currentRoleData, setCurrentRoleData] = useState({ name: '', permissions: [] });
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   // Authentication & Initial Fetch
   const [roboSettings, setRoboSettings] = useState({
@@ -188,6 +188,22 @@ const AdminPanel = () => {
     setKitchenOrders(filtered);
   }, [orders]);
 
+  useEffect(() => {
+    if (activeTab === 'menu_order') {
+      setOrderedMenu([...menuItems]);
+    }
+    if (activeTab === 'sidebar_order') {
+      axios.get(`${API_URL}/api/mgmt/sidebar`)
+        .then(res => setOrderedSidebar(res.data.data))
+        .catch(e => console.error(e));
+    }
+    if (activeTab === 'roles') {
+      axios.get(`${API_URL}/api/mgmt/roles`)
+        .then(res => setDbRoles(res.data.data))
+        .catch(e => console.error(e));
+    }
+  }, [activeTab, menuItems]);
+
   // AI Menu Import States
   const [isImporting, setIsImporting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -201,7 +217,11 @@ const AdminPanel = () => {
   const [showCouponPopup, setShowCouponPopup] = useState(false);
   const [showRiderPopup, setShowRiderPopup] = useState(false);
   const [editingRiderId, setEditingRiderId] = useState(null);
-  const [newRider, setNewRider] = useState({ name: '', phone: '', status: 'online' });
+  const [newRider, setNewRider] = useState({ 
+    name: '', phone: '', status: 'online', 
+    vehicle_number: '', license_number: '', 
+    address: '', emergency_contact: '' 
+  });
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     discount_type: 'percent',
@@ -389,13 +409,16 @@ const AdminPanel = () => {
       return;
     }
     fetchData();
+    axios.get(`${API_URL}/api/mgmt/roles`)
+      .then(res => setDbRoles(res.data.data))
+      .catch(e => console.error(e));
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
     socket.on('new_order', (order) => {
       console.log("📥 Admin Socket: new_order received", order);
       const isMyRest = String(order.restaurant_id) === String(adminUser.restaurant_id);
       const isSuper = adminUser.role === 'super_admin';
-      
+
       if (isMyRest || isSuper) {
         setOrders(prev => {
           if (prev.find(o => o.id === order.id)) return prev;
@@ -417,7 +440,7 @@ const AdminPanel = () => {
 
     // Removed fallback polling to prevent frequent API calls
     // Polling was at 60s, but user reported much more frequent calls
-    
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
@@ -480,9 +503,9 @@ const AdminPanel = () => {
         setRidersList(ridersRes.data.data || []);
       }
 
-      if (activeTab === 'monitor') {
-        const statsRes = await fetchHelper(`${API_URL}/api/monitoring/stats`);
-        setStatsData(statsRes.data.data || {});
+      if (activeTab === 'dashboard' || activeTab === 'reports' || activeTab === 'robo_control' || activeTab === 'qr_codes') {
+        const tablesRes = await fetchHelper(`${API_URL}/api/tables`);
+        setRestaurantTables(tablesRes.data.data || []);
       }
 
     } catch (error) {
@@ -645,7 +668,7 @@ const AdminPanel = () => {
       }
       setShowMenuPopup(false);
       fetchData();
-    } catch (e) { 
+    } catch (e) {
       console.error(e);
       alert("Failed to save dish");
     } finally {
@@ -659,7 +682,7 @@ const AdminPanel = () => {
     try {
       await axios.delete(`${API_URL}/api/menu/${id}`);
       fetchData();
-    } catch (e) { 
+    } catch (e) {
       console.error(e);
       alert("Failed to delete dish");
     } finally {
@@ -672,7 +695,7 @@ const AdminPanel = () => {
     try {
       await axios.put(`${API_URL}/api/menu/${item.id}`, { ...item, is_active: !item.is_active });
       fetchData();
-    } catch (e) { 
+    } catch (e) {
       console.error(e);
     } finally {
       setActionLoading(`toggle_dish_${item.id}`, false);
@@ -687,7 +710,7 @@ const AdminPanel = () => {
       setNewCatName('');
       setShowCatPopup(false);
       fetchData();
-    } catch (e) { 
+    } catch (e) {
       console.error(e);
       alert("Failed to add category");
     } finally {
@@ -709,9 +732,9 @@ const AdminPanel = () => {
       setEditingStaffId(null);
       setNewStaff({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
       fetchData();
-    } catch (e) { 
-      console.error(e); 
-      alert("Action failed: " + e.message); 
+    } catch (e) {
+      console.error(e);
+      alert("Action failed: " + e.message);
     } finally {
       setActionLoading('save_staff', false);
     }
@@ -752,9 +775,9 @@ const AdminPanel = () => {
         logo_url: '', cover_url: ''
       });
       fetchData();
-    } catch (e) { 
-      console.error(e); 
-      alert("Action failed: " + e.message); 
+    } catch (e) {
+      console.error(e);
+      alert("Action failed: " + e.message);
     } finally {
       setActionLoading('save_node', false);
     }
@@ -766,8 +789,8 @@ const AdminPanel = () => {
     try {
       await axios.delete(`${API_URL}/api/users/${id}`);
       fetchData();
-    } catch (e) { 
-      console.error(e); 
+    } catch (e) {
+      console.error(e);
     } finally {
       setActionLoading(`delete_user_${id}`, false);
     }
@@ -779,8 +802,8 @@ const AdminPanel = () => {
     try {
       await axios.delete(`${API_URL}/api/restaurants/${id}`);
       fetchData();
-    } catch (e) { 
-      console.error(e); 
+    } catch (e) {
+      console.error(e);
     } finally {
       setActionLoading(`delete_restaurant_${id}`, false);
     }
@@ -788,7 +811,15 @@ const AdminPanel = () => {
 
   const handleEditRider = (rider) => {
     setEditingRiderId(rider.id);
-    setNewRider({ name: rider.name, phone: rider.phone, status: rider.status || 'online' });
+    setNewRider({ 
+      name: rider.name, 
+      phone: rider.phone, 
+      status: rider.status || 'online',
+      vehicle_number: rider.vehicle_number || '',
+      license_number: rider.license_number || '',
+      address: rider.address || '',
+      emergency_contact: rider.emergency_contact || ''
+    });
     setShowRiderPopup(true);
   };
 
@@ -810,7 +841,11 @@ const AdminPanel = () => {
       }
       setShowRiderPopup(false);
       setEditingRiderId(null);
-      setNewRider({ name: '', phone: '', status: 'online' });
+      setNewRider({ 
+        name: '', phone: '', status: 'online', 
+        vehicle_number: '', license_number: '', 
+        address: '', emergency_contact: '' 
+      });
       fetchData();
     } catch (e) { alert(editingRiderId ? "Failed to update rider" : "Failed to recruit rider"); }
   };
@@ -823,14 +858,19 @@ const AdminPanel = () => {
     } catch (e) { alert("Failed to delete coupon"); }
   };
 
-  const getPermittedTabs = (role) => {
+  const getPermittedTabs = (roleName) => {
+    // Priority 1: Dynamic Roles from Database
+    const matchedDbRole = dbRoles.find(r => r.name.toLowerCase() === roleName?.toLowerCase());
+    if (matchedDbRole) return matchedDbRole.permissions;
+
+    // Priority 2: Hardcoded Defaults (Fallback)
     const permissions = {
-      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants'],
-      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
+      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants', 'roles'],
+      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
       staff: ['orders', 'monitor'],
       chef: ['kitchen', 'orders', 'monitor']
     };
-    return permissions[role] || ['orders'];
+    return permissions[roleName] || ['orders'];
   };
 
   if (!getPermittedTabs(adminUser.role).includes(activeTab)) {
@@ -1075,14 +1115,14 @@ const AdminPanel = () => {
                 <div className="header-left">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <h1 className="view-title">Orders Hub</h1>
-                    <button 
+                    <button
                       onClick={fetchData}
                       className="btn-icon"
                       disabled={isLoading}
                       title="Manual Refresh"
-                      style={{ 
-                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', 
-                        padding: '8px', borderRadius: '10px', color: 'var(--text-muted)', 
+                      style={{
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)',
+                        padding: '8px', borderRadius: '10px', color: 'var(--text-muted)',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}
                     >
@@ -1197,14 +1237,14 @@ const AdminPanel = () => {
                             <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)', position: 'relative' }}>
                               {editingOrderId === order.id ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <input 
+                                  <input
                                     className="filter-input"
                                     value={editFormData.name}
                                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                                     placeholder="Name"
                                     style={{ padding: '2px 8px', fontSize: '11px', height: '28px' }}
                                   />
-                                  <input 
+                                  <input
                                     className="filter-input"
                                     value={editFormData.phone}
                                     onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
@@ -1218,11 +1258,11 @@ const AdminPanel = () => {
                                 </div>
                               ) : (
                                 <>
-                                  <button 
+                                  <button
                                     onClick={() => {
                                       setEditingOrderId(order.id);
-                                      setEditFormData({ 
-                                        name: order.customerName || order.customer_name || '', 
+                                      setEditFormData({
+                                        name: order.customerName || order.customer_name || '',
                                         phone: order.customerPhone || order.customer_phone || ''
                                       });
                                     }}
@@ -1238,32 +1278,32 @@ const AdminPanel = () => {
                           )}
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                {(order.items || []).map((item, idx) => (
-                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
-                                        <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name}</span>
-                                      </div>
-                                      <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
-                                    </div>
-                                ))}
-                                <button 
-                                  onClick={() => {
-                                    setIsEditingOrder(true);
-                                    setManualOrderData({
-                                      id: order.id,
-                                      tableNumber: (order.table_number || order.tableNumber || '1').toString(),
-                                      customerName: order.customerName || order.customer_name || '',
-                                      customerPhone: order.customerPhone || order.customer_phone || '',
-                                      items: [...(order.items || [])],
-                                      total: order.total
-                                    });
-                                    setShowManualOrderPopup(true);
-                                  }}
-                                  style={{ marginTop: '8px', background: 'rgba(124, 58, 237, 0.05)', border: '1px dashed var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '8px', padding: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
-                                >
-                                  <Edit size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Edit Items
-                                </button>
+                            {(order.items || []).map((item, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
+                                  <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name}</span>
+                                </div>
+                                <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => {
+                                setIsEditingOrder(true);
+                                setManualOrderData({
+                                  id: order.id,
+                                  tableNumber: (order.table_number || order.tableNumber || '1').toString(),
+                                  customerName: order.customerName || order.customer_name || '',
+                                  customerPhone: order.customerPhone || order.customer_phone || '',
+                                  items: [...(order.items || [])],
+                                  total: order.total
+                                });
+                                setShowManualOrderPopup(true);
+                              }}
+                              style={{ marginTop: '8px', background: 'rgba(124, 58, 237, 0.05)', border: '1px dashed var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '8px', padding: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                            >
+                              <Edit size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Edit Items
+                            </button>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2072,46 +2112,46 @@ const AdminPanel = () => {
                           Table {order.tableNumber}
                         </div>
                         <h2 style={{ fontSize: '24px', fontWeight: '900', marginTop: '4px' }}>Order #{order.id}</h2>
-                          <div style={{ fontSize: '14px', fontWeight: '700', position: 'relative' }}>
-                            {editingOrderId === order.id ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <input 
-                                  className="filter-input"
-                                  value={editFormData.name}
-                                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                                  placeholder="Name"
-                                  style={{ padding: '4px 8px', fontSize: '12px' }}
-                                />
-                                <input 
-                                  className="filter-input"
-                                  value={editFormData.phone}
-                                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                                  placeholder="Phone"
-                                  style={{ padding: '4px 8px', fontSize: '12px' }}
-                                />
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '4px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Save</button>
-                                  <button onClick={() => setEditingOrderId(null)} style={{ padding: '4px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Cancel</button>
-                                </div>
+                        <div style={{ fontSize: '14px', fontWeight: '700', position: 'relative' }}>
+                          {editingOrderId === order.id ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <input
+                                className="filter-input"
+                                value={editFormData.name}
+                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                placeholder="Name"
+                                style={{ padding: '4px 8px', fontSize: '12px' }}
+                              />
+                              <input
+                                className="filter-input"
+                                value={editFormData.phone}
+                                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                placeholder="Phone"
+                                style={{ padding: '4px 8px', fontSize: '12px' }}
+                              />
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '4px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Save</button>
+                                <button onClick={() => setEditingOrderId(null)} style={{ padding: '4px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Cancel</button>
                               </div>
-                            ) : (
-                              <>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  {order.customer_name || 'Guest'}
-                                  <button 
-                                    onClick={() => {
-                                      setEditingOrderId(order.id);
-                                      setEditFormData({ name: order.customer_name || '', phone: order.customer_phone || '' });
-                                    }}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                                  >
-                                    <Edit2 size={12} />
-                                  </button>
-                                </div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{order.customer_phone}</div>
-                              </>
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {order.customer_name || 'Guest'}
+                                <button
+                                  onClick={() => {
+                                    setEditingOrderId(order.id);
+                                    setEditFormData({ name: order.customer_name || '', phone: order.customer_phone || '' });
+                                  }}
+                                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{order.customer_phone}</div>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning)', fontWeight: '800', fontSize: '18px' }}>
@@ -2595,8 +2635,8 @@ const AdminPanel = () => {
                     const nextId = restaurantTables.length + 1;
                     const tableName = prompt("Enter Table Name/Label:", `Table ${nextId}`);
                     if (!tableName) return;
-                    
-                    const randomSecret = `T${nextId}-R4-DINE${Math.floor(1000 + Math.random() * 9000)}`;
+
+                    const randomSecret = `T${nextId}-DINE${Math.floor(1000 + Math.random() * 9000)}`;
                     try {
                       const res = await axios.post(`${API_URL}/api/tables`, {
                         table_number: nextId,
@@ -2604,11 +2644,7 @@ const AdminPanel = () => {
                         restaurant_id: adminUser.restaurant_id || 4,
                         name: tableName
                       });
-                      setRestaurantTables([...restaurantTables, { 
-                        table: tableName, 
-                        token: randomSecret,
-                        table_number: nextId
-                      }]);
+                      fetchData('New Table Added');
                     } catch (err) { alert("Persistence failed"); }
                   }}
                   className="btn-primary"
@@ -2620,7 +2656,8 @@ const AdminPanel = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                 {restaurantTables.map((t, idx) => {
-                  const liveUrl = `${window.location.origin}/?s=${t.token}`;
+                  const tokenVal = t.secret_token || t.token;
+                  const liveUrl = `${window.location.origin}/?s=${tokenVal}`;
                   return (
                     <div key={idx} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px', boxShadow: 'var(--shadow-md)', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' }}>
                       <div style={{ padding: '16px', background: 'white', borderRadius: '16px', width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2630,19 +2667,62 @@ const AdminPanel = () => {
                           style={{ width: '130px', height: '130px', objectFit: 'contain' }}
                         />
                       </div>
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{t.name || t.table}</h3>
-                      <div style={{ fontSize: '12px', background: 'var(--bg-deep)', padding: '8px 12px', borderRadius: '8px', color: 'var(--accent-primary)', fontWeight: '700', wordBreak: 'break-all' }}>{t.token}</div>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {t.name || t.table || `Table ${t.table_number}`}
+                        <button
+                          onClick={() => {
+                            const newName = prompt("Edit Table Name:", t.name || t.table);
+                            if (newName) {
+                              axios.put(`${API_URL}/api/tables/${t.id}`, { name: newName, table_number: t.table_number })
+                                .then(() => fetchData('Table Updated'));
+                            }
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-deep)', padding: '6px 12px', borderRadius: '8px', width: '100%', justifyContent: 'center' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: '700', wordBreak: 'break-all' }}>{tokenVal}</div>
+                        <button
+                          onClick={() => {
+                            const newKey = prompt("Edit Secret Key (Token):", tokenVal);
+                            if (newKey) {
+                              axios.put(`${API_URL}/api/tables/${t.id}`, { name: t.name || t.table, table_number: t.table_number, secret_token: newKey })
+                                .then(() => fetchData('Key Updated'));
+                            }
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      </div>
 
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(liveUrl);
-                          alert("Table URL copied to clipboard!");
-                        }}
-                        className="btn-primary"
-                        style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', width: '100%', border: 'none', cursor: 'pointer' }}
-                      >
-                        Copy Dine-In Link
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(liveUrl);
+                            alert("Table URL copied to clipboard!");
+                          }}
+                          className="btn-primary"
+                          style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', flex: 1, border: 'none', cursor: 'pointer' }}
+                        >
+                          Copy Dine-In Link
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm("Are you sure you want to delete this table?")) {
+                              try {
+                                await axios.delete(`${API_URL}/api/tables/${t.id}`);
+                                fetchData('Table Deleted');
+                              } catch (err) { alert("Delete failed"); }
+                            }
+                          }}
+                          style={{ padding: '10px', borderRadius: '12px', border: '1px solid var(--danger)', color: 'var(--danger)', background: 'transparent', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
 
                       <button
                         onClick={() => {
@@ -2694,7 +2774,7 @@ const AdminPanel = () => {
                           <td style={{ padding: '16px 20px', fontWeight: '700' }}>{t.name || t.table}</td>
                           <td style={{ padding: '16px 20px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-dim)' }}>{t.token}</td>
                           <td style={{ padding: '16px 20px', textAlign: 'right', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
-                             <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); alert("Copied!"); }} style={{ background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>Copy URL</button>
+                            <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); alert("Copied!"); }} style={{ background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>Copy URL</button>
                           </td>
                         </tr>
                       ))}
@@ -2704,6 +2784,500 @@ const AdminPanel = () => {
               </div>
             </div>
           )}
+          {activeTab === 'menu_order' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Menu Ordering</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Arrange the sequence of dishes in your digital menu.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <button
+                    className="btn-primary"
+                    onClick={async () => {
+                      try {
+                        const payload = orderedMenu.map((item, index) => ({ id: item.id, sort_order: index }));
+                        await axios.post(`${API_URL}/api/menu/reorder`, { orders: payload });
+                        alert("Menu sequence synchronized!");
+                        fetchData('Menu Reordered');
+                      } catch (e) { alert("Save failed"); }
+                    }}
+                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', padding: '12px 24px', borderRadius: '14px', fontWeight: '800' }}
+                  >
+                    Save Sequence
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '13px' }}>
+                      <th style={{ padding: '20px' }}>ORDER</th>
+                      <th style={{ padding: '20px' }}>DISH NAME</th>
+                      <th style={{ padding: '20px' }}>CATEGORY</th>
+                      <th style={{ padding: '20px', textAlign: 'right' }}>CONTROLS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderedMenu.map((item, idx) => (
+                      <tr
+                        key={item.id}
+                        draggable
+                        onDragStart={() => setDragItemIndex(idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          const newArr = [...orderedMenu];
+                          const draggedItem = newArr.splice(dragItemIndex, 1)[0];
+                          newArr.splice(idx, 0, draggedItem);
+                          setOrderedMenu(newArr);
+                          setDragItemIndex(null);
+                        }}
+                        style={{
+                          borderBottom: '1px solid var(--card-border)',
+                          background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                          cursor: 'grab'
+                        }}
+                      >
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ color: 'var(--text-muted)', cursor: 'grab' }}>⠿</span>
+                            <span style={{ background: 'var(--bg-deep)', padding: '4px 12px', borderRadius: '8px', fontWeight: '800', color: 'var(--accent-primary)' }}>{idx + 1}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {item.image_url && <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />}
+                            <span style={{ fontWeight: '700' }}>{item.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                          <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>{item.category}</span>
+                        </td>
+                        <td style={{ padding: '20px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              disabled={idx === 0}
+                              onClick={() => {
+                                const newArr = [...orderedMenu];
+                                [newArr[idx - 1], newArr[idx]] = [newArr[idx], newArr[idx - 1]];
+                                setOrderedMenu(newArr);
+                              }}
+                              style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--bg-deep)', color: 'var(--text-main)', cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.2 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <ChevronUp size={16} />
+                            </button>
+                            <button
+                              disabled={idx === orderedMenu.length - 1}
+                              onClick={() => {
+                                const newArr = [...orderedMenu];
+                                [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
+                                setOrderedMenu(newArr);
+                              }}
+                              style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--bg-deep)', color: 'var(--text-main)', cursor: idx === orderedMenu.length - 1 ? 'not-allowed' : 'pointer', opacity: idx === orderedMenu.length - 1 ? 0.2 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <ChevronDown size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {activeTab === 'sidebar_order' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Sidebar Ordering</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Customize the sequence of modules in your admin navigation bar.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <button
+                    className="btn-primary"
+                    onClick={async () => {
+                      try {
+                        const payload = orderedSidebar.map((item, index) => ({ id: item.id, sort_order: index }));
+                        await axios.post(`${API_URL}/api/mgmt/sidebar/reorder`, { orders: payload });
+                        alert("Sidebar layout updated! Refresh to see changes.");
+                        window.location.reload(); // Reload to refresh sidebar
+                      } catch (e) { alert("Save failed"); }
+                    }}
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', padding: '12px 24px', borderRadius: '14px', fontWeight: '800' }}
+                  >
+                    Apply Sidebar Layout
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '13px' }}>
+                      <th style={{ padding: '20px' }}>POS</th>
+                      <th style={{ padding: '20px' }}>MODULE LABEL</th>
+                      <th style={{ padding: '20px' }}>ID</th>
+                      <th style={{ padding: '20px', textAlign: 'center' }}>VISIBILITY</th>
+                      <th style={{ padding: '20px', textAlign: 'right' }}>REORDER</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderedSidebar.map((item, idx) => (
+                      <tr
+                        key={item.id}
+                        draggable
+                        onDragStart={() => setDragItemIndex(idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          const newArr = [...orderedSidebar];
+                          const draggedItem = newArr.splice(dragItemIndex, 1)[0];
+                          newArr.splice(idx, 0, draggedItem);
+                          setOrderedSidebar(newArr);
+                          setDragItemIndex(null);
+                        }}
+                        style={{
+                          borderBottom: '1px solid var(--card-border)',
+                          background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                          cursor: 'grab',
+                          opacity: item.is_active ? 1 : 0.5
+                        }}
+                      >
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ color: 'var(--text-muted)', cursor: 'grab' }}>⠿</span>
+                            <span style={{ background: 'var(--bg-deep)', padding: '4px 12px', borderRadius: '8px', fontWeight: '800', color: 'var(--accent-primary)' }}>{idx + 1}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                          <span style={{ fontWeight: '700', color: 'white' }}>{item.label}</span>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                          <code style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '8px', color: 'var(--text-muted)' }}>{item.id}</code>
+                        </td>
+                        <td style={{ padding: '20px', textAlign: 'center' }}>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const newStatus = !item.is_active;
+                                await axios.post(`${API_URL}/api/mgmt/sidebar/toggle`, { id: item.id, is_active: newStatus });
+                                const newArr = [...orderedSidebar];
+                                newArr[idx].is_active = newStatus;
+                                setOrderedSidebar(newArr);
+                                // Refresh sidebar live if possible or alert
+                              } catch (err) { alert("Failed to toggle visibility"); }
+                            }}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: item.is_active ? 'var(--accent-primary)' : 'var(--text-muted)',
+                              transition: 'all 0.3s'
+                            }}
+                          >
+                            {item.is_active ? <Eye size={20} /> : <EyeOff size={20} />}
+                          </button>
+                        </td>
+                        <td style={{ padding: '20px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              disabled={idx === 0}
+                              onClick={() => {
+                                const newArr = [...orderedSidebar];
+                                [newArr[idx - 1], newArr[idx]] = [newArr[idx], newArr[idx - 1]];
+                                setOrderedSidebar(newArr);
+                              }}
+                              style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--bg-deep)', color: 'var(--text-main)', cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.2 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <ChevronUp size={16} />
+                            </button>
+                            <button
+                              disabled={idx === orderedSidebar.length - 1}
+                              onClick={() => {
+                                const newArr = [...orderedSidebar];
+                                [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
+                                setOrderedSidebar(newArr);
+                              }}
+                              style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--bg-deep)', color: 'var(--text-main)', cursor: idx === orderedSidebar.length - 1 ? 'not-allowed' : 'pointer', opacity: idx === orderedSidebar.length - 1 ? 0.2 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <ChevronDown size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {activeTab === 'roles' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'white' }}>Role Management</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Configure system-wide administrative privileges and module access.</p>
+                </div>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    setCurrentRoleData({ name: '', permissions: [] });
+                    setIsRoleModalOpen(true);
+                  }}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px', borderRadius: '14px',
+                    background: 'var(--accent-primary)', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer'
+                  }}
+                >
+                  <Plus size={20} /> Add New Role
+                </button>
+              </div>
+
+              <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', background: 'rgba(255,255,255,0.03)' }}>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>IDENTITY / ROLE NAME</th>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>ACCESS SCOPE</th>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>MODULES</th>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>CONTROL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dbRoles.map((role) => (
+                      <tr key={role.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }} className="table-row-hover">
+                        <td style={{ padding: '20px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: role.name === 'super_admin' ? '#10b981' : 'var(--accent-primary)' }} />
+                             <span style={{ fontWeight: '700', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{role.name.replace('_', ' ')}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px 24px' }}>
+                          <span style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#a78bfa', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', border: '1px solid rgba(124, 58, 237, 0.2)' }}>
+                            {role.permissions.length} Active Modules
+                          </span>
+                        </td>
+                        <td style={{ padding: '20px 24px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '400px' }}>
+                            {role.permissions.slice(0, 4).map(p => (
+                              <span key={p} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.05)', padding: '3px 10px', borderRadius: '6px', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>{p.replace('_', ' ')}</span>
+                            ))}
+                            {role.permissions.length > 4 && <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px' }}>+{role.permissions.length - 4} more</span>}
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => {
+                                setCurrentRoleData(role);
+                                setIsRoleModalOpen(true);
+                              }}
+                              style={{ 
+                                background: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.2)', 
+                                color: '#a78bfa', cursor: 'pointer', padding: '10px 18px', borderRadius: '12px', 
+                                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '13px' 
+                              }}
+                            >
+                              <Edit size={16} /> Edit Role
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (window.confirm(`Delete role ${role.name}?`)) {
+                                  await axios.delete(`${API_URL}/api/mgmt/roles/${role.id}`);
+                                  axios.get(`${API_URL}/api/mgmt/roles`).then(res => setDbRoles(res.data.data));
+                                }
+                              }}
+                              style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '10px', borderRadius: '12px', transition: 'all 0.2s' }}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Polished Modern Modal */}
+              {isRoleModalOpen && (
+                <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: '20px' }}>
+                  <div className="glass-panel" style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'hidden', background: 'var(--card-bg)', borderRadius: '32px', border: '1px solid var(--card-border)', boxShadow: '0 40px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '40px 40px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'white' }}>{currentRoleData.id ? 'Edit Access Role' : 'Initialize New Role'}</h2>
+                        <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Modify the security parameters and permitted system modules.</p>
+                      </div>
+                      <button 
+                        onClick={() => setIsRoleModalOpen(false)} 
+                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Plus size={20} style={{ transform: 'rotate(45deg)' }} />
+                      </button>
+                    </div>
+
+                    <div style={{ padding: '30px 40px', overflowY: 'auto', flex: 1 }}>
+                      <div style={{ marginBottom: '32px' }}>
+                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '10px', fontWeight: '800', letterSpacing: '1px' }}>ROLE IDENTIFIER</label>
+                        <input
+                          type="text"
+                          value={currentRoleData.name}
+                          onChange={(e) => setCurrentRoleData({ ...currentRoleData, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                          placeholder="e.g. store_manager"
+                          style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--card-border)', color: 'white', outline: 'none', fontSize: '16px', fontWeight: '600' }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '15px', fontWeight: '800', letterSpacing: '1px' }}>ACCESS MATRIX</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px' }}>
+                          {[
+                            'dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'menu_order',
+                            'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes',
+                            'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants', 'roles'
+                          ].map(mod => {
+                            const isSelected = currentRoleData.permissions.includes(mod);
+                            return (
+                              <div
+                                key={mod}
+                                onClick={() => {
+                                  let newPerms = [...currentRoleData.permissions];
+                                  if (isSelected) newPerms = newPerms.filter(p => p !== mod);
+                                  else newPerms.push(mod);
+                                  setCurrentRoleData({ ...currentRoleData, permissions: newPerms });
+                                }}
+                                style={{ 
+                                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', 
+                                  background: isSelected ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.03)', 
+                                  borderRadius: '16px', cursor: 'pointer', border: '1px solid',
+                                  borderColor: isSelected ? 'var(--accent-primary)' : 'transparent',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                <div style={{ width: '18px', height: '18px', borderRadius: '5px', border: '2px solid', borderColor: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)', background: isSelected ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                   {isSelected && <Check size={12} color="white" strokeWidth={4} />}
+                                </div>
+                                <span style={{ fontSize: '14px', color: isSelected ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'capitalize' }}>{mod.replace('_', ' ')}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '30px 40px', borderTop: '1px solid var(--border-default)', display: 'flex', gap: '16px', background: 'var(--bg-secondary)' }}>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => setIsRoleModalOpen(false)}
+                        style={{ flex: 1, padding: '16px', borderRadius: '16px', fontWeight: '700' }}
+                      >
+                        Discard
+                      </button>
+                      <button
+                        className="btn-primary"
+                        onClick={async () => {
+                          if (!currentRoleData.name) return alert("Role name is required");
+                          try {
+                            await axios.post(`${API_URL}/api/mgmt/roles`, currentRoleData);
+                            axios.get(`${API_URL}/api/mgmt/roles`).then(res => setDbRoles(res.data.data));
+                            setIsRoleModalOpen(false);
+                          } catch (e) { alert("Failed to save role"); }
+                        }}
+                        style={{ flex: 2, padding: '16px', borderRadius: '16px', background: 'var(--accent-primary)', color: 'white', border: 'none', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 20px rgba(124, 58, 237, 0.3)' }}
+                      >
+                        Confirm & Deploy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === 'sidebar_order' && (
+            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
+              <div className="view-header-row mb-8">
+                <div className="header-left">
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'white' }}>Sidebar Configurator</h1>
+                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Drag to reorder your navigation menu or toggle module visibility.</p>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ maxWidth: '700px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '28px', padding: '10px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {orderedSidebar.map((item, index) => (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={() => setDragItemIndex(index)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={async () => {
+                        const items = [...orderedSidebar];
+                        const draggedItem = items[dragItemIndex];
+                        items.splice(dragItemIndex, 1);
+                        items.splice(index, 0, draggedItem);
+                        setOrderedSidebar(items);
+                        try {
+                          await axios.post(`${API_URL}/api/mgmt/sidebar/reorder`, {
+                            order: items.map(it => it.id)
+                          });
+                        } catch (err) { alert("Failed to save new order"); }
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '16px 24px', background: 'rgba(255,255,255,0.03)', borderRadius: '18px',
+                        border: '1px solid rgba(255,255,255,0.05)', cursor: 'grab',
+                        transition: 'transform 0.2s, background 0.2s',
+                        opacity: item.is_active ? 1 : 0.4
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ color: 'rgba(255,255,255,0.2)' }}><ListTodo size={18} /></div>
+                        <div>
+                          <p style={{ fontWeight: '800', color: 'white', fontSize: '15px', textTransform: 'capitalize' }}>{item.label}</p>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Module: {item.module_name}</p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '900', color: item.is_active ? 'var(--accent-primary)' : '#666', letterSpacing: '1px' }}>{item.is_active ? 'VISIBLE' : 'HIDDEN'}</span>
+                            <button 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await axios.post(`${API_URL}/api/mgmt/sidebar/toggle/${item.id}`, {
+                                    is_active: !item.is_active
+                                  });
+                                  const updated = [...orderedSidebar];
+                                  updated[index].is_active = !item.is_active;
+                                  setOrderedSidebar(updated);
+                                } catch (err) { alert("Failed to toggle visibility"); }
+                              }}
+                              style={{ 
+                                width: '48px', height: '24px', borderRadius: '12px', 
+                                background: item.is_active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                                border: 'none', cursor: 'pointer', position: 'relative', marginTop: '6px',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                              }}
+                            >
+                               <div style={{ 
+                                 width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                 position: 'absolute', top: '3px', left: item.is_active ? '27px' : '3px',
+                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                 boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                               }} />
+                            </button>
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'feedback' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
               <div className="view-header-row mb-8">
@@ -3033,7 +3607,7 @@ const AdminPanel = () => {
                 onClick={handleSaveDish}
                 disabled={uploading || loadingStates['save_dish']}
                 style={{ padding: '14px 40px', borderRadius: '14px', fontWeight: '800', fontSize: '15px', border: 'none', cursor: (uploading || loadingStates['save_dish']) ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', boxShadow: '0 10px 20px -5px rgba(124, 58, 237, 0.4)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
-                onMouseOver={(e) => ! (uploading || loadingStates['save_dish']) && (e.currentTarget.style.transform = 'translateY(-2px)')}
+                onMouseOver={(e) => !(uploading || loadingStates['save_dish']) && (e.currentTarget.style.transform = 'translateY(-2px)')}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 {(uploading || loadingStates['save_dish']) ? <div className="spinner-small" /> : 'Save Menu Item'}
@@ -3216,7 +3790,7 @@ const AdminPanel = () => {
                   onChange={(e) => setNewCatName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
                 />
-                <button 
+                <button
                   onClick={handleAddCategory}
                   disabled={loadingStates['add_category']}
                   style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', border: 'none', padding: '12px 24px', borderRadius: '14px', color: 'white', fontWeight: '800', cursor: loadingStates['add_category'] ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.3)' }}
@@ -3232,17 +3806,17 @@ const AdminPanel = () => {
                   </div>
                 ) : (
                   categories.map(cat => (
-                    <div 
-                      key={cat.id} 
-                      style={{ 
-                        background: 'rgba(124, 58, 237, 0.08)', 
-                        color: 'var(--accent-primary)', 
-                        padding: '10px 18px', 
-                        borderRadius: '16px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '12px', 
-                        fontWeight: '700', 
+                    <div
+                      key={cat.id}
+                      style={{
+                        background: 'rgba(124, 58, 237, 0.08)',
+                        color: 'var(--accent-primary)',
+                        padding: '10px 18px',
+                        borderRadius: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        fontWeight: '700',
                         fontSize: '14px',
                         border: '1px solid rgba(124, 58, 237, 0.15)',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -3258,7 +3832,7 @@ const AdminPanel = () => {
                       }}
                     >
                       {cat.name}
-                      <button 
+                      <button
                         onClick={async (e) => {
                           e.stopPropagation();
                           if (window.confirm(`Are you sure you want to delete "${cat.name}"?`)) {
@@ -3270,16 +3844,16 @@ const AdminPanel = () => {
                             }
                           }
                         }}
-                        style={{ 
-                          background: 'rgba(239, 68, 68, 0.1)', 
-                          border: 'none', 
-                          width: '24px', 
-                          height: '24px', 
-                          borderRadius: '50%', 
-                          color: '#ef4444', 
-                          cursor: 'pointer', 
-                          display: 'flex', 
-                          alignItems: 'center', 
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: 'none',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '12px',
                           transition: 'all 0.2s'
@@ -3294,8 +3868,8 @@ const AdminPanel = () => {
                 )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <button 
-                  className="btn-secondary" 
+                <button
+                  className="btn-secondary"
                   onClick={() => setShowCatPopup(false)}
                   style={{ padding: '12px 32px', borderRadius: '14px', fontWeight: '700' }}
                 >
@@ -3608,17 +4182,17 @@ const AdminPanel = () => {
                       </div>
                     </div>
                   </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>INVOICE PREFIX</label>
-                        <input type="text" value={newNode.invoice_prefix} onChange={(e) => setNewNode({ ...newNode, invoice_prefix: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BILL FOOTER NOTE</label>
-                        <input type="text" value={newNode.bill_footer} onChange={(e) => setNewNode({ ...newNode, bill_footer: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
-                      </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>INVOICE PREFIX</label>
+                      <input type="text" value={newNode.invoice_prefix} onChange={(e) => setNewNode({ ...newNode, invoice_prefix: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>BILL FOOTER NOTE</label>
+                      <input type="text" value={newNode.bill_footer} onChange={(e) => setNewNode({ ...newNode, bill_footer: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
                     </div>
                   </div>
+                </div>
               )}
 
               {nodeActiveTab === 'ai' && (
@@ -3752,8 +4326,8 @@ const AdminPanel = () => {
 
               <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                 <button className="btn-secondary" onClick={() => { setShowCouponPopup(false); setEditingCouponId(null); }} style={{ flex: 1 }}>Cancel</button>
-                <button 
-                  className="btn-primary" 
+                <button
+                  className="btn-primary"
                   disabled={loadingStates['save_coupon']}
                   onClick={async () => {
                     setActionLoading('save_coupon', true);
@@ -3770,7 +4344,7 @@ const AdminPanel = () => {
                       fetchData();
                     } catch (e) { alert("Failed to save coupon"); }
                     finally { setActionLoading('save_coupon', false); }
-                  }} 
+                  }}
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
                   {loadingStates['save_coupon'] ? <div className="spinner-small" /> : (editingCouponId ? 'Update Promotion' : 'Publish Offer')}
@@ -3784,42 +4358,72 @@ const AdminPanel = () => {
       {/* Rider Modal */}
       {showRiderPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '400px', width: '90%', padding: '32px', borderRadius: '24px' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '24px' }}>{editingRiderId ? 'Update Rider Bio' : 'Recruit New Rider'}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '650px', width: '90%', padding: '32px', borderRadius: '32px', background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>RIDER NAME</label>
-                <input type="text" placeholder="Full Name" value={newRider.name} onChange={(e) => setNewRider({ ...newRider, name: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
-                <input type="text" placeholder="+91 XXXXX XXXXX" value={newRider.phone} onChange={(e) => setNewRider({ ...newRider, phone: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }} />
+                <h3 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{editingRiderId ? 'Update Rider Profile' : 'Recruit New Rider'}</h3>
+                <p className="text-muted" style={{ fontSize: '14px', marginTop: '4px' }}>Onboard delivery agents to your fleet network.</p>
               </div>
               {editingRiderId && (
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>AVAILABILITY STATUS</label>
-                  <select value={newRider.status} onChange={(e) => setNewRider({ ...newRider, status: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}>
-                    <option value="online">Online & Active</option>
-                    <option value="busy">Busy / Delivering</option>
-                    <option value="offline">Offline / Shift End</option>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                   <label style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-muted)', marginBottom: '4px' }}>CURRENT STATUS</label>
+                   <select 
+                    value={newRider.status} 
+                    onChange={(e) => setNewRider({ ...newRider, status: e.target.value })} 
+                    style={{ padding: '6px 12px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', fontSize: '12px' }}
+                   >
+                    <option value="online">Online</option>
+                    <option value="busy">Busy</option>
+                    <option value="offline">Offline</option>
                   </select>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                <button className="btn-secondary" onClick={() => setShowRiderPopup(false)} style={{ flex: 1 }}>Cancel</button>
-                <button 
-                  className="btn-primary" 
-                  disabled={loadingStates['save_rider']}
-                  onClick={async () => {
-                    setActionLoading('save_rider', true);
-                    try { await handleSaveRider(); } 
-                    finally { setActionLoading('save_rider', false); }
-                  }} 
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                >
-                  {loadingStates['save_rider'] ? <div className="spinner-small" /> : (editingRiderId ? 'Synchronize Data' : 'Onboard Rider')}
-                </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ gridColumn: 'span 1' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Full Name *</label>
+                <input type="text" placeholder="e.g. Rahul Kumar" value={newRider.name} onChange={(e) => setNewRider({ ...newRider, name: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '6px' }} />
               </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Phone Number *</label>
+                <input type="text" placeholder="+91 XXXXX XXXXX" value={newRider.phone} onChange={(e) => setNewRider({ ...newRider, phone: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '6px' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Vehicle Number</label>
+                <input type="text" placeholder="e.g. DL 01 AB 1234" value={newRider.vehicle_number} onChange={(e) => setNewRider({ ...newRider, vehicle_number: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '6px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>License Number</label>
+                <input type="text" placeholder="e.g. DLXXXXXXXXXXXXX" value={newRider.license_number} onChange={(e) => setNewRider({ ...newRider, license_number: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '6px' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Residential Address</label>
+                <textarea placeholder="Complete address..." value={newRider.address} onChange={(e) => setNewRider({ ...newRider, address: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '6px', minHeight: '60px' }} />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Emergency Contact (Name/Phone)</label>
+                <input type="text" placeholder="e.g. Brother: 98XXXXXXXX" value={newRider.emergency_contact} onChange={(e) => setNewRider({ ...newRider, emergency_contact: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '6px' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--card-border)' }}>
+              <button className="btn-secondary" onClick={() => setShowRiderPopup(false)} style={{ flex: 1, padding: '14px', borderRadius: '14px' }}>Cancel</button>
+              <button
+                className="btn-primary"
+                disabled={loadingStates['save_rider']}
+                onClick={async () => {
+                  setActionLoading('save_rider', true);
+                  try { await handleSaveRider(); }
+                  finally { setActionLoading('save_rider', false); }
+                }}
+                style={{ flex: 2, padding: '14px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {loadingStates['save_rider'] ? <div className="spinner-small" /> : (editingRiderId ? 'Synchronize Profile' : 'Confirm Recruitment')}
+              </button>
             </div>
           </div>
         </div>
@@ -3904,19 +4508,19 @@ const AdminPanel = () => {
             <div style={{ flex: 1, padding: '32px', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>Order Summary</h3>
-                  <button
-                    onClick={() => {
-                      if (isEditingOrder) {
-                        setIsEditingOrder(false);
-                        setManualOrderData({ tableNumber: '1', items: [], customerName: '', customerPhone: '', total: 0 });
-                      }
-                      setShowManualOrderPopup(false);
-                    }}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                  >
-                    <Trash2 size={24} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    if (isEditingOrder) {
+                      setIsEditingOrder(false);
+                      setManualOrderData({ tableNumber: '1', items: [], customerName: '', customerPhone: '', total: 0 });
+                    }
+                    setShowManualOrderPopup(false);
+                  }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  <Trash2 size={24} />
+                </button>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1fr', gap: '10px' }}>
                 <div>

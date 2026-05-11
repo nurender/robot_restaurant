@@ -20,29 +20,50 @@ import {
     QrCode
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapsed, setIsCollapsed }) => {
-    const menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super_admin', 'manager'] },
-        { id: 'orders', label: 'Order Management', icon: ListTodo, roles: ['super_admin', 'manager', 'staff'] },
-        { id: 'kitchen', label: 'Kitchen Hub', icon: ChefHat, roles: ['super_admin', 'manager', 'chef'] },
-        { id: 'marketing', label: 'Marketing Hub', icon: Send, roles: ['super_admin', 'manager'] },
-        { id: 'monitor', label: 'Neural Live Feed', icon: Bot, roles: ['super_admin', 'manager', 'staff'] },
-        { id: 'robo_control', label: 'AI Robo Control', icon: Settings, roles: ['super_admin', 'manager'] },
-        { id: 'menu', label: 'Menu Management', icon: UtensilsCrossed, roles: ['super_admin', 'manager'] },
-        { id: 'coupons', label: 'Offers & Coupons', icon: StoreIcon, roles: ['super_admin', 'manager'] },
-        { id: 'customers', label: 'Customer Insights', icon: Users, roles: ['super_admin', 'manager'] },
-        { id: 'rider_fleet', label: 'Rider Fleet', icon: Bike, roles: ['super_admin', 'manager'] },
-        { id: 'inventory', label: 'Smart Inventory', icon: Package, roles: ['super_admin', 'manager'] },
-        { id: 'reports', label: 'Reports & Analytics', icon: BarChart2, roles: ['super_admin', 'manager'] },
-        { id: 'qr_codes', label: 'Tables & QR Codes', icon: QrCode, roles: ['super_admin', 'manager'] },
-        { id: 'feedback', label: 'Customer Feedback', icon: Star, roles: ['super_admin', 'manager'] },
-        { id: 'ai_prompt', label: 'Prompt Engineer', icon: Bot, roles: ['super_admin'] },
-        { id: 'settings', label: 'General Settings', icon: Settings, roles: ['super_admin', 'manager'] },
-        { id: 'restaurants', label: 'Our Restaurants', icon: StoreIcon, roles: ['super_admin'] },
-        { id: 'staff', label: 'Team Members', icon: Users, roles: ['super_admin'] },
-    ];
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-    const filteredItems = menuItems.filter(item => item.roles.includes(adminUser.role));
+const iconMap = {
+    LayoutDashboard, UtensilsCrossed, ListTodo, ChefHat, Users, Store, Bot, Send, LogOut, Package, 
+    BarChart2, Settings, StoreIcon, Bike, CreditCard, Star, ChevronLeft, ChevronRight, QrCode
+};
+
+const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapsed, setIsCollapsed }) => {
+    const [menuItems, setMenuItems] = useState([]);
+
+    useEffect(() => {
+        const fetchMenu = async () => {
+            try {
+                const res = await axios.get(`${API_URL}/api/mgmt/sidebar`);
+                if (res.data.success) {
+                    const mapped = res.data.data.map(item => ({
+                        ...item,
+                        icon: iconMap[item.icon_name] || Settings
+                    }));
+                    setMenuItems(mapped);
+                }
+            } catch (e) { console.error("Sidebar Load Error:", e); }
+        };
+        fetchMenu();
+    }, []);
+
+    const filteredItems = menuItems.filter(item => {
+        // Ensure roles is an array (sometimes PG arrays come as strings depending on config)
+        let rolesArray = item.roles;
+        if (typeof rolesArray === 'string') {
+            rolesArray = rolesArray.replace(/[{}]/g, '').split(',');
+        }
+        
+        const isPermitted = rolesArray.includes(adminUser.role);
+        const isActive = item.is_active;
+
+        if (item.id === 'roles') {
+            console.log(`[Sidebar Debug] Item: ${item.label}, UserRole: ${adminUser.role}, Permitted: ${isPermitted}, Active: ${isActive}`);
+        }
+
+        return isPermitted && isActive;
+    });
 
     return (
         <aside className={`admin-sidebar shadow-premium ${isCollapsed ? 'collapsed' : ''}`} style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>

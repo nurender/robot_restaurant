@@ -132,10 +132,10 @@ const assignRiderToOrder = async (req, res) => {
 const updateRider = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, phone, status } = req.body;
+        const { name, phone, status, vehicle_number, license_number, address, emergency_contact } = req.body;
         await pool.query(
-            "UPDATE riders SET name = $1, phone = $2, status = $3, updated_at = NOW() WHERE id = $4",
-            [name, phone, status, id]
+            "UPDATE riders SET name = $1, phone = $2, status = $3, vehicle_number = $4, license_number = $5, address = $6, emergency_contact = $7, updated_at = NOW() WHERE id = $8",
+            [name, phone, status, vehicle_number, license_number, address, emergency_contact, id]
         );
         res.json({ success: true });
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
@@ -157,4 +157,62 @@ const updateStock = async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
 
-module.exports = { getCoupons, createCoupon, updateCoupon, deleteCoupon, getCustomers, getSettings, updateSettings, getRiders, createRider, updateRider, deleteRider, assignRiderToOrder, updateStock };
+const getSidebarItems = async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM admin_sidebar_items ORDER BY sort_order ASC");
+        res.json({ success: true, data: result.rows });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const updateSidebarOrder = async (req, res) => {
+    try {
+        const { orders } = req.body; // Array of { id, sort_order }
+        for (const item of orders) {
+            await pool.query("UPDATE admin_sidebar_items SET sort_order = $1 WHERE id = $2", [item.sort_order, item.id]);
+        }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const toggleSidebarVisibility = async (req, res) => {
+    try {
+        const { id, is_active } = req.body;
+        await pool.query("UPDATE admin_sidebar_items SET is_active = $1 WHERE id = $2", [is_active, id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const getRoles = async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM admin_roles ORDER BY name ASC");
+        res.json({ success: true, data: result.rows });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const createRole = async (req, res) => {
+    try {
+        const { name, permissions } = req.body;
+        const result = await pool.query(
+            "INSERT INTO admin_roles (name, permissions) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET permissions = $2 RETURNING *",
+            [name, permissions]
+        );
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const deleteRole = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query("DELETE FROM admin_roles WHERE id = $1", [id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+module.exports = { 
+    getCoupons, createCoupon, updateCoupon, deleteCoupon, 
+    getCustomers, getSettings, updateSettings, 
+    getRiders, createRider, updateRider, deleteRider, 
+    assignRiderToOrder, updateStock,
+    getSidebarItems, updateSidebarOrder, toggleSidebarVisibility,
+    getRoles, createRole, deleteRole
+};

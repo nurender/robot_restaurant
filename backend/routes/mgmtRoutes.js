@@ -1,7 +1,21 @@
 const express = require('express');
-const { getCoupons, createCoupon, updateCoupon, deleteCoupon, getCustomers, getSettings, updateSettings, getRiders, createRider, updateRider, deleteRider, assignRiderToOrder } = require('../controllers/mgmtController');
+const { 
+    getCoupons, createCoupon, updateCoupon, deleteCoupon, 
+    getCustomers, getSettings, updateSettings, 
+    getRiders, createRider, updateRider, deleteRider, 
+    assignRiderToOrder, getSidebarItems, updateSidebarOrder, toggleSidebarVisibility,
+    getRoles, createRole, deleteRole
+} = require('../controllers/mgmtController');
 
 const router = express.Router();
+
+router.get('/sidebar', getSidebarItems);
+router.post('/sidebar/reorder', updateSidebarOrder);
+router.post('/sidebar/toggle', toggleSidebarVisibility);
+
+router.get('/roles', getRoles);
+router.post('/roles', createRole);
+router.delete('/roles/:id', deleteRole);
 
 router.get('/coupons', getCoupons);
 router.post('/coupons', createCoupon);

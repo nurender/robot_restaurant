@@ -18,10 +18,13 @@ const {
     deleteCategory,
     importMenuAI,
     getSmartMenu,
-    createSmartItem
+    createSmartItem,
+    updateMenuOrder
 } = require('../controllers/menuController');
 
 const router = express.Router();
+
+router.post('/reorder', updateMenuOrder);
 
 // Smart Advanced Endpoints
 router.get('/smart', getSmartMenu);

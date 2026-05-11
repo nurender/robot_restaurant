@@ -120,7 +120,9 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 // Database Configuration
 const { pool, connectDB } = require('./config/db');
-connectDB();
+connectDB()
+    .then(() => console.log("✅ All Database Tables Verified & Ready"))
+    .catch(err => console.error("❌ Database Initialization Failed:", err));
 
 const chatRoutes = require('./routes/chatRoutes');
 const adminRoutes = require('./routes/adminRoutes');

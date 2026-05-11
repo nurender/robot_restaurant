@@ -4,6 +4,11 @@ const OpenAI = require('openai');
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
+const openrouter = process.env.OPENROUTER_API_KEY ? new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1"
+}) : null;
+
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 console.log(ai ? '✅ Sentient Gemini Brain: ACTIVE' : '⚠️  AI Brain: Missing Key (Limited Experience)');
 
@@ -38,4 +43,4 @@ async function generateNeuralTTS(text, lang) {
     }
 }
 
-module.exports = { ai, openai, OPENAI_REALTIME_API_KEY, generateNeuralTTS };
+module.exports = { ai, openai, openrouter, OPENAI_REALTIME_API_KEY, generateNeuralTTS };

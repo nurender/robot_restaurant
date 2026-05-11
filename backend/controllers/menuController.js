@@ -9,6 +9,7 @@ const getMenu = async (req, res) => {
         params.push(restaurant_id);
     }
     try {
+        query += " ORDER BY sort_order ASC, id ASC";
         const result = await pool.query(query, params);
         res.json({ data: result.rows });
     } catch (err) {
@@ -182,6 +183,20 @@ const createSmartItem = async (req, res) => {
     }
 };
 
+const updateMenuOrder = async (req, res) => {
+    const { orders } = req.body; // Array of { id, sort_order }
+    const io = req.app.get('socketio');
+    try {
+        for (const item of orders) {
+            await pool.query("UPDATE menu SET sort_order = $1 WHERE id = $2", [item.sort_order, item.id]);
+        }
+        if (io) io.emit('menu_updated');
+        res.json({ message: "Order updated successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 module.exports = {
     getMenu,
     createMenuItem,
@@ -192,5 +207,6 @@ module.exports = {
     deleteCategory,
     importMenuAI,
     getSmartMenu,
-    createSmartItem
+    createSmartItem,
+    updateMenuOrder
 };

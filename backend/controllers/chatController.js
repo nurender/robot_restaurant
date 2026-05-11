@@ -1,4 +1,4 @@
-const { ai, openai } = require('../config/ai');
+const { ai, openai, openrouter } = require('../config/ai');
 const { pool } = require('../config/db');
 const { getAiSystemPrompt } = require('../services/cacheService');
 
@@ -39,7 +39,18 @@ const handleChat = async (req, res) => {
     }
 
     const provider = process.env.AI_PROVIDER || 'GEMINI';
-    const flatMenu = flattenMenu(menuContext);
+    
+    // 🧠 Backend Fallback: If frontend fails to send menu, fetch it from DB
+    let finalMenuContext = menuContext;
+    if ((!finalMenuContext || finalMenuContext.length === 0) && restaurantId) {
+        try {
+            const menuRes = await pool.query("SELECT * FROM menu WHERE restaurant_id = $1 AND is_active != false", [restaurantId]);
+            finalMenuContext = [{ category: 'Menu', items: menuRes.rows }];
+            console.log(`📡 Backend fetched ${menuRes.rows.length} items for restaurant ${restaurantId} (Fallback)`);
+        } catch (e) { console.error("Menu Fallback Error:", e.message); }
+    }
+
+    const flatMenu = flattenMenu(finalMenuContext);
 
     // 2. Build Intelligent Prompt
     let basePrompt = await getAiSystemPrompt();
@@ -76,7 +87,17 @@ Never include markdown formatting or extra text.
     try {
         let aiJsonResponse = "";
 
-        if (provider === 'OPENAI' && openai) {
+        if (provider === 'OPENROUTER' && openrouter) {
+            const completion = await openrouter.chat.completions.create({
+                model: "google/gemini-2.0-flash-001",
+                messages: [
+                    { role: "system", content: contextPrompt + schemaInstructions }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.1
+            });
+            aiJsonResponse = completion.choices[0].message.content;
+        } else if (provider === 'OPENAI' && openai) {
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
@@ -99,7 +120,29 @@ Never include markdown formatting or extra text.
 
         const jsonMatch = aiJsonResponse.match(/\{[\s\S]*\}/);
         const parsedData = JSON.parse(jsonMatch ? jsonMatch[0] : aiJsonResponse);
-        console.log("📤 AI Parsed Response:", parsedData);
+
+        // 🧠 Item Enrichment: Fetch full details from DB so frontend can add to cart even if menu is missing
+        if (parsedData.items_to_add && Array.isArray(parsedData.items_to_add)) {
+            for (let i = 0; i < parsedData.items_to_add.length; i++) {
+                const item = parsedData.items_to_add[i];
+                try {
+                    // Try to find item by ID or Name
+                    const itemDetails = await pool.query(
+                        "SELECT id, name, price, image_url FROM menu WHERE id = $1 OR name ILIKE $1 LIMIT 1", 
+                        [item.id || item.name]
+                    );
+                    if (itemDetails.rows.length > 0) {
+                        parsedData.items_to_add[i] = {
+                            ...item,
+                            ...itemDetails.rows[0],
+                            qty: item.qty || item.quantity || 1
+                        };
+                    }
+                } catch (e) { console.error("Enrichment Error:", e.message); }
+            }
+        }
+
+        console.log("📤 AI Parsed Response (Enriched):", parsedData);
 
         // 🔊 Optional Neural TTS for iOS (Premium Voice)
         if (isIOS === true || isIOS === 'true') {
