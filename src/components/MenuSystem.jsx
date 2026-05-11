@@ -34,8 +34,37 @@ const MenuSystem = ({
         }
     };
 
+    const [touchStart, setTouchStart] = useState(null);
+    const contentRef = useRef(null);
+
+    const handleTouchStart = (e) => {
+        setTouchStart(e.targetTouches[0].clientY);
+    };
+
+    const handleTouchMove = (e) => {
+        if (touchStart === null) return;
+        const currentTouch = e.targetTouches[0].clientY;
+        const diff = currentTouch - touchStart;
+
+        // If swiping down and at the top of the content
+        if (diff > 100 && contentRef.current.scrollTop === 0) {
+            setShowMenuPopup(false);
+            setTouchStart(null);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setTouchStart(null);
+    };
+
     return (
-        <div className="premium-menu-panel slide-up">
+        <div 
+            className="premium-menu-panel slide-up"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
+            <div className="menu-drag-handle"></div>
             <div className="menu-header">
                 <div className="menu-header-top">
                     <div className="menu-title-area">
@@ -97,7 +126,7 @@ const MenuSystem = ({
                 </div>
             </div>
 
-            <div className="menu-content scrollbar-hidden">
+            <div ref={contentRef} className="menu-content scrollbar-hidden">
                 {menuCategories.map((category) => {
                     if (activeCategory !== 'All' && category.category !== activeCategory) return null;
 

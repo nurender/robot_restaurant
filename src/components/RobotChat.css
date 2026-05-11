@@ -557,6 +557,16 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
+  overscroll-behavior: contain;
+}
+
+.menu-drag-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
 }
 
 .slide-up {
@@ -579,7 +589,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 24px 24px 20px 24px;
+  padding: 12px 24px 20px 24px;
   background: #1a1a1e;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
@@ -739,6 +749,7 @@
   gap: 14px;
   padding-bottom: 100px;
   /* Space for Cart Footer */
+  overscroll-behavior-y: contain;
 }
 
 .category-header-row {
@@ -1169,6 +1180,7 @@
   backdrop-filter: blur(16px);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   position: relative;
+  overscroll-behavior: contain;
 }
 
 /* Feedback Modal */
@@ -1182,6 +1194,7 @@
   backdrop-filter: blur(20px);
   box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
   position: relative;
+  overscroll-behavior: contain;
 }
 
 .feedback-header {
@@ -1329,6 +1342,7 @@
   box-shadow: 0 40px 100px rgba(0, 0, 0, 1);
   overflow: hidden;
   animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overscroll-behavior: contain;
 }
 
 @keyframes modalPop {
@@ -1386,6 +1400,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overscroll-behavior: contain;
 }
 
 .cart-summary-item {
