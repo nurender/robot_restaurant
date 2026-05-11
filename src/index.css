@@ -163,14 +163,16 @@
 html {
   /* Global smooth theme transition */
   transition: color 0.25s ease, background-color 0.25s ease;
+  overflow: hidden;
+  height: 100%;
 }
 
 body {
   background-color: var(--bg-deep);
   color: var(--text-main);
-  min-height: 100vh;
+  height: 100%;
   width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
