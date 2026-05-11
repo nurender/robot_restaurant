@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronRight, ChefHat, Plus, Minus, ShoppingCart, Play } from 'lucide-react';
 
 const MenuSystem = ({
@@ -35,20 +35,34 @@ const MenuSystem = ({
     };
 
     const [touchStart, setTouchStart] = useState(null);
+    const [isActive, setIsActive] = useState(false);
     const contentRef = useRef(null);
+
+    useEffect(() => {
+        // Short delay to ensure transition triggers
+        const timer = setTimeout(() => setIsActive(true), 10);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleClose = () => {
+        setIsActive(false);
+        setTimeout(() => {
+            setShowMenuPopup(false);
+        }, 400); // match transition duration
+    };
 
     const handleTouchStart = (e) => {
         setTouchStart(e.targetTouches[0].clientY);
     };
 
     const handleTouchMove = (e) => {
-        if (touchStart === null) return;
+        if (touchStart === null || !isActive) return;
         const currentTouch = e.targetTouches[0].clientY;
         const diff = currentTouch - touchStart;
 
         // If swiping down and at the top of the content
         if (diff > 100 && contentRef.current.scrollTop === 0) {
-            setShowMenuPopup(false);
+            handleClose();
             setTouchStart(null);
         }
     };
@@ -59,7 +73,7 @@ const MenuSystem = ({
 
     return (
         <div 
-            className="premium-menu-panel slide-up"
+            className={`premium-menu-panel ${isActive ? 'active' : ''}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -71,7 +85,7 @@ const MenuSystem = ({
                         <h4>{textLanguage === 'en' ? 'Our Menu' : 'हमारा मेनू'}</h4>
                         <span className="menu-subtitle">{textLanguage === 'en' ? 'Select your favorite dishes' : 'अपनी पसंदीदा डिश चुनें'}</span>
                     </div>
-                    <button className="close-menu-btn" onClick={() => setShowMenuPopup(false)}>×</button>
+                    <button className="close-menu-btn" onClick={handleClose}>×</button>
                 </div>
 
                 <div className="menu-search-wrapper">

@@ -558,6 +558,15 @@
   flex-direction: column;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
   overscroll-behavior: contain;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  will-change: transform, opacity;
+}
+
+.premium-menu-panel.active {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .menu-drag-handle {
@@ -567,22 +576,6 @@
   border-radius: 2px;
   margin: 10px auto 0;
   flex-shrink: 0;
-}
-
-.slide-up {
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
 }
 
 .menu-header {
