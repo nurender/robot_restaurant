@@ -61,9 +61,14 @@ const MenuSystem = ({
         const diff = currentTouch - touchStart;
 
         // If swiping down and at the top of the content
-        if (diff > 100 && contentRef.current.scrollTop === 0) {
-            handleClose();
-            setTouchStart(null);
+        if (diff > 0 && contentRef.current.scrollTop === 0) {
+            // Prevent browser pull-to-refresh
+            if (e.cancelable) e.preventDefault();
+            
+            if (diff > 100) {
+                handleClose();
+                setTouchStart(null);
+            }
         }
     };
 
