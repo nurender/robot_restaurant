@@ -145,8 +145,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       if (data.orders && data.orders.length > 0) {
         setActiveOrders(data.orders);
         // If any order just became ready, maybe show tracking popup automatically
-        const anyReady = data.orders.some(o => o.status === 'ready');
-        const prevAnyReady = activeOrders.some(o => o.status === 'ready');
+        const anyReady = data.orders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
+        const prevAnyReady = activeOrders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
         if (anyReady && !prevAnyReady) {
           setShowOrderTracking(true);
         }
@@ -183,7 +183,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           }
         });
 
-        if (updatedOrder.status === 'ready') {
+        if (updatedOrder.status === 'ready' || updatedOrder.status === 'out_for_delivery') {
           setShowOrderTracking(true);
         }
       }
@@ -1193,11 +1193,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                       { key: 'preparing', label: 'Cooking', icon: ChefHat },
                       { key: 'ready', label: 'Ready', icon: Store }
                     ].map((step, i) => {
-                      const statuses = ['pending', 'accepted', 'preparing', 'ready', 'completed'];
+                      const statuses = ['pending', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'completed'];
                       const currentIndex = statuses.indexOf(order.status);
                       const stepIndex = statuses.indexOf(step.key);
                       const isCompleted = stepIndex < currentIndex;
-                      const isActive = step.key === order.status;
+                      const isActive = step.key === order.status || (step.key === 'ready' && order.status === 'out_for_delivery');
 
                       return (
                         <div key={i} className={`timeline-step ${isCompleted || isActive ? 'active' : ''}`}>
