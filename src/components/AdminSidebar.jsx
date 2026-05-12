@@ -1,11 +1,11 @@
-import { 
-    LayoutDashboard, 
-    UtensilsCrossed, 
-    ListTodo, 
-    ChefHat, 
-    Users, 
-    Store, 
-    Bot, 
+import {
+    LayoutDashboard,
+    UtensilsCrossed,
+    ListTodo,
+    ChefHat,
+    Users,
+    Store,
+    Bot,
     Send,
     LogOut,
     Package,
@@ -22,10 +22,10 @@ import {
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.API_URL || 'http://localhost:3001';
 
 const iconMap = {
-    LayoutDashboard, UtensilsCrossed, ListTodo, ChefHat, Users, Store, Bot, Send, LogOut, Package, 
+    LayoutDashboard, UtensilsCrossed, ListTodo, ChefHat, Users, Store, Bot, Send, LogOut, Package,
     BarChart2, Settings, StoreIcon, Bike, CreditCard, Star, ChevronLeft, ChevronRight, QrCode
 };
 
@@ -54,7 +54,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
         if (typeof rolesArray === 'string') {
             rolesArray = rolesArray.replace(/[{}]/g, '').split(',');
         }
-        
+
         const isPermitted = rolesArray.includes(adminUser.role);
         const isActive = item.is_active;
 
