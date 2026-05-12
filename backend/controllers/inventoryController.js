@@ -12,9 +12,9 @@ exports.getInventory = async (req, res) => {
                 ('Spices Mix', 'Spices', 2.4, 'Kg', 5, 450, 'Masala Mart', '2026-11-20', 'B-001', 'Reorder')
             `);
             const retry = await pool.query("SELECT * FROM inventory ORDER BY id ASC");
-            return res.json(retry.rows);
+            return res.json({ data: retry.rows });
         }
-        res.json(result.rows);
+        res.json({ data: result.rows });
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
 

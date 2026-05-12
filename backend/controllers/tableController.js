@@ -11,7 +11,7 @@ exports.getTables = async (req, res) => {
         }
         query += " ORDER BY id ASC";
         const result = await pool.query(query, params);
-        res.json(result.rows);
+        res.json({ data: result.rows });
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
 

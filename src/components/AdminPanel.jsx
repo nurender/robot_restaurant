@@ -1139,7 +1139,6 @@ const AdminPanel = () => {
                       className="filter-input"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
                     />
                   </div>
                   <div className="filter-group">
@@ -1148,7 +1147,7 @@ const AdminPanel = () => {
                       className="filter-input"
                       value={tableSearch}
                       onChange={(e) => setTableSearch(e.target.value)}
-                      style={{ width: '130px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                      style={{ width: '130px' }}
                     >
                       <option value="">All Tables</option>
                       {restaurantTables.map((t, idx) => (
@@ -1166,7 +1165,7 @@ const AdminPanel = () => {
                       className="filter-input"
                       value={phoneSearch}
                       onChange={(e) => setPhoneSearch(e.target.value)}
-                      style={{ width: '120px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
+                      style={{ width: '120px' }}
                     />
                   </div>
                   <div className="filter-group">
@@ -1177,7 +1176,7 @@ const AdminPanel = () => {
                       className="filter-input"
                       value={nameSearch}
                       onChange={(e) => setNameSearch(e.target.value)}
-                      style={{ width: '150px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '12px', color: 'var(--text-main)', padding: '6px 12px', fontSize: '14px', outline: 'none' }}
+                      style={{ width: '150px' }}
                     />
                   </div>
                   <div className="filter-stats">

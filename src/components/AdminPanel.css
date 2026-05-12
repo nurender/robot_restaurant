@@ -1011,11 +1011,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.7);
+  padding: 16px 24px;
+  border-radius: 24px;
+  background: var(--bg-deep);
+  border: 1px solid var(--card-border);
   backdrop-filter: blur(12px);
-  gap: 40px;
+  gap: 32px;
+  margin-bottom: 8px;
 }
 
 .filter-group {
@@ -1036,10 +1038,10 @@
 }
 
 .filter-input {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-main);
@@ -1084,12 +1086,13 @@
 
 .filter-stats {
   margin-left: auto;
-  font-size: 13px;
-  color: var(--text-muted);
-  background: rgba(99, 102, 241, 0.05);
-  padding: 10px 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: rgba(124, 58, 237, 0.08);
+  padding: 8px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  font-weight: 600;
 }
 
 .filter-stats strong {
