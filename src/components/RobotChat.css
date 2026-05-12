@@ -685,12 +685,13 @@
 
 .menu-search-input {
   background: transparent;
-  border: none;
+  border: none !important;
+  box-shadow: none !important;
   color: white;
   font-size: 14px;
   margin-left: 10px;
   width: 100%;
-  outline: none;
+  outline: none !important;
   font-weight: 400;
 }
 

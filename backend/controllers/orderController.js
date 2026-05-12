@@ -112,7 +112,7 @@ const getOrders = async (req, res) => {
 
 const updateOrder = async (req, res) => {
     const { id } = req.params;
-    const { customer_name, customer_phone, items, status } = req.body;
+    const { customer_name, customer_phone, items, status, total, tablenumber } = req.body;
 
     try {
         let query = "UPDATE orders SET ";
@@ -134,6 +134,14 @@ const updateOrder = async (req, res) => {
         if (status !== undefined) {
             updates.push(`status = $${params.length + 1}`);
             params.push(status);
+        }
+        if (total !== undefined) {
+            updates.push(`total = $${params.length + 1}`);
+            params.push(total);
+        }
+        if (tablenumber !== undefined) {
+            updates.push(`tablenumber = $${params.length + 1}`);
+            params.push(tablenumber);
         }
 
         if (updates.length === 0) return res.json({ success: true, message: "No changes" });

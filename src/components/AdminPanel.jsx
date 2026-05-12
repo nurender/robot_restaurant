@@ -36,7 +36,8 @@ import {
   Phone,
   Star,
   Send,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -322,7 +323,11 @@ const AdminPanel = () => {
     } else {
       newItems = [...manualOrderData.items, { ...item, qty: 1 }];
     }
-    const newTotal = newItems.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    const newTotal = newItems.reduce((acc, curr) => {
+      const price = parseFloat(curr.price || curr.unit_price || 0);
+      const qty = parseInt(curr.qty || curr.quantity || 0);
+      return acc + (price * qty);
+    }, 0);
     setManualOrderData({ ...manualOrderData, items: newItems, total: newTotal });
   };
 
@@ -334,7 +339,11 @@ const AdminPanel = () => {
       }
       return i;
     }).filter(i => i.qty > 0);
-    const newTotal = newItems.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    const newTotal = newItems.reduce((acc, curr) => {
+      const price = parseFloat(curr.price || curr.unit_price || 0);
+      const qty = parseInt(curr.qty || curr.quantity || 0);
+      return acc + (price * qty);
+    }, 0);
     setManualOrderData({ ...manualOrderData, items: newItems, total: newTotal });
   };
 
@@ -346,7 +355,8 @@ const AdminPanel = () => {
           customer_name: manualOrderData.customerName,
           customer_phone: manualOrderData.customerPhone,
           items: manualOrderData.items,
-          tablenumber: manualOrderData.tableNumber
+          tablenumber: manualOrderData.tableNumber,
+          total: manualOrderData.total
         });
       } else {
         await axios.post(`${API_URL}/api/orders`, {
@@ -503,7 +513,7 @@ const AdminPanel = () => {
         setRidersList(ridersRes.data.data || []);
       }
 
-      if (activeTab === 'dashboard' || activeTab === 'reports' || activeTab === 'robo_control' || activeTab === 'qr_codes') {
+      if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'reports' || activeTab === 'robo_control' || activeTab === 'qr_codes') {
         const tablesRes = await fetchHelper(`${API_URL}/api/tables`);
         setRestaurantTables(tablesRes.data.data || []);
       }
@@ -1289,13 +1299,20 @@ const AdminPanel = () => {
                             <button
                               onClick={() => {
                                 setIsEditingOrder(true);
+                                const initialItems = [...(order.items || [])];
+                                const initialTotal = initialItems.reduce((acc, curr) => {
+                                  const price = parseFloat(curr.price || curr.unit_price || 0);
+                                  const qty = parseInt(curr.qty || curr.quantity || 1);
+                                  return acc + (price * qty);
+                                }, 0);
+                                
                                 setManualOrderData({
                                   id: order.id,
                                   tableNumber: (order.table_number || order.tableNumber || '1').toString(),
                                   customerName: order.customerName || order.customer_name || '',
                                   customerPhone: order.customerPhone || order.customer_phone || '',
-                                  items: [...(order.items || [])],
-                                  total: order.total
+                                  items: initialItems,
+                                  total: initialTotal
                                 });
                                 setShowManualOrderPopup(true);
                               }}
@@ -4517,7 +4534,7 @@ const AdminPanel = () => {
                   }}
                   style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
-                  <Trash2 size={24} />
+                  <X size={24} />
                 </button>
               </div>
 
