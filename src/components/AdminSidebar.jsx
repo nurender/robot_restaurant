@@ -22,7 +22,7 @@ import {
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-const API_URL = import.meta.env.API_URL || 'http://localhost:3001';
+import { API_URL } from '../config';
 
 const iconMap = {
     LayoutDashboard, UtensilsCrossed, ListTodo, ChefHat, Users, Store, Bot, Send, LogOut, Package,
