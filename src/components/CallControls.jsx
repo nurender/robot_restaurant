@@ -46,57 +46,7 @@ const CallControls = ({
                 </div>
             )}
 
-            {/* Circular Controls Row */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '400px' }}>
-                {/* Menu */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <button onClick={() => setShowMenuPopup(true)} style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <MenuIcon size={24} />
-                    </button>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>Menu</span>
-                </div>
-
-                {/* Camera */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <button onClick={toggleCamera} style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        {isCameraOn ? <Video size={24} /> : <VideoOff size={24} />}
-                    </button>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>Camera</span>
-                </div>
-
-                {/* Listening (Large Central Button) */}
-                <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <button 
-                        onClick={IS_OPENAI_REALTIME ? handleToggleSession : startListening}
-                        disabled={isConnecting}
-                        className={`speak-btn ${isListening ? 'listening' : ''} ${isConnecting ? 'connecting' : ''}`}
-                    >
-                        {isConnecting ? <div className="hud-loader"></div> : <Mic size={32} />}
-                    </button>
-                    <span style={{ fontSize: '11px', color: '#00e676', fontWeight: '600' }}>{isListening ? 'Listening...' : 'Speak'}</span>
-                </div>
-
-                {/* Cart */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <button onClick={() => setShowCartSummary(true)} style={{ position: 'relative', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <ShoppingCart size={24} />
-                        {cartCount > 0 && (
-                            <span style={{ position: 'absolute', top: '-2px', right: '-2px', background: '#ff4757', color: 'white', fontSize: '10px', fontWeight: 'bold', width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid black' }}>
-                                {cartCount}
-                            </span>
-                        )}
-                    </button>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>Cart</span>
-                </div>
-
-                {/* End Call */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                    <button onClick={() => window.location.reload()} style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#ff4757', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <PhoneOff size={24} />
-                    </button>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>End</span>
-                </div>
-            </div>
+            {/* Circular Controls Row removed as requested */}
         </div>
     );
 };

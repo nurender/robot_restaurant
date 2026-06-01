@@ -1738,7 +1738,7 @@ const AdminPanel = () => {
                           </div>
                           <div className="inv-details">
                             <div className="staff-card-header mb-2">
-                              <span className={`role-badge ${staff.role} shadow-sm`}>{staff.role.replace('_', ' ')}</span>
+                              <span className={`role-badge ${staff.role} shadow-sm`}>{(staff.role || 'user').replace('_', ' ')}</span>
                             </div>
                             <div className="inv-main">
                               <strong className="text-lg">{staff.name}</strong>
@@ -1789,7 +1789,7 @@ const AdminPanel = () => {
                           </div>
                           <div className="inv-details">
                             <div className="staff-card-header mb-2">
-                              <span className={`role-badge ${staff.role} shadow-sm`}>{staff.role.replace('_', ' ')}</span>
+                              <span className={`role-badge ${staff.role} shadow-sm`}>{(staff.role || 'user').replace('_', ' ')}</span>
                             </div>
                             <div className="inv-main">
                               <strong className="text-lg">{staff.name}</strong>
@@ -3065,7 +3065,7 @@ const AdminPanel = () => {
                         <td style={{ padding: '20px 24px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: role.name === 'super_admin' ? '#10b981' : 'var(--accent-primary)' }} />
-                             <span style={{ fontWeight: '700', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{role.name.replace('_', ' ')}</span>
+                             <span style={{ fontWeight: '700', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{(role.name || '').replace('_', ' ')}</span>
                           </div>
                         </td>
                         <td style={{ padding: '20px 24px' }}>
@@ -3076,7 +3076,7 @@ const AdminPanel = () => {
                         <td style={{ padding: '20px 24px' }}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '400px' }}>
                             {role.permissions.slice(0, 4).map(p => (
-                              <span key={p} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.05)', padding: '3px 10px', borderRadius: '6px', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>{p.replace('_', ' ')}</span>
+                              <span key={p} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.05)', padding: '3px 10px', borderRadius: '6px', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>{(p || '').replace('_', ' ')}</span>
                             ))}
                             {role.permissions.length > 4 && <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px' }}>+{role.permissions.length - 4} more</span>}
                           </div>
@@ -3173,7 +3173,7 @@ const AdminPanel = () => {
                                 <div style={{ width: '18px', height: '18px', borderRadius: '5px', border: '2px solid', borderColor: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)', background: isSelected ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                    {isSelected && <Check size={12} color="white" strokeWidth={4} />}
                                 </div>
-                                <span style={{ fontSize: '14px', color: isSelected ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'capitalize' }}>{mod.replace('_', ' ')}</span>
+                                <span style={{ fontSize: '14px', color: isSelected ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'capitalize' }}>{(mod || '').replace('_', ' ')}</span>
                               </div>
                             );
                           })}
@@ -4547,8 +4547,8 @@ const AdminPanel = () => {
                     style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', marginTop: '4px' }}
                   >
                     {restaurantTables.map((t, idx) => (
-                      <option key={idx} value={t.table.replace('Table ', '')}>
-                        {t.table}
+                      <option key={idx} value={t.table_number || (idx + 1)}>
+                        {t.name || t.table || `Table ${t.table_number || (idx + 1)}`}
                       </option>
                     ))}
                   </select>

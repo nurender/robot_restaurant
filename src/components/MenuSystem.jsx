@@ -64,7 +64,7 @@ const MenuSystem = ({
         if (diff > 0 && contentRef.current.scrollTop === 0) {
             // Prevent browser pull-to-refresh
             if (e.cancelable) e.preventDefault();
-            
+
             if (diff > 100) {
                 handleClose();
                 setTouchStart(null);
@@ -77,20 +77,18 @@ const MenuSystem = ({
     };
 
     return (
-        <div 
+        <div
             className={`premium-menu-panel ${isActive ? 'active' : ''}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
-            <div className="menu-drag-handle"></div>
             <div className="menu-header">
                 <div className="menu-header-top">
                     <div className="menu-title-area">
                         <h4>{textLanguage === 'en' ? 'Our Menu' : 'हमारा मेनू'}</h4>
-                        <span className="menu-subtitle">{textLanguage === 'en' ? 'Select your favorite dishes' : 'अपनी पसंदीदा डिश चुनें'}</span>
+                        <span className="menu-subtitle">{textLanguage === 'en' ? 'What are you craving today?' : 'आज आप क्या खाना चाहेंगे?'}</span>
                     </div>
-                    <button className="close-menu-btn" onClick={handleClose}>×</button>
                 </div>
 
                 <div className="menu-search-wrapper">
@@ -146,7 +144,24 @@ const MenuSystem = ({
             </div>
 
             <div ref={contentRef} className="menu-content scrollbar-hidden">
-                {menuCategories.map((category) => {
+                {(!menuCategories || menuCategories.length === 0) ? (
+                    <div className="menu-skeletons">
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="premium-menu-item skeleton-item">
+                                <div className="skeleton-img shimmer"></div>
+                                <div className="item-details skeleton-details">
+                                    <div className="item-header">
+                                       <div className="skeleton-line title shimmer"></div>
+                                       <div className="skeleton-line price shimmer"></div>
+                                    </div>
+                                    <div className="skeleton-line desc shimmer"></div>
+                                    <div className="skeleton-line button shimmer"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    menuCategories.map((category) => {
                     if (activeCategory !== 'All' && category.category !== activeCategory) return null;
 
                     const matchingItems = category.items.filter(item => {
@@ -222,7 +237,7 @@ const MenuSystem = ({
                             )}
                         </div>
                     );
-                })}
+                }))}
             </div>
             {getCartCount() > 0 && (
                 <div className="menu-cart-footer slide-up">

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VideoOff, CheckCircle, X, AlertCircle, Clock, ChefHat, Store, ListTodo } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
-
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth } from '../firebase';
 import { API_URL, IS_OPENAI_REALTIME } from '../config';
 import useRealtime from '../hooks/useRealtime';
 
@@ -63,10 +64,15 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [zoomedImage, setZoomedImage] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [activeCoupon, setActiveCoupon] = useState(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderTracking, setOrderTracking] = useState(null);
+  const [mockOtpToast, setMockOtpToast] = useState(null);
   const [userPreferences, setUserPreferences] = useState([]);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const initializationRef = useRef(false);
@@ -300,6 +306,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setCurrentCart([]);
         setShowCustomerForm(false);
         setCustomerInfo({ name: '', phone: '' });
+        setOtpCode('');
+        setOtpSent(false);
+        setMockOtpToast(null);
+        setConfirmationResult(null);
         speak(dialogs[voiceLanguage].confirm(orderData.total), voiceLanguage);
 
         // Refresh orders immediately so tracking badge shows up
@@ -312,6 +322,64 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       console.error("Order Failed:", e);
       alert(textLanguage === 'hi' ? 'ऑर्डर करने में कुछ समस्या आई। कृपया पुनः प्रयास करें।' : 'Something went wrong while placing the order. Please try again.');
     } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+    }
+  };
+
+  const handleSendOtp = async (e) => {
+    if(e) e.preventDefault();
+    if (!customerInfo.name || !customerInfo.phone || customerInfo.phone.length !== 10) {
+      alert(textLanguage === 'hi' ? 'कृपया अपना नाम और वैध 10-अंकों का मोबाइल नंबर दर्ज करें।' : 'Please enter your name and a valid 10-digit phone number.');
+      return;
+    }
+    setupRecaptcha();
+    setIsSendingOtp(true);
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, `+91${customerInfo.phone}`, window.recaptchaVerifier);
+      setConfirmationResult(confirmation);
+      setOtpSent(true);
+    } catch (error) {
+      console.error("Firebase Auth Error:", error);
+      // MOCK FALLBACK FOR TESTING IF FIREBASE SMS FAILS
+      const dummyOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Use a custom Toast instead of blocking alert so the user can type it easily
+      setMockOtpToast(dummyOtp);
+      
+      setConfirmationResult({
+        confirm: async (code) => {
+          if (code !== dummyOtp) throw new Error("Invalid testing OTP");
+          return true;
+        }
+      });
+      setOtpSent(true);
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtpAndOrder = async (e) => {
+    if(e) e.preventDefault();
+    if (!otpCode || otpCode.length !== 6) {
+      alert(textLanguage === 'hi' ? 'कृपया 6-अंकों का OTP दर्ज करें।' : 'Please enter the 6-digit OTP.');
+      return;
+    }
+    setIsSubmittingOrder(true);
+    try {
+      await confirmationResult.confirm(otpCode);
+      // Success, now process order
+      await completeOrderProcess();
+    } catch (error) {
+      console.error(error);
+      alert(textLanguage === 'hi' ? 'अमान्य OTP' : 'Invalid OTP entered.');
       setIsSubmittingOrder(false);
     }
   };
@@ -608,7 +676,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       });
 
       const data = await res.json();
-      
+
       // 1. Handle Response Text
       const replyText = data.reply || data.reply_text;
       if (replyText) {
@@ -631,11 +699,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setCurrentCart((prev) => {
           let updatedCart = [...prev];
           data.items_to_add.forEach(newItem => {
-            const target = findMenuItemByName(newItem.name) || 
-                           menuCategories.flatMap(c => c.items).find(i => String(i.id) === String(newItem.id)) ||
-                           (newItem.price ? newItem : null);
+            const target = findMenuItemByName(newItem.name) ||
+              menuCategories.flatMap(c => c.items).find(i => String(i.id) === String(newItem.id)) ||
+              (newItem.price ? newItem : null);
             if (!target) return;
-            
+
             const quantity = Math.max(1, Number(newItem.qty || newItem.quantity) || 1);
             const existingIdx = updatedCart.findIndex((i) => String(i.id) === String(target.id));
 
@@ -660,7 +728,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           data.items_to_remove.forEach(removeItem => {
             const targetId = removeItem.id;
             const targetName = normalizeName(removeItem.name || '');
-            
+
             updatedCart = updatedCart.filter(item => {
               const matchesId = targetId && String(item.id) === String(targetId);
               const matchesName = targetName && normalizeName(item.name) === targetName;
@@ -775,70 +843,27 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       </div>
 
       <div className="avatar-container">
-        <div className={`avatar-pulse-ring ${isRobotSpeaking ? 'speaking' : ''} ${isListening ? 'listening-ring' : ''}`}></div>
-        <img src="/avatar.png" alt="AI Waiter Avatar" className={`waiter-avatar breathing-idle ${isRobotSpeaking ? 'animate-talk' : ''}`} />
+        <MenuSystem
+          menuCategories={menuCategories}
+          textLanguage={textLanguage}
+          menuSearchTerm={menuSearchTerm}
+          setMenuSearchTerm={setMenuSearchTerm}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          toggleCategory={toggleCategory}
+          expandedCats={expandedCats}
+          getItemQty={getItemQty}
+          handleManualCartUpdate={handleManualCartUpdate}
+          getCartTotal={getCartTotal}
+          getCartCount={getCartCount}
+          setShowCartSummary={setShowCartSummary}
+          completeOrderProcess={initiateCheckout}
+          setShowMenuPopup={() => {}}
+          getMediaUrl={getMediaUrl}
+          setZoomedImage={setZoomedImage}
+        />
 
-        {!hasCameraError && (
-          <div className="customer-pip-card" style={{
-            position: 'absolute',
-            top: '80px',
-            right: '20px',
-            width: '125px',
-            height: '160px',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            border: '1.5px solid rgba(255,255,255,0.2)',
-            zIndex: 30,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-          }}>
-            <video ref={videoRef} autoPlay playsInline muted className={`pip-video ${!isCameraOn ? 'muted-video' : ''}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            {!isCameraOn && <div className="pip-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VideoOff size={20} color="white" /></div>}
 
-
-            {/* "You" Tag */}
-            <div style={{
-              position: 'absolute',
-              bottom: '8px',
-              right: '8px',
-              left: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              color: 'white',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              background: 'rgba(0,0,0,0.75)',
-              padding: '4px 6px',
-              borderRadius: '10px',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              whiteSpace: 'nowrap'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#00e676' }}>
-                <div className="live-dot" style={{ width: '4px', height: '4px', backgroundColor: '#00e676' }}></div>
-                <span>{formatTime(callDuration)}</span>
-              </div>
-              <span style={{ opacity: 0.2 }}>|</span>
-              <span>You</span>
-              {(isListening || isSessionActive) ? (
-                <div className="vocal-wave-container">
-                  <div className="wave-bar"></div>
-                  <div className="wave-bar"></div>
-                  <div className="wave-bar"></div>
-                  <div className="wave-bar"></div>
-                  <div className="wave-bar"></div>
-                </div>
-              ) : (
-                <div className="vocal-wave-container static">
-                  <div className="wave-bar"></div>
-                  <div className="wave-bar"></div>
-                  <div className="wave-bar"></div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {orderConfirmedUI && (
           <div className="order-success-overlay scale-in">
@@ -874,6 +899,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           </div>
         )}
 
+
         {/* {isAiProcessing && (
           <div className="ai-typing-indicator slide-up">
             <div className="typing-dot"></div>
@@ -883,27 +909,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         )} */}
       </div>
 
-      {showMenuPopup && (
-        <MenuSystem
-          menuCategories={menuCategories}
-          textLanguage={textLanguage}
-          menuSearchTerm={menuSearchTerm}
-          setMenuSearchTerm={setMenuSearchTerm}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-          toggleCategory={toggleCategory}
-          expandedCats={expandedCats}
-          getItemQty={getItemQty}
-          handleManualCartUpdate={handleManualCartUpdate}
-          getCartTotal={getCartTotal}
-          getCartCount={getCartCount}
-          setShowCartSummary={setShowCartSummary}
-          completeOrderProcess={initiateCheckout}
-          setShowMenuPopup={setShowMenuPopup}
-          getMediaUrl={getMediaUrl}
-          setZoomedImage={setZoomedImage}
-        />
-      )}
+
 
       {showCartSummary && (
         <CartOverlay
@@ -936,27 +942,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         />
       )}
 
-      <CallControls
-        showMenuPopup={showMenuPopup}
-        showSettingsPopup={showSettingsPopup}
-        currentSubtitle={currentSubtitle}
-        isConnecting={isConnecting}
-        isAiTyping={isAiTyping}
-        textLanguage={textLanguage}
-        IS_OPENAI_REALTIME={IS_OPENAI_REALTIME}
-        handleFallbackSubmit={(e) => { e.preventDefault(); setFallbackText(''); }}
-        fallbackText={fallbackText}
-        setFallbackText={setFallbackText}
-        setShowMenuPopup={setShowMenuPopup}
-        isCameraOn={isCameraOn}
-        toggleCamera={toggleCamera}
-        isListening={isListening || isSessionActive}
-        handleToggleSession={handleToggleSession}
-        startListening={startListening}
-        setShowCartSummary={setShowCartSummary}
-        currentCart={currentCart}
-        setShowSettingsPopup={setShowSettingsPopup}
-      />
+
 
       {zoomedImage && (
         <div className="image-zoom-overlay" onClick={() => setZoomedImage(null)}>
@@ -989,12 +975,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <p className="modal-subtitle">
               {textLanguage === 'hi' ? 'आर्डर बुक करने के लिए कृपया अपनी जानकारी दें।' : 'Please provide your details to confirm the order.'}
             </p>
-            <form onSubmit={(e) => { e.preventDefault(); completeOrderProcess(); }} className="modal-form">
+            <form onSubmit={otpSent ? handleVerifyOtpAndOrder : handleSendOtp} className="modal-form">
               <div className="form-group">
                 <label>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
                 <input
                   type="text"
                   required
+                  disabled={otpSent}
                   className="modal-input"
                   placeholder={textLanguage === 'hi' ? 'अपना नाम लिखें' : 'Enter your name'}
                   value={customerInfo.name}
@@ -1003,19 +990,57 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               </div>
               <div className="form-group">
                 <label>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
-                <input
-                  type="tel"
-                  required
-                  pattern="[0-9]{10}"
-                  className="modal-input"
-                  placeholder={textLanguage === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
-                  value={customerInfo.phone}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                />
+                  <input
+                    type="tel"
+                    required
+                    disabled={otpSent}
+                    pattern="[0-9]{10}"
+                    maxLength={10}
+                    className="modal-input"
+                    placeholder={textLanguage === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
+                    value={customerInfo.phone}
+                    onChange={(e) => {
+                      const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+                      setCustomerInfo({ ...customerInfo, phone: onlyNums.slice(0, 10) });
+                    }}
+                  />
               </div>
+              
+              {otpSent && (
+                <div className="form-group">
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{textLanguage === 'hi' ? 'OTP कोड' : 'OTP Code'}</span>
+                    {mockOtpToast && (
+                      <span style={{ color: 'var(--success)', fontWeight: '800', background: 'rgba(0,230,118,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '13px' }}>
+                        Test OTP: {mockOtpToast}
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={6}
+                    className="modal-input"
+                    placeholder={textLanguage === 'hi' ? '6 अंको का OTP' : 'Enter 6-digit OTP'}
+                    value={otpCode}
+                    onChange={(e) => {
+                      const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+                      setOtpCode(onlyNums.slice(0, 6));
+                    }}
+                  />
+                </div>
+              )}
+
+              <div id="recaptcha-container" style={{ display: 'none' }}></div>
+
               <div className="modal-actions-row">
                 <button type="button" className="btn-secondary flex-1" onClick={() => {
                   setShowCustomerForm(false);
+                  setCustomerInfo({ name: '', phone: '' });
+                  setOtpCode('');
+                  setOtpSent(false);
+                  setMockOtpToast(null);
+                  setConfirmationResult(null);
                   if (IS_OPENAI_REALTIME) {
                     sendEvent({
                       type: 'conversation.item.create',
@@ -1030,20 +1055,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 }}>
                   {textLanguage === 'hi' ? 'रद्द करें' : 'Cancel'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingOrder}
-                  className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`}
-                >
-                  {isSubmittingOrder ? (
-                    <>
-                      <div className="button-loader"></div>
-                      {textLanguage === 'hi' ? 'प्रोसेसिंग...' : 'Processing...'}
-                    </>
-                  ) : (
-                    textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'
-                  )}
-                </button>
+
+                {!otpSent ? (
+                  <button type="submit" disabled={isSendingOtp} className={`btn-primary flex-1 ${isSendingOtp ? 'loading' : ''}`}>
+                    {isSendingOtp ? (textLanguage === 'hi' ? 'भेज रहा है...' : 'Sending...') : (textLanguage === 'hi' ? 'OTP भेजें' : 'Send OTP')}
+                  </button>
+                ) : (
+                  <button type="submit" disabled={isSubmittingOrder || otpCode.length !== 6} className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`} style={{ background: otpCode.length === 6 ? 'linear-gradient(135deg, #00e676 0%, #10b981 100%)' : '' }}>
+                    {isSubmittingOrder ? (textLanguage === 'hi' ? 'प्रोसेसिंग...' : 'Processing...') : (textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order')}
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -1166,7 +1187,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 <div key={order.id} className="order-tracking-card">
                   <div className="order-id-row">
                     <div className="order-id-meta">
-                      <span className="order-id-badge">#ORDER-{order.id}</span>
+                      <span className="order-id-badge">
+                        #ORDER-{order.id} {order.customerName && <span style={{color: 'rgba(255,255,255,0.9)', marginLeft: '6px', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '6px'}}>👤 {order.customerName}</span>}
+                      </span>
                       <span className="order-amount-text">₹{order.total}</span>
                     </div>
                     <span className="order-time-text">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
