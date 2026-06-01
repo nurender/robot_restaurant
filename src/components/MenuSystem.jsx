@@ -34,7 +34,7 @@ const MenuSystem = ({
         }
     };
 
-    const [touchStart, setTouchStart] = useState(null);
+
     const [isActive, setIsActive] = useState(false);
     const contentRef = useRef(null);
 
@@ -51,38 +51,10 @@ const MenuSystem = ({
         }, 400); // match transition duration
     };
 
-    const handleTouchStart = (e) => {
-        setTouchStart(e.targetTouches[0].clientY);
-    };
 
-    const handleTouchMove = (e) => {
-        if (touchStart === null || !isActive) return;
-        const currentTouch = e.targetTouches[0].clientY;
-        const diff = currentTouch - touchStart;
-
-        // If swiping down and at the top of the content
-        if (diff > 0 && contentRef.current.scrollTop === 0) {
-            // Prevent browser pull-to-refresh
-            if (e.cancelable) e.preventDefault();
-
-            if (diff > 100) {
-                handleClose();
-                setTouchStart(null);
-            }
-        }
-    };
-
-    const handleTouchEnd = () => {
-        setTouchStart(null);
-    };
 
     return (
-        <div
-            className={`premium-menu-panel ${isActive ? 'active' : ''}`}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-        >
+        <div className={`premium-menu-panel ${isActive ? 'active' : ''}`}>
             <div className="menu-header">
                 <div className="menu-header-top">
                     <div className="menu-title-area">
