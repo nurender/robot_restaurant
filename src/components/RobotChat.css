@@ -551,7 +551,6 @@
   z-index: 10;
   display: flex;
   flex-direction: column;
-  overscroll-behavior: contain;
 }
 
 .premium-menu-panel.active {
@@ -573,6 +572,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 85px 24px 12px 24px;
+  padding-top: calc(85px + env(safe-area-inset-top, 0px));
   background: #1a1a1e;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -656,7 +656,8 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 0 12px;
-  height: 38px; /* Force strict slim height */
+  height: 38px;
+  /* Force strict slim height */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -670,7 +671,8 @@
 .search-icon {
   color: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
-  transform: scale(0.85); /* Slightly shrink the SVG */
+  transform: scale(0.85);
+  /* Slightly shrink the SVG */
 }
 
 .menu-search-input {
@@ -678,7 +680,8 @@
   border: none !important;
   box-shadow: none !important;
   color: white;
-  font-size: 13px; /* Slightly smaller text for slim look */
+  font-size: 13px;
+  /* Slightly smaller text for slim look */
   margin-left: 6px;
   width: 100%;
   height: 100%;
@@ -729,20 +732,19 @@
 .menu-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 24px;
+  padding: 12px 13px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding-bottom: 100px;
   /* Space for Cart Footer */
-  overscroll-behavior-y: contain;
 }
 
 .category-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 5px 16px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   cursor: pointer;
@@ -1038,10 +1040,10 @@
   transform: translateX(-50%);
   width: 90%;
   max-width: 400px;
-  background: rgba(20, 20, 30, 0.7);
+  background: rgba(20, 20, 30, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  padding: 12px 16px 12px 24px;
+  padding: 8px 8px 8px 20px;
   border-radius: 40px;
   display: flex;
   justify-content: space-between;
@@ -1056,23 +1058,22 @@
   gap: 12px;
   color: white;
   font-weight: 800;
-  font-size: 20px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-size: 18px;
 }
 
 .cart-view-hint {
-  font-size: 11px;
+  font-size: 10px;
   background: rgba(255, 255, 255, 0.1);
   padding: 4px 8px;
   border-radius: 12px;
   color: rgba(255, 255, 255, 0.8);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
-.checkout-btn,
-.confirm-btn-footer {
+.checkout-btn {
   background: linear-gradient(135deg, #00e676 0%, #10b981 100%);
   color: #000;
   border: none;
@@ -1082,10 +1083,28 @@
   font-size: 15px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   box-shadow: 0 4px 15px rgba(0, 230, 118, 0.4);
+}
+
+.confirm-btn-footer {
+  background: linear-gradient(135deg, #00e676 0%, #10b981 100%);
+  color: #000;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 30px;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 15px rgba(0, 230, 118, 0.4);
+  white-space: nowrap;
 }
 
 .confirm-btn-footer:hover {
@@ -2297,7 +2316,8 @@
 
   /* Menu System Mobile Spacing */
   .menu-header {
-    padding: 10px 12px 6px 12px !important;
+    padding: 45px 12px 6px 12px !important;
+    padding-top: calc(45px + env(safe-area-inset-top, 0px)) !important;
     gap: 6px !important;
   }
 
@@ -2450,46 +2470,59 @@
   }
 
   /* Tracking Modal Mobile Optimization */
-  .tracking-header {
-    padding: 24px 20px !important;
+  /* Tracking Modal Mobile Optimization */
+  .tracking-modal {
+    width: 98% !important;
+    border-radius: 20px !important;
   }
 
-  .tracking-header h3 {
-    font-size: 20px !important;
+  .tracking-header {
+    padding: 8px 16px !important;
+  }
+
+  .tracking-header-info h3 {
+    font-size: 18px !important;
+    margin: 0 !important;
+  }
+
+  .tracking-header-info p {
+    font-size: 12px !important;
+    margin: 2px 0 0 0 !important;
   }
 
   .tracking-body {
-    padding: 20px 16px !important;
+    padding: 12px 14px !important;
   }
 
   .order-tracking-card {
-    margin-bottom: 24px !important;
-    padding-bottom: 24px !important;
+    margin-bottom: 12px !important;
+    padding: 12px !important;
   }
 
   .order-id-row {
-    margin-bottom: 16px !important;
+    margin-bottom: 10px !important;
   }
 
   .timeline-container {
-    gap: 20px !important;
+    gap: 12px !important;
+    margin-top: 10px !important;
   }
 
   .step-content {
-    gap: 12px !important;
+    gap: 6px !important;
   }
 
   .tracking-footer {
-    padding: 20px 16px !important;
+    padding: 10px 16px !important;
   }
 }
 
 /* Tracking Modal Base Styling */
 .tracking-modal {
-  max-width: 480px;
-  width: 94%;
+  max-width: 520px;
+  width: 96%;
   padding: 0;
-  border-radius: 32px;
+  border-radius: 28px;
   background: rgba(10, 10, 15, 0.98);
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
@@ -2497,7 +2530,7 @@
 }
 
 .tracking-header {
-  padding: 16px 24px;
+  padding: 10px 16px;
   background: linear-gradient(135deg, var(--accent-primary), #4f46e5);
   display: flex;
   justify-content: space-between;
@@ -2505,16 +2538,16 @@
 }
 
 .tracking-header-info h3 {
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 800;
   color: white;
   margin: 0;
 }
 
 .tracking-header-info p {
-  margin: 2px 0 0 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+  margin: 1px 0 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -2522,8 +2555,8 @@
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: white;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2532,16 +2565,16 @@
 }
 
 .tracking-body {
-  padding: 20px 24px;
+  padding: 14px 18px;
   max-height: 70vh;
   overflow-y: auto;
 }
 
 .order-tracking-card {
-  margin-bottom: 20px;
-  padding: 20px;
+  margin-bottom: 14px;
+  padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.02);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
@@ -2554,7 +2587,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .order-id-meta {
@@ -2566,9 +2599,9 @@
 .order-id-badge {
   background: rgba(124, 58, 237, 0.1);
   color: var(--accent-primary);
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -2587,15 +2620,15 @@
 
 .ordered-items-box {
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 24px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .box-label {
-  margin: 0 0 10px 0;
-  font-size: 11px;
+  margin: 0 0 6px 0;
+  font-size: 10px;
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -2629,17 +2662,16 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 10px 0 0 0;
-  margin-top: 20px;
+  padding: 6px 0 0 0;
+  margin-top: 12px;
   border-top: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 .timeline-line {
   position: absolute;
-  top: 26px;
-  /* Exactly vertical center of 32px icon (10px padding + 16px radius) */
+  top: 20px;
+  /* center of 28px icon approx */
   left: 12%;
-  /* Perfect spacing for 4 items */
   right: 12%;
   height: 2px;
   background: rgba(255, 255, 255, 0.1);
@@ -2663,29 +2695,32 @@
 
 .step-dot {
   display: none;
-  /* Hide side dots for horizontal layout */
 }
 
 .step-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .step-icon-box {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background-color: #1a1a20;
-  /* Solid background prevents line bleed */
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   transition: all 0.3s;
   z-index: 2;
+}
+
+.step-icon-box svg {
+  width: 14px;
+  height: 14px;
 }
 
 .step-icon-box.active {
@@ -2716,7 +2751,8 @@
 }
 
 .tracking-footer {
-  padding: 14px 20px; /* Massively reduced padding */
+  padding: 14px 20px;
+  /* Massively reduced padding */
   background: rgba(255, 255, 255, 0.02);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   margin-top: auto;
@@ -2724,7 +2760,8 @@
 
 .close-tracking-footer-btn {
   width: 100%;
-  padding: 12px; /* Slimmer button padding */
+  padding: 12px;
+  /* Slimmer button padding */
   border-radius: 12px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.05);
@@ -3183,12 +3220,10 @@
   left: -100%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 100%);
   animation: loadingShimmer 1.5s infinite linear;
 }
 
@@ -3196,4 +3231,4 @@
   100% {
     left: 200%;
   }
-}
+}
