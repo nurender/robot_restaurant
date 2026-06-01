@@ -16,7 +16,6 @@ const {
     getCategories,
     createCategory,
     deleteCategory,
-    importMenuAI,
     getSmartMenu,
     createSmartItem,
     updateMenuOrder
@@ -36,8 +35,7 @@ router.post('/', createMenuItem);
 router.put('/:id', updateMenuItem);
 router.delete('/:id', deleteMenuItem);
 
-// AI Menu Image Extract
-router.post('/import-ai', upload.single('file'), importMenuAI);
+
 
 // Categories
 router.get('/categories', getCategories);

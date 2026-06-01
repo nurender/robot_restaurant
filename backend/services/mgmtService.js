@@ -1,0 +1,149 @@
+const { pool } = require('../config/db');
+
+class MgmtService {
+    // --- Coupons ---
+    async getCoupons(restaurant_id) {
+        const result = await pool.query("SELECT * FROM coupons WHERE restaurant_id = $1 ORDER BY created_at DESC", [restaurant_id || 4]);
+        return result.rows;
+    }
+
+    async createCoupon(data) {
+        const { restaurant_id, code, discount_type, discount_value, min_order_value, usage_limit, expiry_date } = data;
+        const result = await pool.query(
+            "INSERT INTO coupons (restaurant_id, code, discount_type, discount_value, min_order_value, usage_limit, expiry_date) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *",
+            [restaurant_id || 4, code, discount_type, discount_value, min_order_value, usage_limit, expiry_date]
+        );
+        return result.rows[0];
+    }
+
+    async updateCoupon(id, data) {
+        const { code, discount_type, discount_value, min_order_value, usage_limit, expiry_date, is_active } = data;
+        await pool.query(
+            `UPDATE coupons SET 
+                code = $1, discount_type = $2, discount_value = $3, 
+                min_order_value = $4, usage_limit = $5, expiry_date = $6, is_active = $7
+             WHERE id = $8`,
+            [code, discount_type, discount_value, min_order_value, usage_limit, expiry_date, is_active, id]
+        );
+        return true;
+    }
+
+    async deleteCoupon(id) {
+        await pool.query("DELETE FROM coupons WHERE id = $1", [id]);
+        return true;
+    }
+
+    // --- Customers ---
+    async getCustomers(restaurant_id) {
+        const result = await pool.query("SELECT * FROM customers WHERE restaurant_id = $1 ORDER BY total_spend DESC", [restaurant_id || 4]);
+        return result.rows;
+    }
+
+    // --- Settings ---
+    async getSettings(restaurant_id) {
+        const result = await pool.query("SELECT * FROM restaurant_settings WHERE restaurant_id = $1", [restaurant_id || 4]);
+        return result.rows[0] || {};
+    }
+
+    async updateSettings(data) {
+        // AI columns are removed from restaurant_settings
+        const { restaurant_id, theme_color, company_logo } = data;
+        const result = await pool.query(
+            `UPDATE restaurant_settings SET 
+                theme_color = $1, company_logo = $2, updated_at = NOW()
+             WHERE restaurant_id = $3 RETURNING *`,
+            [theme_color, company_logo, restaurant_id || 4]
+        );
+        return result.rows[0];
+    }
+
+    // --- Riders ---
+    async getRiders(restaurant_id) {
+        const result = await pool.query("SELECT * FROM riders WHERE restaurant_id = $1 ORDER BY name ASC", [restaurant_id || 4]);
+        return result.rows;
+    }
+
+    async createRider(data) {
+        const { restaurant_id, name, phone } = data;
+        const result = await pool.query(
+            "INSERT INTO riders (restaurant_id, name, phone) VALUES ($1,$2,$3) RETURNING *",
+            [restaurant_id || 4, name, phone]
+        );
+        return result.rows[0];
+    }
+
+    async updateRider(id, data) {
+        const { name, phone, status, vehicle_number, license_number, address, emergency_contact } = data;
+        await pool.query(
+            "UPDATE riders SET name = $1, phone = $2, status = $3, vehicle_number = $4, license_number = $5, address = $6, emergency_contact = $7, updated_at = NOW() WHERE id = $8",
+            [name, phone, status, vehicle_number, license_number, address, emergency_contact, id]
+        );
+        return true;
+    }
+
+    async deleteRider(id) {
+        await pool.query("DELETE FROM riders WHERE id = $1", [id]);
+        return true;
+    }
+
+    async assignRiderToOrder(order_id, rider_id) {
+        const orderRes = await pool.query("SELECT * FROM orders WHERE id = $1", [order_id]);
+        const order = orderRes.rows[0];
+
+        await pool.query("UPDATE orders SET rider_id = $1, delivery_status = 'out_for_delivery' WHERE id = $2", [rider_id, order_id]);
+        await pool.query("UPDATE riders SET status = 'busy' WHERE id = $1", [rider_id]);
+
+        if (order && order.customer_phone) {
+            await pool.query(
+                "INSERT INTO notifications (restaurant_id, customer_phone, message, type) VALUES ($1,$2,$3,$4)",
+                [order.restaurant_id, order.customer_phone, `Hey! Your order #${order_id} is out for delivery! 🚴`, 'order_dispatched']
+            );
+        }
+        return true;
+    }
+
+    // --- Stock ---
+    async updateStock(item_id, quantity) {
+        await pool.query("UPDATE menu_items SET stock_quantity = $1 WHERE id = $2", [quantity, item_id]);
+        return true;
+    }
+
+    // --- Sidebar Items ---
+    async getSidebarItems() {
+        const result = await pool.query("SELECT * FROM admin_sidebar_items ORDER BY sort_order ASC");
+        return result.rows;
+    }
+
+    async updateSidebarOrder(orders) {
+        for (const item of orders) {
+            await pool.query("UPDATE admin_sidebar_items SET sort_order = $1 WHERE id = $2", [item.sort_order, item.id]);
+        }
+        return true;
+    }
+
+    async toggleSidebarVisibility(id, is_active) {
+        await pool.query("UPDATE admin_sidebar_items SET is_active = $1 WHERE id = $2", [is_active, id]);
+        return true;
+    }
+
+    // --- Roles ---
+    async getRoles() {
+        const result = await pool.query("SELECT * FROM admin_roles ORDER BY name ASC");
+        return result.rows;
+    }
+
+    async createRole(name, permissions) {
+        const result = await pool.query(
+            "INSERT INTO admin_roles (name, permissions) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET permissions = $2 RETURNING *",
+            [name, permissions]
+        );
+        return result.rows[0];
+    }
+
+    async deleteRole(id) {
+        await pool.query("DELETE FROM admin_roles WHERE id = $1", [id]);
+        return true;
+    }
+}
+
+module.exports = new MgmtService();

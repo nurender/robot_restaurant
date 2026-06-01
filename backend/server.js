@@ -7,9 +7,6 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-const { ai, openai, OPENAI_REALTIME_API_KEY, generateNeuralTTS } = require('./config/ai');
-
-
 const app = express();
 const server = http.createServer(app);
 app.use(cors({ origin: '*' }));
@@ -27,87 +24,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// 🎙️ Secure Cloud Transcription Endpoint (Native Google Gemini - FREE)
-app.post('/api/transcribe', upload.single('file'), async (req, res) => {
-    if (!req.file || !ai) {
-        console.error("❌ Transcription blocked: Missing file or Gemini key");
-        return res.status(400).json({ error: "No file or Gemini key missing" });
-    }
-
-    try {
-        console.log(`🎙️ Incoming Transcription: ${req.file.originalname} (${req.file.size} bytes, ${req.file.mimetype})`);
-
-        const audioBase64 = fs.readFileSync(req.file.path).toString('base64');
-        const mimeType = req.file.mimetype === 'audio/octet-stream' ? 'audio/webm' : req.file.mimetype;
-
-        let transcript = "";
-
-        if (process.env.TRANSCRIPTION_PROVIDER === 'WHISPER' && openai) {
-            console.log("🧠 Using OpenAI Whisper for transcription...");
-            const transcription = await openai.audio.transcriptions.create({
-                file: fs.createReadStream(req.file.path),
-                model: "gpt-4o-mini-transcribe",
-                temperature: 0,
-            });
-            transcript = transcription.text;
-            console.log("✅ Whisper Transcription SUCCESS:", transcript);
-        } else {
-            console.log("🧠 Using Google Gemini for transcription...");
-            // 🧠 Neural Fallback Strategy: Try multiple models if one fails (Resolves 404s)
-            const modelsToTry = [
-                process.env.GEMINI_API_MODEL || "gemini-1.5-flash",
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-flash-8b",
-                "gemini-pro",
-                "gemini-2.5-flash"
-            ];
-
-            let lastError = null;
-
-            for (const modelId of modelsToTry) {
-                try {
-                    console.log(`🧠 Attempting Transcription with: ${modelId}`);
-                    const model = ai.getGenerativeModel({ model: modelId });
-
-                    const result = await model.generateContent([
-                        "Transcribe the following audio precisely. Only return the transcribed text, nothing else.",
-                        {
-                            inlineData: {
-                                data: audioBase64,
-                                mimeType: mimeType
-                            },
-                        },
-                    ]);
-
-                    transcript = result.response.text();
-                    if (transcript) {
-                        console.log(`✅ Transcription SUCCESS using ${modelId}:`, transcript);
-                        break;
-                    }
-                } catch (err) {
-                    lastError = err.message;
-                    console.warn(`⚠️ Model ${modelId} failed: ${err.message}`);
-                    if (!err.message.includes("404") && !err.message.includes("not found")) break;
-                }
-            }
-            if (!transcript) throw new Error(lastError || "All Gemini models failed to transcribe.");
-        }
-
-        // Cleanup temp file
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        res.json({ text: transcript });
-    } catch (error) {
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        console.error("❌ Native Gemini Transcription ERROR:", error.message);
-
-        let userMsg = "Transcription failed.";
-        if (error.message.includes("400")) userMsg += " (Invalid Audio Format)";
-        if (error.message.includes("403")) userMsg += " (API Key Issue)";
-        if (error.message.includes("429")) userMsg += " (Rate Limit - Slow down)";
-
-        res.status(500).json({ error: userMsg, technical: error.message });
-    }
-});
 
 app.post('/api/upload', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -124,28 +40,23 @@ connectDB()
     .then(() => console.log("✅ All Database Tables Verified & Ready"))
     .catch(err => console.error("❌ Database Initialization Failed:", err));
 
-const chatRoutes = require('./routes/chatRoutes');
-const adminRoutes = require('./routes/adminRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const userRoutes = require('./routes/userRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const tableRoutes = require('./routes/tableRoutes');
-const monitoringRoutes = require('./routes/monitoringRoutes');
 const mgmtRoutes = require('./routes/mgmtRoutes');
 
 // Pass socket.io instance to controllers via app
 app.set('socketio', io);
 
 // Mount Modular Routes
-app.use('/api', chatRoutes);       // /api/chat, /api/session
-app.use('/api/admin', adminRoutes); // /api/admin/prompt
 app.use('/api/menu', menuRoutes);   // /api/menu, /api/menu/categories
 app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api', tableRoutes);
 app.use('/api', userRoutes);       // /api/login, /api/users, /api/restaurants
-app.use('/api/monitoring', monitoringRoutes);
+
 app.use('/api/mgmt', mgmtRoutes);
 
 // 🔄 Route Aliases for Compatibility

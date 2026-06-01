@@ -1,63 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { VideoOff, CheckCircle, X, AlertCircle, Clock, ChefHat, Store, ListTodo } from 'lucide-react';
+import { CheckCircle, X, Clock, ChefHat, Store, ListTodo } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { auth } from '../firebase';
-import { API_URL, IS_OPENAI_REALTIME } from '../config';
-import useRealtime from '../hooks/useRealtime';
+import { API_URL } from '../config';
 
 // Sub-components
 import MenuSystem from './MenuSystem';
 import CartOverlay from './CartOverlay';
-import SettingsModal from './SettingsModal';
-import CallControls from './CallControls';
 
 const socket = io(API_URL, { autoConnect: true });
-
-const getDialogs = (restaurantName) => ({
-  hi: {
-    welcome: `${restaurantName} में आपका स्वागत है। मैं हूँ रोबो, आपका डिजिटल सहायक। आज आपकी सेवा में क्या पेश करूँ?`,
-    menu_title: "हमारा प्रीमियम डिजिटल मेनू",
-    confirm: (total) => `आपका आर्डर सफलतापूर्वक बुक हो चुका है! कुल ₹${total}। ${restaurantName} चुनने के लिए धन्यवाद!`,
-    voice_switched: "मेरी आवाज़ अब हिंदी में है।"
-  },
-  en: {
-    welcome: `Welcome to ${restaurantName}. I am Robo, your neural concierge. How can I elevate your dining experience today?`,
-    menu_title: "Our Premium Digital Menu",
-    confirm: (total) => `Order successfully synchronized! Total: ₹${total}. Thank you for choosing ${restaurantName}.`,
-    voice_switched: "Neural voice switched to English."
-  }
-});
 
 const RobotChat = ({ tableNumber, restaurantId }) => {
   const [restaurantData, setRestaurantData] = useState(null);
   const [restaurantName, setRestaurantName] = useState(null);
-  const [hasGreeted, setHasGreeted] = useState(false);
-  const dialogs = getDialogs(restaurantName || 'Cyber Chef');
+  
   const [showCartSummary, setShowCartSummary] = useState(false);
   const [activeOrders, setActiveOrders] = useState([]);
+  
   const [showOrderTracking, setShowOrderTracking] = useState(false);
-  const [textLanguage, setTextLanguage] = useState('en');
-  const [voiceLanguage, setVoiceLanguage] = useState('hi');
   const [menuCategories, setMenuCategories] = useState([]);
-  const [currentSubtitle, setCurrentSubtitle] = useState('');
-  const [showMenuPopup, setShowMenuPopup] = useState(false);
-  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [fallbackText, setFallbackText] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [isRobotSpeaking, setIsRobotSpeaking] = useState(false);
-  const [isCameraOn, setIsCameraOn] = useState(true);
-  const [stream, setStream] = useState(null);
-  const [hasCameraError, setHasCameraError] = useState(false);
-  const [isAiTyping, setIsAiTyping] = useState(false);
   const [currentCart, setCurrentCart] = useState([]);
   const [orderConfirmedUI, setOrderConfirmedUI] = useState(false);
   const [expandedCats, setExpandedCats] = useState(new Set());
-  const [isAutoListenEnabled, setIsAutoListenEnabled] = useState(false);
-  const [micVolume, setMicVolume] = useState(0);
-  const [sensitivity, setSensitivity] = useState(0.05);
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -68,17 +34,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [activeCoupon, setActiveCoupon] = useState(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderTracking, setOrderTracking] = useState(null);
   const [mockOtpToast, setMockOtpToast] = useState(null);
-  const [userPreferences, setUserPreferences] = useState([]);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
-  const initializationRef = useRef(false);
-
-  const videoRef = useRef(null);
-  const synthRef = useRef(window.speechSynthesis);
 
   const getMediaUrl = (url) => {
     if (!url) return '';
@@ -125,24 +85,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     initApp();
   }, [restaurantId]);
 
-  useEffect(() => {
-    const timer = setInterval(() => setCallDuration(prev => prev + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
-  const speak = (text, lang, callback) => {
-    if (!synthRef.current) return;
-    synthRef.current.cancel();
-    const ut = new SpeechSynthesisUtterance(text);
-    ut.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
-    ut.rate = 0.95;
-    ut.onstart = () => setIsRobotSpeaking(true);
-    ut.onend = () => {
-      setIsRobotSpeaking(false);
-      if (callback) callback();
-    };
-    synthRef.current.speak(ut);
-  };
 
   const fetchTrackingStatus = useCallback(async () => {
     try {
@@ -273,13 +216,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     if (e) e.preventDefault();
     if (getCartCount() === 0) return;
     if (!customerInfo.name || !customerInfo.phone) {
-      alert(textLanguage === 'hi' ? 'कृपया अपना नाम और मोबाइल नंबर दर्ज करें।' : 'Please enter your name and phone number.');
+      alert('Please enter your name and phone number.');
       return;
     }
 
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(customerInfo.phone)) {
-      alert(textLanguage === 'hi' ? 'कृपया एक वैध 10 अंकों का मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+      alert('Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -310,17 +253,15 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setOtpSent(false);
         setMockOtpToast(null);
         setConfirmationResult(null);
-        speak(dialogs[voiceLanguage].confirm(orderData.total), voiceLanguage);
 
         // Refresh orders immediately so tracking badge shows up
         fetchTrackingStatus();
 
         setTimeout(() => setOrderConfirmedUI(false), 5000);
-        if (IS_OPENAI_REALTIME) stopSession();
       }
     } catch (e) {
       console.error("Order Failed:", e);
-      alert(textLanguage === 'hi' ? 'ऑर्डर करने में कुछ समस्या आई। कृपया पुनः प्रयास करें।' : 'Something went wrong while placing the order. Please try again.');
+      alert('Something went wrong while placing the order. Please try again.');
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -337,7 +278,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const handleSendOtp = async (e) => {
     if(e) e.preventDefault();
     if (!customerInfo.name || !customerInfo.phone || customerInfo.phone.length !== 10) {
-      alert(textLanguage === 'hi' ? 'कृपया अपना नाम और वैध 10-अंकों का मोबाइल नंबर दर्ज करें।' : 'Please enter your name and a valid 10-digit phone number.');
+      alert('Please enter your name and a valid 10-digit phone number.');
       return;
     }
     setupRecaptcha();
@@ -369,7 +310,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const handleVerifyOtpAndOrder = async (e) => {
     if(e) e.preventDefault();
     if (!otpCode || otpCode.length !== 6) {
-      alert(textLanguage === 'hi' ? 'कृपया 6-अंकों का OTP दर्ज करें।' : 'Please enter the 6-digit OTP.');
+      alert('Please enter the 6-digit OTP.');
       return;
     }
     setIsSubmittingOrder(true);
@@ -379,225 +320,19 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       await completeOrderProcess();
     } catch (error) {
       console.error(error);
-      alert(textLanguage === 'hi' ? 'अमान्य OTP' : 'Invalid OTP entered.');
+      alert('Invalid OTP entered.');
       setIsSubmittingOrder(false);
     }
   };
 
   const initiateCheckout = () => {
     if (getCartCount() === 0) {
-      speak(textLanguage === 'hi' ? 'आपका कार्ट अभी खाली है। कृपया पहले कुछ आर्डर करें।' : 'Your cart is empty. Please add some items first.', voiceLanguage);
+      alert('Your cart is empty. Please add some items first.');
       return;
     }
     setShowCustomerForm(true);
     setShowCartSummary(false);
-    setShowMenuPopup(false);
   };
-
-  const {
-    isConnecting,
-    handleToggleSession,
-    isSessionActive,
-    stopSession,
-    error,
-    setError
-  } = useRealtime(restaurantId, tableNumber, {
-    onCartUpdate: (items) => {
-      const normalizedItems = (items || []).map((item) => {
-        const matchedMenuItem = !item?.id ? findMenuItemByName(item?.name) : null;
-        return {
-          ...item,
-          id: item?.id ?? matchedMenuItem?.id,
-          name: item?.name ?? matchedMenuItem?.name,
-          price: Number(item?.price ?? matchedMenuItem?.price ?? 0),
-          qty: Number(item?.qty ?? item?.quantity ?? 1)
-        };
-      });
-      setCurrentCart(normalizedItems);
-      if (items.length > 0) setShowMenuPopup(true);
-    },
-    onShowMenu: (category) => {
-      if (category) setActiveCategory(category);
-      setShowMenuPopup(true);
-    },
-    onConfirmOrder: () => initiateCheckout(),
-    onRealtimeEvent: (event) => {
-      if (event.type === 'response.created') {
-        if (!sessionStartTimeRef.current) sessionStartTimeRef.current = Date.now();
-        setIsAiProcessing(true);
-      }
-    },
-    onResponse: (text) => {
-      setCurrentSubtitle(text);
-      setIsRobotSpeaking(true);
-      setTimeout(() => setIsRobotSpeaking(false), text.length * 50);
-    },
-    onProcessingStart: () => setIsAiProcessing(true),
-    onProcessingEnd: () => setIsAiProcessing(false),
-    onUserTranscript: (text) => {
-      window._lastUserTranscript = text;
-    },
-    onAiTranscript: async (text) => {
-      try {
-        await fetch(`${API_URL}/api/monitoring/log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            restaurant_id: restaurantId,
-            table_number: tableNumber,
-            transcript: window._lastUserTranscript || '',
-            reply: text,
-            action: window._lastToolAction || 'CHAT'
-          })
-        });
-        window._lastToolAction = null;
-      } catch (e) { console.error("Logging failed", e); }
-    },
-    onToolCall: ({ name, args }) => {
-      window._lastToolAction = name;
-      if (name === 'show_menu') {
-        if (args?.category) setActiveCategory(args.category);
-        setShowMenuPopup(true);
-        return;
-      }
-
-      if (name === 'confirm_order') {
-        initiateCheckout();
-        return;
-      }
-
-      if (name === 'show_item_photo') {
-        const target = findMenuItemByName(args?.name);
-        if (target?.image_url) {
-          setCurrentImageUrl(target.image_url);
-          setTimeout(() => setCurrentImageUrl(null), 2500);
-        }
-        return;
-      }
-
-      if (name === 'add_items_to_cart') {
-        const itemsToAdd = args?.items || [];
-        if (itemsToAdd.length === 0) return;
-
-        setCurrentCart((prev) => {
-          let updatedCart = [...prev];
-          itemsToAdd.forEach(newItem => {
-            const target = findMenuItemByName(newItem.name);
-            if (!target) return;
-            const quantity = Math.max(1, Number(newItem.quantity) || 1);
-            const existingIdx = updatedCart.findIndex((i) => String(i.id) === String(target.id));
-
-            if (existingIdx > -1) {
-              updatedCart[existingIdx] = {
-                ...updatedCart[existingIdx],
-                qty: (updatedCart[existingIdx].qty || 0) + quantity
-              };
-            } else {
-              updatedCart.push({ ...target, qty: quantity });
-            }
-          });
-          return updatedCart;
-        });
-        setShowCartSummary(true);
-        return { success: true, message: `Successfully added ${itemsToAdd.length} items to cart.` };
-      }
-
-      if (name === 'add_item_to_cart') {
-        const target = findMenuItemByName(args?.name);
-        if (!target) return { error: "Item not found in menu." };
-        const quantity = Math.max(1, Number(args?.quantity) || 1);
-        setCurrentCart((prev) => {
-          const existing = prev.find((i) => String(i.id) === String(target.id));
-          if (existing) {
-            return prev.map((i) =>
-              String(i.id) === String(target.id) ? { ...i, qty: (i.qty || 0) + quantity } : i
-            );
-          }
-          return [...prev, { ...target, qty: quantity }];
-        });
-        setShowCartSummary(true);
-        return { success: true, message: `Added ${quantity} ${target.name} to cart.` };
-      }
-
-      if (name === 'remove_item_from_cart') {
-        const target = findMenuItemByName(args?.name);
-        if (!target) return { error: "Item not found in cart." };
-        const quantity = Math.max(1, Number(args?.quantity) || 1);
-        setCurrentCart((prev) =>
-          prev
-            .map((i) =>
-              String(i.id) === String(target.id) ? { ...i, qty: Math.max(0, (i.qty || 0) - quantity) } : i
-            )
-            .filter((i) => (i.qty || 0) > 0)
-        );
-        setShowCartSummary(true);
-        return { success: true, message: `Removed ${quantity} ${target.name} from cart.` };
-      }
-
-      if (name === 'update_item_quantity') {
-        const target = findMenuItemByName(args?.name);
-        if (!target) return { error: "Item not found in menu." };
-        const quantity = Math.max(0, Number(args?.quantity));
-        setCurrentCart((prev) => {
-          const existing = prev.find((i) => String(i.id) === String(target.id));
-          if (quantity === 0) {
-            return prev.filter((i) => String(i.id) !== String(target.id));
-          }
-          if (existing) {
-            return prev.map((i) =>
-              String(i.id) === String(target.id) ? { ...i, qty: quantity } : i
-            );
-          }
-          return [...prev, { ...target, qty: quantity }];
-        });
-        setShowCartSummary(true);
-        return { success: true, message: `Updated ${target.name} quantity to ${quantity}.` };
-      }
-
-      if (name === 'apply_coupon') {
-        const code = args?.code || 'SAVE20';
-        setActiveCoupon({ code, discount: 120 });
-        setTimeout(() => setActiveCoupon(null), 5000);
-        return;
-      }
-
-      if (name === 'track_order') {
-        setOrderTracking({ status: 'Chef is preparing', eta: '8 mins' });
-        setTimeout(() => setOrderTracking(null), 10000);
-        return;
-      }
-
-      if (name === 'clear_cart') {
-        setCurrentCart([]);
-        return;
-      }
-
-      if (name === 'repeat_last_order') {
-        // Mocking a last order repeat
-        const mockItems = menuCategories[0]?.items.slice(0, 2).map(i => ({ ...i, qty: 1 })) || [];
-        setCurrentCart(mockItems);
-        setShowCartSummary(true);
-        return;
-      }
-
-      if (name === 'save_user_preference') {
-        setUserPreferences(prev => [...prev, args?.preference]);
-        return;
-      }
-
-      if (name === 'show_best_sellers') {
-        setActiveCategory('All');
-        setMenuSearchTerm('Best Seller');
-        setShowMenuPopup(true);
-        return;
-      }
-
-      if (name === 'show_offers') {
-        setShowSettingsPopup(true);
-        return;
-      }
-    }
-  }, currentCart, restaurantName || 'Cyber Chef');
 
   const toggleCategory = (cat) => {
     setExpandedCats(prev => {
@@ -606,171 +341,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       else next.add(cat);
       return next;
     });
-  };
-
-  const toggleCamera = async () => {
-    if (isCameraOn) {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-      setIsCameraOn(false);
-    } else {
-      try {
-        const s = await navigator.mediaDevices.getUserMedia({ video: true });
-        setStream(s);
-        if (videoRef.current) videoRef.current.srcObject = s;
-        setIsCameraOn(true);
-      } catch (e) { setHasCameraError(true); }
-    }
-  };
-
-  const recognitionRef = useRef(null);
-
-  // 🎙️ Setup Legacy Speech Recognition
-  useEffect(() => {
-    if (IS_OPENAI_REALTIME) return;
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn("Speech Recognition not supported in this browser.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = voiceLanguage === 'hi' ? 'hi-IN' : 'en-US';
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) {
-        handleLegacyChat(transcript);
-      }
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech Recognition Error:", event.error);
-      setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-  }, [voiceLanguage]);
-
-  const handleLegacyChat = async (transcript) => {
-    setIsAiProcessing(true);
-    setCurrentSubtitle(transcript);
-    try {
-      const res = await fetch(`${API_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript,
-          restaurantId,
-          textLanguage,
-          menuContext: menuCategories,
-          cartContext: currentCart
-        })
-      });
-
-      const data = await res.json();
-
-      // 1. Handle Response Text
-      const replyText = data.reply || data.reply_text;
-      if (replyText) {
-        setCurrentSubtitle(replyText);
-        speak(replyText, voiceLanguage);
-      }
-
-      // 2. Handle Actions
-      if (data.action === 'PLACE_ORDER' || data.action === 'confirm_order') {
-        initiateCheckout();
-      }
-
-      if (data.action === 'EXPAND_CATEGORY' && data.category) {
-        setActiveCategory(data.category);
-        setShowMenuPopup(true);
-      }
-
-      // 3. Handle Items to Add
-      if (data.items_to_add && data.items_to_add.length > 0) {
-        setCurrentCart((prev) => {
-          let updatedCart = [...prev];
-          data.items_to_add.forEach(newItem => {
-            const target = findMenuItemByName(newItem.name) ||
-              menuCategories.flatMap(c => c.items).find(i => String(i.id) === String(newItem.id)) ||
-              (newItem.price ? newItem : null);
-            if (!target) return;
-
-            const quantity = Math.max(1, Number(newItem.qty || newItem.quantity) || 1);
-            const existingIdx = updatedCart.findIndex((i) => String(i.id) === String(target.id));
-
-            if (existingIdx > -1) {
-              updatedCart[existingIdx] = {
-                ...updatedCart[existingIdx],
-                qty: (updatedCart[existingIdx].qty || 0) + quantity
-              };
-            } else {
-              updatedCart.push({ ...target, qty: quantity });
-            }
-          });
-          return updatedCart;
-        });
-        setShowCartSummary(true);
-      }
-
-      // 4. Handle Items to Remove
-      if (data.items_to_remove && data.items_to_remove.length > 0) {
-        setCurrentCart((prev) => {
-          let updatedCart = [...prev];
-          data.items_to_remove.forEach(removeItem => {
-            const targetId = removeItem.id;
-            const targetName = normalizeName(removeItem.name || '');
-
-            updatedCart = updatedCart.filter(item => {
-              const matchesId = targetId && String(item.id) === String(targetId);
-              const matchesName = targetName && normalizeName(item.name) === targetName;
-              return !(matchesId || matchesName);
-            });
-          });
-          return updatedCart;
-        });
-        setShowCartSummary(true);
-      }
-
-    } catch (e) {
-      console.error("Legacy Chat Error:", e);
-    } finally {
-      setIsAiProcessing(false);
-    }
-  };
-
-  const startListening = () => {
-    if (!initializationRef.current) {
-      initializationRef.current = true;
-      if (!IS_OPENAI_REALTIME) {
-        speak(dialogs[voiceLanguage].welcome, voiceLanguage);
-      }
-      setHasGreeted(true);
-    }
-
-    if (!IS_OPENAI_REALTIME) {
-      if (isListening) {
-        recognitionRef.current?.stop();
-        setIsListening(false);
-      } else {
-        try {
-          recognitionRef.current?.start();
-          setIsListening(true);
-        } catch (e) {
-          console.error("Failed to start recognition:", e);
-        }
-      }
-    } else {
-      setIsListening(!isListening);
-    }
   };
 
   const formatTime = (secs) => {
@@ -796,7 +366,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           comment: feedback.comment
         })
       });
-      alert(textLanguage === 'hi' ? 'आपकी प्रतिक्रिया के लिए धन्यवाद!' : 'Thank you for your feedback!');
+      alert('Thank you for your feedback!');
       setShowFeedbackPopup(false);
       setFeedback({ rating: 5, comment: '', name: '', phone: '' });
     } catch (e) { console.error("Feedback failed:", e); }
@@ -818,7 +388,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               className="robot-header-btn tracking"
             >
               <Clock size={14} color="#a78bfa" />
-              <span>{textLanguage === 'hi' ? 'ट्रैकिंग' : 'Tracking'}</span>
+              <span>{'Tracking'}</span>
               {activeOrders.length > 0 && (
                 <span style={{
                   position: 'absolute', top: '-5px', right: '-5px',
@@ -837,7 +407,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             className="robot-header-btn"
           >
             <span style={{ color: '#f1c40f' }}>★</span>
-            <span>{textLanguage === 'hi' ? 'फीडबैक' : 'Feedback'}</span>
+            <span>{'Feedback'}</span>
           </button>
         </div>
       </div>
@@ -845,7 +415,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       <div className="avatar-container">
         <MenuSystem
           menuCategories={menuCategories}
-          textLanguage={textLanguage}
+          
           menuSearchTerm={menuSearchTerm}
           setMenuSearchTerm={setMenuSearchTerm}
           activeCategory={activeCategory}
@@ -858,7 +428,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           getCartCount={getCartCount}
           setShowCartSummary={setShowCartSummary}
           completeOrderProcess={initiateCheckout}
-          setShowMenuPopup={() => {}}
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}
         />
@@ -868,7 +437,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         {orderConfirmedUI && (
           <div className="order-success-overlay scale-in">
             <CheckCircle size={48} color="white" fill="var(--success)" />
-            <p>{textLanguage === 'hi' ? 'आर्डर कन्फर्म हो चुका है!' : 'Order Confirmed!'}</p>
+            <p>{'Order Confirmed!'}</p>
           </div>
         )}
 
@@ -914,7 +483,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       {showCartSummary && (
         <CartOverlay
           currentCart={currentCart}
-          textLanguage={textLanguage}
+          
           setShowCartSummary={setShowCartSummary}
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}
@@ -927,20 +496,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         />
       )}
 
-      {showSettingsPopup && !IS_OPENAI_REALTIME && (
-        <SettingsModal
-          textLanguage={textLanguage}
-          setShowSettingsPopup={setShowSettingsPopup}
-          isAutoListenEnabled={isAutoListenEnabled}
-          setIsAutoListenEnabled={setIsAutoListenEnabled}
-          sensitivity={sensitivity}
-          setSensitivity={setSensitivity}
-          voiceLanguage={voiceLanguage}
-          setVoiceLanguage={setVoiceLanguage}
-          setCurrentSubtitle={setCurrentSubtitle}
-          speak={speak}
-        />
-      )}
+
 
 
 
@@ -956,40 +512,29 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       {showCustomerForm && (
         <div className="modal-overlay" onClick={() => {
           setShowCustomerForm(false);
-          if (IS_OPENAI_REALTIME) {
-            sendEvent({
-              type: 'conversation.item.create',
-              item: {
-                type: 'message',
-                role: 'user',
-                content: [{ type: 'input_text', text: '[System: User closed the checkout form without finishing. It is no longer visible.]' }]
-              }
-            });
-            sendEvent({ type: 'response.create' });
-          }
         }}>
           <div className="booking-modal-content" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">
-              {textLanguage === 'hi' ? 'बुकिंग डिटेल्स' : 'Booking Details'}
+              {'Booking Details'}
             </h3>
             <p className="modal-subtitle">
-              {textLanguage === 'hi' ? 'आर्डर बुक करने के लिए कृपया अपनी जानकारी दें।' : 'Please provide your details to confirm the order.'}
+              {'Please provide your details to confirm the order.'}
             </p>
             <form onSubmit={otpSent ? handleVerifyOtpAndOrder : handleSendOtp} className="modal-form">
               <div className="form-group">
-                <label>{textLanguage === 'hi' ? 'पूरा नाम' : 'Full Name'}</label>
+                <label>{'Full Name'}</label>
                 <input
                   type="text"
                   required
                   disabled={otpSent}
                   className="modal-input"
-                  placeholder={textLanguage === 'hi' ? 'अपना नाम लिखें' : 'Enter your name'}
+                  placeholder={'Enter your name'}
                   value={customerInfo.name}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                 />
               </div>
               <div className="form-group">
-                <label>{textLanguage === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}</label>
+                <label>{'Phone Number'}</label>
                   <input
                     type="tel"
                     required
@@ -997,7 +542,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     pattern="[0-9]{10}"
                     maxLength={10}
                     className="modal-input"
-                    placeholder={textLanguage === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
+                    placeholder={'10-digit number'}
                     value={customerInfo.phone}
                     onChange={(e) => {
                       const onlyNums = e.target.value.replace(/[^0-9]/g, '');
@@ -1009,7 +554,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               {otpSent && (
                 <div className="form-group">
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{textLanguage === 'hi' ? 'OTP कोड' : 'OTP Code'}</span>
+                    <span>{'OTP Code'}</span>
                     {mockOtpToast && (
                       <span style={{ color: 'var(--success)', fontWeight: '800', background: 'rgba(0,230,118,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '13px' }}>
                         Test OTP: {mockOtpToast}
@@ -1021,7 +566,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     required
                     maxLength={6}
                     className="modal-input"
-                    placeholder={textLanguage === 'hi' ? '6 अंको का OTP' : 'Enter 6-digit OTP'}
+                    placeholder={'Enter 6-digit OTP'}
                     value={otpCode}
                     onChange={(e) => {
                       const onlyNums = e.target.value.replace(/[^0-9]/g, '');
@@ -1041,28 +586,17 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   setOtpSent(false);
                   setMockOtpToast(null);
                   setConfirmationResult(null);
-                  if (IS_OPENAI_REALTIME) {
-                    sendEvent({
-                      type: 'conversation.item.create',
-                      item: {
-                        type: 'message',
-                        role: 'user',
-                        content: [{ type: 'input_text', text: '[System: User closed the checkout form without finishing. It is no longer visible.]' }]
-                      }
-                    });
-                    sendEvent({ type: 'response.create' });
-                  }
                 }}>
-                  {textLanguage === 'hi' ? 'रद्द करें' : 'Cancel'}
+                  {'Cancel'}
                 </button>
 
                 {!otpSent ? (
                   <button type="submit" disabled={isSendingOtp} className={`btn-primary flex-1 ${isSendingOtp ? 'loading' : ''}`}>
-                    {isSendingOtp ? (textLanguage === 'hi' ? 'भेज रहा है...' : 'Sending...') : (textLanguage === 'hi' ? 'OTP भेजें' : 'Send OTP')}
+                    {isSendingOtp ? ('Sending...') : ('Send OTP')}
                   </button>
                 ) : (
                   <button type="submit" disabled={isSubmittingOrder || otpCode.length !== 6} className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`} style={{ background: otpCode.length === 6 ? 'linear-gradient(135deg, #00e676 0%, #10b981 100%)' : '' }}>
-                    {isSubmittingOrder ? (textLanguage === 'hi' ? 'प्रोसेसिंग...' : 'Processing...') : (textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order')}
+                    {isSubmittingOrder ? ('Processing...') : ('Confirm Order')}
                   </button>
                 )}
               </div>
@@ -1078,10 +612,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <div className="feedback-header">
               <div className="feedback-emoji">⭐</div>
               <h3 className="modal-title">
-                {textLanguage === 'hi' ? 'आपका अनुभव कैसा रहा?' : 'How was your experience?'}
+                {'How was your experience?'}
               </h3>
               <p className="modal-subtitle">
-                {textLanguage === 'hi' ? 'आपकी राय हमारे लिए महत्वपूर्ण है।' : 'Your feedback helps us improve.'}
+                {'Your feedback helps us improve.'}
               </p>
             </div>
 
@@ -1102,7 +636,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 <input
                   type="text"
                   className="modal-input"
-                  placeholder={textLanguage === 'hi' ? 'आपका नाम (वैकल्पिक)' : 'Your Name (Optional)'}
+                  placeholder={'Your Name (Optional)'}
                   value={feedback.name}
                   onChange={(e) => setFeedback({ ...feedback, name: e.target.value })}
                 />
@@ -1111,7 +645,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 <input
                   type="tel"
                   className="modal-input"
-                  placeholder={textLanguage === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Phone Number (Optional)'}
+                  placeholder={'Phone Number (Optional)'}
                   value={feedback.phone}
                   onChange={(e) => setFeedback({ ...feedback, phone: e.target.value })}
                 />
@@ -1119,7 +653,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <div className="form-group">
                 <textarea
                   className="modal-input textarea"
-                  placeholder={textLanguage === 'hi' ? 'कुछ और कहना चाहेंगे? (वैकल्पिक)' : 'Any other comments? (Optional)'}
+                  placeholder={'Any other comments? (Optional)'}
                   value={feedback.comment}
                   onChange={(e) => setFeedback({ ...feedback, comment: e.target.value })}
                   rows="3"
@@ -1130,44 +664,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 className="btn-primary full-width"
                 style={{ background: 'linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)', color: '#000' }}
               >
-                {textLanguage === 'hi' ? 'फीडबैक भेजें' : 'Submit Feedback'}
+                {'Submit Feedback'}
               </button>
             </form>
           </div>
         </div>
       )}
-      {/* Microphone Permission Modal */}
-      {error === 'mic_denied' && (
-        <div className="modal-overlay" style={{ zIndex: 10002 }}>
-          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '440px', padding: '40px', textAlign: 'center', background: 'rgba(15, 15, 20, 0.95)', backdropFilter: 'blur(20px)' }}>
-            <div style={{ width: '80px', height: '80px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-              <AlertCircle size={40} color="#ef4444" />
-            </div>
-            <h3 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px', color: '#ffffff', letterSpacing: '-0.5px' }}>Microphone Access Required</h3>
-            <p style={{ color: 'var(--text-dim)', marginBottom: '12px', fontSize: '16px', lineHeight: '1.6' }}>
-              To speak with our digital concierge, we need your permission to use the microphone.
-            </p>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '16px', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-                💡 <strong>Desktop:</strong> Click the <strong>Lock icon</strong> in the address bar.
-              </p>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px', margin: 0 }}>
-                📱 <strong>Mobile:</strong> Tap the <strong>Lock</strong> (Chrome) or <strong>AA</strong> (Safari) icon in the address bar and select <strong>"Allow"</strong> for the Microphone.
-              </p>
-            </div>
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setError(null);
-                setTimeout(() => handleToggleSession(), 300);
-              }}
-              style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '16px', fontWeight: '800', boxShadow: '0 8px 24px var(--accent-glow)' }}
-            >
-              Try Again & Allow Access
-            </button>
-          </div>
-        </div>
-      )}
+
       {/* Tracking Modal - Redesigned for Multiple Orders */}
       {showOrderTracking && activeOrders.length > 0 && (
         <div className="modal-overlay" style={{ zIndex: 10003 }}>

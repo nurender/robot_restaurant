@@ -16,7 +16,6 @@ const MenuSystem = ({
     getCartCount,
     setShowCartSummary,
     completeOrderProcess,
-    setShowMenuPopup,
     getMediaUrl,
     setZoomedImage
 }) => {
@@ -44,13 +43,6 @@ const MenuSystem = ({
         return () => clearTimeout(timer);
     }, []);
 
-    const handleClose = () => {
-        setIsActive(false);
-        setTimeout(() => {
-            setShowMenuPopup(false);
-        }, 400); // match transition duration
-    };
-
 
 
     return (
@@ -58,8 +50,8 @@ const MenuSystem = ({
             <div className="menu-header">
                 <div className="menu-header-top">
                     <div className="menu-title-area">
-                        <h4>{textLanguage === 'en' ? 'Our Menu' : 'हमारा मेनू'}</h4>
-                        <span className="menu-subtitle">{textLanguage === 'en' ? 'What are you craving today?' : 'आज आप क्या खाना चाहेंगे?'}</span>
+                        <h4>Our Menu</h4>
+                        <span className="menu-subtitle">What are you craving today?</span>
                     </div>
                 </div>
 
@@ -68,7 +60,7 @@ const MenuSystem = ({
                     <input
                         type="text"
                         className="menu-search-input"
-                        placeholder={textLanguage === 'en' ? 'Search...' : 'खोजें...'}
+                        placeholder="Search..."
                         value={menuSearchTerm}
                         onChange={(e) => setMenuSearchTerm(e.target.value)}
                     />
@@ -101,7 +93,7 @@ const MenuSystem = ({
                         className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
                         onClick={() => setActiveCategory('All')}
                     >
-                        {textLanguage === 'en' ? 'All' : 'सभी'}
+                        All
                     </button>
                     {menuCategories.map((cat) => (
                         <button
@@ -219,7 +211,7 @@ const MenuSystem = ({
                         <span className="cart-view-hint">View Cart</span>
                     </div>
                     <button className="confirm-btn-footer" onClick={() => completeOrderProcess()}>
-                        {textLanguage === 'hi' ? 'आर्डर बुक करें' : 'Confirm Order'} <ChevronRight size={18} />
+                        {'Confirm Order'} <ChevronRight size={18} />
                     </button>
                 </div>
             )}

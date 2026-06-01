@@ -56,7 +56,6 @@ import {
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import './AdminPanel.css';
-import PromptManager from './PromptManager';
 import AdminSidebar from './AdminSidebar';
 import ThemeToggle from './ThemeToggle';
 import SmartInventory from './SmartInventory';
@@ -513,7 +512,7 @@ const AdminPanel = () => {
         setRidersList(ridersRes.data.data || []);
       }
 
-      if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'reports' || activeTab === 'robo_control' || activeTab === 'qr_codes') {
+      if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'reports' || activeTab === 'qr_codes') {
         const tablesRes = await fetchHelper(`${API_URL}/api/tables`);
         setRestaurantTables(tablesRes.data.data || []);
       }
@@ -875,8 +874,8 @@ const AdminPanel = () => {
 
     // Priority 2: Hardcoded Defaults (Fallback)
     const permissions = {
-      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants', 'roles'],
-      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
+      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles'],
+      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
       staff: ['orders', 'monitor'],
       chef: ['kitchen', 'orders', 'monitor']
     };
@@ -1911,9 +1910,6 @@ const AdminPanel = () => {
             </div>
           )}
 
-          {activeTab === 'ai_prompt' && adminUser.role === 'super_admin' && (
-            <PromptManager />
-          )}
 
           {activeTab === 'inventory' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
@@ -2344,74 +2340,7 @@ const AdminPanel = () => {
             </div>
           )}
 
-          {activeTab === 'robo_control' && (
-            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-              <div className="view-header-row mb-8">
-                <div className="header-left">
-                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>AI Robo Control</h1>
-                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Neural personality adjustment and operational parameters.</p>
-                </div>
-              </div>
 
-              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '32px', maxWidth: '600px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '16px' }}>Neural Tone & Personality</label>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      {['friendly', 'professional', 'funny', 'robotic'].map(tone => (
-                        <button
-                          key={tone}
-                          onClick={() => setRoboSettings({ ...roboSettings, ai_tone: tone })}
-                          style={{ flex: 1, padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)', background: roboSettings.ai_tone === tone ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: roboSettings.ai_tone === tone ? 'white' : 'var(--text-muted)', fontWeight: '700', textTransform: 'capitalize', cursor: 'pointer', transition: 'all 0.3s' }}
-                        >
-                          {tone}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Voice Synthesis</strong>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Enable neural voice communication.</span>
-                    </div>
-                    <div
-                      onClick={() => setRoboSettings({ ...roboSettings, voice_enabled: !roboSettings.voice_enabled })}
-                      style={{ width: '56px', height: '30px', background: roboSettings.voice_enabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
-                    >
-                      <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.voice_enabled ? '30px' : '4px', transition: '0.3s' }} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--bg-deep)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '16px', color: 'white' }}>Auto-Accept Orders</strong>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Bypass manual accept for fast processing.</span>
-                    </div>
-                    <div
-                      onClick={() => setRoboSettings({ ...roboSettings, auto_accept_orders: !roboSettings.auto_accept_orders })}
-                      style={{ width: '56px', height: '30px', background: roboSettings.auto_accept_orders ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '30px', position: 'relative', cursor: 'pointer', transition: '0.3s' }}
-                    >
-                      <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px', left: roboSettings.auto_accept_orders ? '30px' : '4px', transition: '0.3s' }} />
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn-primary"
-                    style={{ width: '100%', padding: '16px', borderRadius: '16px', fontSize: '16px' }}
-                    onClick={async () => {
-                      try {
-                        await axios.post(`${API_URL}/api/mgmt/settings`, { ...roboSettings, restaurant_id: adminUser.restaurant_id });
-                        alert("Neural parameters synchronized successfully!");
-                      } catch (e) { alert("Sync failed"); }
-                    }}
-                  >
-                    Synchronize Parameters
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'inventory' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
@@ -3148,9 +3077,9 @@ const AdminPanel = () => {
                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '15px', fontWeight: '800', letterSpacing: '1px' }}>ACCESS MATRIX</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px' }}>
                           {[
-                            'dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'robo_control', 'menu', 'menu_order',
+                            'dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order',
                             'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes',
-                            'feedback', 'ai_prompt', 'settings', 'staff', 'restaurants', 'roles'
+                            'feedback', 'settings', 'staff', 'restaurants', 'roles'
                           ].map(mod => {
                             const isSelected = currentRoleData.permissions.includes(mod);
                             return (

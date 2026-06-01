@@ -60,13 +60,6 @@ const connectDB = async () => {
             invoice_prefix TEXT,
             bill_footer TEXT,
             
-            -- AI Robo Settings
-            ai_enabled BOOLEAN DEFAULT true,
-            ai_greeting TEXT,
-            ai_language TEXT DEFAULT 'Hinglish',
-            ai_upsell_enabled BOOLEAN DEFAULT true,
-            ai_tone TEXT DEFAULT 'friendly',
-            
             -- Branding
             logo_url TEXT,
             cover_url TEXT,
@@ -113,11 +106,6 @@ const connectDB = async () => {
             ['currency', "TEXT DEFAULT '₹'"],
             ['invoice_prefix', 'TEXT'],
             ['bill_footer', 'TEXT'],
-            ['ai_enabled', 'BOOLEAN DEFAULT true'],
-            ['ai_greeting', 'TEXT'],
-            ['ai_language', "TEXT DEFAULT 'Hinglish'"],
-            ['ai_upsell_enabled', 'BOOLEAN DEFAULT true'],
-            ['ai_tone', "TEXT DEFAULT 'friendly'"],
             ['logo_url', 'TEXT'],
             ['cover_url', 'TEXT']
         ];
@@ -458,19 +446,7 @@ const connectDB = async () => {
             );
         `);
 
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS chat_logs (
-                id SERIAL PRIMARY KEY,
-                restaurant_id INTEGER NOT NULL,
-                table_number TEXT,
-                customer_transcript TEXT,
-                ai_reply TEXT,
-                action_taken TEXT,
-                mode TEXT DEFAULT 'voice', -- 'voice' or 'text'
-                duration_seconds INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
+
 
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 100`);
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER DEFAULT 10`);
@@ -496,7 +472,7 @@ const connectDB = async () => {
             );
         `);
 
-        await pool.query(`ALTER TABLE chat_logs ADD COLUMN IF NOT EXISTS customer_mood TEXT`);
+
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS inventory (
@@ -588,7 +564,6 @@ const connectDB = async () => {
                 ['kitchen', 'Kitchen Hub', 'ChefHat', '{super_admin, manager, chef}', 2],
                 ['marketing', 'Marketing Hub', 'Send', '{super_admin, manager}', 3],
                 ['monitor', 'Neural Live Feed', 'Bot', '{super_admin, manager, staff}', 4],
-                ['robo_control', 'AI Robo Control', 'Settings', '{super_admin, manager}', 5],
                 ['menu', 'Menu Management', 'UtensilsCrossed', '{super_admin, manager}', 6],
                 ['menu_order', 'Menu Ordering', 'ListTodo', '{super_admin, manager}', 7],
                 ['sidebar_order', 'Sidebar Ordering', 'Settings', '{super_admin}', 8],
@@ -599,7 +574,6 @@ const connectDB = async () => {
                 ['reports', 'Reports & Analytics', 'BarChart2', '{super_admin, manager}', 13],
                 ['qr_codes', 'Tables & QR Codes', 'QrCode', '{super_admin, manager}', 14],
                 ['feedback', 'Customer Feedback', 'Star', '{super_admin, manager}', 15],
-                ['ai_prompt', 'Prompt Engineer', 'Bot', '{super_admin}', 16],
                 ['settings', 'General Settings', 'Settings', '{super_admin, manager}', 17],
                 ['restaurants', 'Our Restaurants', 'Store', '{super_admin}', 18],
                 ['staff', 'Team Members', 'Users', '{super_admin}', 19],
@@ -609,6 +583,8 @@ const connectDB = async () => {
                 await pool.query("INSERT INTO admin_sidebar_items (id, label, icon_name, roles, sort_order) VALUES ($1,$2,$3,$4,$5)", item);
             }
         }
+        
+        await pool.query(`DELETE FROM admin_sidebar_items WHERE id IN ('robo_control', 'ai_prompt')`);
         
         // Ensure new items are added if they were missing from earlier versions
         await pool.query(`
@@ -633,8 +609,8 @@ const connectDB = async () => {
         const rolesCheck = await pool.query("SELECT count(*) FROM admin_roles");
         if (parseInt(rolesCheck.rows[0].count) === 0) {
             const defaultRoles = [
-                ['super_admin', '{dashboard, orders, kitchen, marketing, monitor, robo_control, menu, menu_order, sidebar_order, coupons, customers, rider_fleet, inventory, reports, qr_codes, feedback, ai_prompt, settings, staff, restaurants, roles}'],
-                ['manager', '{dashboard, orders, kitchen, marketing, monitor, robo_control, menu, menu_order, coupons, customers, rider_fleet, inventory, reports, qr_codes, feedback, settings}'],
+                ['super_admin', '{dashboard, orders, kitchen, marketing, monitor, menu, menu_order, sidebar_order, coupons, customers, rider_fleet, inventory, reports, qr_codes, feedback, settings, staff, restaurants, roles}'],
+                ['manager', '{dashboard, orders, kitchen, marketing, monitor, menu, menu_order, coupons, customers, rider_fleet, inventory, reports, qr_codes, feedback, settings}'],
                 ['staff', '{orders, monitor}'],
                 ['chef', '{kitchen, orders, monitor}']
             ];
@@ -657,10 +633,6 @@ const setupSettings = async () => {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS restaurant_settings (
                 restaurant_id INTEGER PRIMARY KEY,
-                ai_tone TEXT DEFAULT 'friendly',
-                voice_enabled BOOLEAN DEFAULT true,
-                language_mode TEXT DEFAULT 'hinglish',
-                upsell_enabled BOOLEAN DEFAULT true,
                 company_logo TEXT,
                 theme_color TEXT DEFAULT '#7c3aed',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
