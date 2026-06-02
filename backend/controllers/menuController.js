@@ -22,6 +22,7 @@ const createMenuItem = async (req, res) => {
 
 const updateMenuItem = async (req, res) => {
     const io = req.app.get('socketio');
+    console.log("UPDATE DISH PAYLOAD:", req.body);
     try {
         await menuService.updateMenuItem(req.params.id, req.body);
         if (io) io.emit('menu_updated');

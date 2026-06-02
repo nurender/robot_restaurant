@@ -21,7 +21,7 @@ const CartOverlay = ({
             <div className="cart-summary-modal slide-up" onClick={e => e.stopPropagation()}>
                 <div className="cart-summary-header">
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <h3>{textLanguage === 'en' ? 'Review Your Order' : 'आपका आर्डर'}</h3>
+                        <h3>Review Your Order</h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00e676', boxShadow: '0 0 10px #00e676' }}></div>
                             <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Neural Selection</span>
@@ -82,7 +82,7 @@ const CartOverlay = ({
                     </div>
                     <div className="cart-final-total">
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span>{textLanguage === 'en' ? 'Total Amount' : 'कुल राशि'}</span>
+                            <span>Total Amount</span>
                             {restaurantData?.is_round_off && <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '700' }}>Rounded Off</span>}
                         </div>
                         <strong>₹{getCartTotal()}</strong>
@@ -91,7 +91,7 @@ const CartOverlay = ({
                         completeOrderProcess();
                         setShowCartSummary(false);
                     }}>
-                        {textLanguage === 'en' ? 'Finalize & Book Order' : 'आर्डर बुक करें'}
+                        Finalize & Book Order
                     </button>
                 </div>
             </div>

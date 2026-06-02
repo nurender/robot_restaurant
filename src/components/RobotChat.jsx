@@ -9,6 +9,7 @@ import { API_URL } from '../config';
 // Sub-components
 import MenuSystem from './MenuSystem';
 import CartOverlay from './CartOverlay';
+import ThemeToggle from './ThemeToggle';
 
 const socket = io(API_URL, { autoConnect: true });
 
@@ -381,7 +382,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           <span style={{ opacity: 0.3, margin: '0 4px' }}>|</span>
           <span style={{ color: '#00e676' }}>₹{getCartTotal()}</span>
         </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <ThemeToggle />
           {activeOrders.length > 0 && (
             <button
               onClick={() => setShowOrderTracking(true)}
@@ -691,7 +693,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   <div className="order-id-row">
                     <div className="order-id-meta">
                       <span className="order-id-badge">
-                        #ORDER-{order.id} {order.customerName && <span style={{color: 'rgba(255,255,255,0.9)', marginLeft: '6px', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '6px'}}>👤 {order.customerName}</span>}
+                        #ORDER-{order.id} {order.customerName && <span style={{color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px'}}>👤 {order.customerName}</span>}
                       </span>
                       <span className="order-amount-text">₹{order.total}</span>
                     </div>

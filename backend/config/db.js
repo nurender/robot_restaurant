@@ -183,6 +183,10 @@ const connectDB = async () => {
         )`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS prep_time INTEGER`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS spice_level INTEGER`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS sku TEXT`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS veg_type TEXT`);
 
         const initialMenu = [
             ['s1', 1, 'Paneer Tikka', 'Starters', 250, 'Grilled cottage cheese with spices', 'https://www.cookwithmanali.com/wp-content/uploads/2015/07/Restaurant-Style-Recipe-Paneer-Tikka.jpg', null],

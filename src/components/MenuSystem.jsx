@@ -93,7 +93,7 @@ const MenuSystem = ({
                         className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
                         onClick={() => setActiveCategory('All')}
                     >
-                        All
+                        All <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '4px' }}>({menuCategories.reduce((acc, cat) => acc + cat.items.length, 0)})</span>
                     </button>
                     {menuCategories.map((cat) => (
                         <button
@@ -101,7 +101,7 @@ const MenuSystem = ({
                             className={`category-chip ${activeCategory === cat.category ? 'active' : ''}`}
                             onClick={() => setActiveCategory(cat.category)}
                         >
-                            {cat.category}
+                            {cat.category} <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '4px' }}>({cat.items.length})</span>
                         </button>
                     ))}
                 </div>
@@ -146,7 +146,7 @@ const MenuSystem = ({
                     return (
                         <div key={category.category} className={`menu-category ${isExpanded ? 'expanded' : 'collapsed'}`}>
                             <div className="category-header-row" onClick={() => toggleCategory(category.category)}>
-                                <h5 className="category-title">{category.category}</h5>
+                                <h5 className="category-title">{category.category} ({matchingItems.length})</h5>
                                 {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                             </div>
 
@@ -174,7 +174,14 @@ const MenuSystem = ({
 
                                                 <div className="item-details">
                                                     <div className="item-header">
-                                                        <h6 className="item-name">{item.name}</h6>
+                                                        <h6 className="item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                            {item.name}
+                                                            {item.spice_level > 0 && (
+                                                                <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '1px 4px', borderRadius: '4px', letterSpacing: '1px' }}>
+                                                                    {'🌶️'.repeat(Math.min(item.spice_level, 5))}
+                                                                </span>
+                                                            )}
+                                                        </h6>
                                                         <span className="item-price">₹{item.price}</span>
                                                     </div>
                                                     <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
@@ -205,13 +212,12 @@ const MenuSystem = ({
             </div>
             {getCartCount() > 0 && (
                 <div className="menu-cart-footer slide-up">
-                    <div className="cart-total" onClick={() => setShowCartSummary(true)} style={{ cursor: 'pointer' }}>
+                    <div className="cart-total">
                         <ShoppingCart size={20} />
                         <span>₹{getCartTotal()}</span>
-                        <span className="cart-view-hint">View Cart</span>
                     </div>
-                    <button className="confirm-btn-footer" onClick={() => completeOrderProcess()}>
-                        {'Confirm Order'} <ChevronRight size={18} />
+                    <button className="confirm-btn-footer" onClick={() => setShowCartSummary(true)}>
+                        {'Go to Cart'} <ChevronRight size={18} />
                     </button>
                 </div>
             )}
