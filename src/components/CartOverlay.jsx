@@ -24,7 +24,7 @@ const CartOverlay = ({
                         <h3>Review Your Order</h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00e676', boxShadow: '0 0 10px #00e676' }}></div>
-                            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Neural Selection</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Neural Selection</span>
                         </div>
                     </div>
                     <button className="close-cart-btn" onClick={() => setShowCartSummary(false)}>×</button>
@@ -32,7 +32,7 @@ const CartOverlay = ({
 
                 <div className="cart-summary-items custom-scrollbar">
                     {currentCart.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)' }}>
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>
                             <ChefHat size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
                             <p>Your cart is empty</p>
                         </div>
@@ -43,8 +43,8 @@ const CartOverlay = ({
                                     {item.image_url ? (
                                         <img src={getMediaUrl(item.image_url)} alt={item.name} />
                                     ) : (
-                                        <div className="cart-item-placeholder" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)' }}>
-                                            <ChefHat size={24} color="rgba(255,255,255,0.2)" />
+                                        <div className="cart-item-placeholder" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)' }}>
+                                            <ChefHat size={24} color="var(--text-dim)" />
                                         </div>
                                     )}
                                 </div>
@@ -66,16 +66,16 @@ const CartOverlay = ({
                 </div>
 
                 <div className="cart-summary-footer" style={{ gap: '12px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border-default)', paddingBottom: '12px', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
                             <span>Subtotal</span>
                             <span>₹{subtotal.toFixed(2)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
                             <span>CGST ({restaurantData?.cgst || 0}%)</span>
                             <span>₹{cgst.toFixed(2)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
                             <span>SGST ({restaurantData?.sgst || 0}%)</span>
                             <span>₹{sgst.toFixed(2)}</span>
                         </div>

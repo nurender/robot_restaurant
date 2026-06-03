@@ -4,27 +4,54 @@
 */
 
 /* ── local aliases so existing selectors don't break ── */
-:root,
-[data-theme="light"],
-[data-theme="dark"] {
-  --ap-sidebar-bg: var(--sidebar-bg);
-  --ap-sidebar-hover: var(--sidebar-hover);
-  --ap-header-bg: var(--header-bg);
-  --ap-main-bg: var(--bg-deep);
-  --ap-accent-color: var(--accent-primary);
-  --ap-accent-glow: var(--accent-glow);
-  --ap-success: var(--success);
-  --ap-text-main: var(--text-main);
-  --ap-text-dim: var(--text-dim);
-  --ap-text-muted: var(--text-muted);
-  --ap-glass-bg: var(--bg-glass);
-  --ap-glass-border: var(--glass-border);
+:root, [data-theme="dark"] {
+  /* AI RESTO Premium SaaS Dark Mode Overrides */
+  --ap-sidebar-bg: #09090b; 
+  --ap-sidebar-hover: rgba(124, 58, 237, 0.15);
+  --ap-header-bg: rgba(9, 9, 11, 0.8);
+  --ap-main-bg: #050508;
+  --ap-accent-color: #8b5cf6; 
+  --ap-accent-glow: rgba(139, 92, 246, 0.5);
+  --ap-success: #10b981; 
+  --ap-text-main: #ffffff;
+  --ap-text-dim: #a1a1aa; 
+  --ap-text-muted: #71717a; 
+  --ap-glass-bg: rgba(24, 24, 27, 0.6); 
+  --ap-glass-border: rgba(255, 255, 255, 0.08);
+  --ap-card-bg: rgba(24, 24, 27, 0.4);
 
-  /* legacy aliases for variables that changed names */
-  --accent-color: var(--accent-primary);
-  --glass-bg: var(--bg-glass);
-  --glass-border: var(--glass-border);
-  --premium-shadow: var(--shadow-premium);
+  --accent-color: #8b5cf6;
+  --glass-bg: rgba(24, 24, 27, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --premium-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  
+  --card-bg: #09090b;
+  --card-border: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] {
+  /* AI RESTO Premium SaaS Light Mode Overrides */
+  --ap-sidebar-bg: #ffffff; 
+  --ap-sidebar-hover: rgba(124, 58, 237, 0.08);
+  --ap-header-bg: rgba(255, 255, 255, 0.8);
+  --ap-main-bg: #f8fafc;
+  --ap-accent-color: #7c3aed; 
+  --ap-accent-glow: rgba(124, 58, 237, 0.4);
+  --ap-success: #059669; 
+  --ap-text-main: #0f172a;
+  --ap-text-dim: #475569; 
+  --ap-text-muted: #64748b; 
+  --ap-glass-bg: rgba(255, 255, 255, 0.6); 
+  --ap-glass-border: rgba(15, 23, 42, 0.08);
+  --ap-card-bg: rgba(255, 255, 255, 0.9);
+
+  --accent-color: #7c3aed;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --premium-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
+  
+  --card-bg: #ffffff;
+  --card-border: rgba(15, 23, 42, 0.08);
 }
 
 * {
@@ -37,12 +64,11 @@
   display: flex !important;
   position: fixed;
   inset: 0;
-  background: var(--bg-deep) !important;
-  color: var(--text-main) !important;
-  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  background: var(--ap-main-bg) !important;
+  color: var(--ap-text-main) !important;
+  font-family: 'Satoshi', 'General Sans', system-ui, sans-serif;
   overflow: hidden;
   z-index: 9999;
-  transition: background 0.25s ease, color 0.25s ease;
 }
 
 /* --- SIDEBAR --- */
@@ -413,8 +439,10 @@
 .view-header-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 44px;
+  align-items: center; /* Adjusted from flex-start to center for better SaaS balance */
+  margin-bottom: 32px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .view-title {
@@ -799,7 +827,7 @@
 }
 
 .btn-cancel {
-  background: #f1f5f9;
+  background: var(--ap-sidebar-hover);
   color: var(--text-muted);
   border: none;
   padding: 14px 28px;
@@ -900,7 +928,7 @@
   width: 60px;
   height: 60px;
   border-radius: 20px;
-  background: #f1f5f9;
+  background: var(--ap-sidebar-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -981,7 +1009,7 @@
 }
 
 .inv-btn-status.inactive {
-  background: #f1f5f9;
+  background: var(--ap-sidebar-hover);
   color: #94a3b8;
 }
 
@@ -1264,7 +1292,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #64748b !important;
+  color: var(--ap-text-dim) !important;
   font-size: 13px;
   font-weight: 700;
 }
@@ -1294,7 +1322,7 @@
   flex-direction: column;
   gap: 12px;
   flex: 1;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--ap-glass-border);
 }
 
 .p-item-row {
@@ -1302,8 +1330,8 @@
   align-items: center;
   gap: 14px;
   position: relative;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--ap-glass-bg);
+  border: 1px solid var(--ap-glass-border);
   border-radius: 16px;
   padding: 12px 14px;
 }
@@ -1336,7 +1364,7 @@
 
 .p-item-desc {
   font-size: 11px;
-  color: #64748b !important;
+  color: var(--ap-text-dim) !important;
   font-weight: 600;
   opacity: 1;
 }
@@ -1366,7 +1394,7 @@
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  color: #64748b !important;
+  color: var(--ap-text-dim) !important;
   letter-spacing: 1px;
 }
 
@@ -1422,9 +1450,9 @@
 }
 
 .btn-action-icon {
-  background: #ffffff;
-  color: #64748b !important;
-  border: 1px solid #d1d9e5;
+  background: var(--ap-glass-bg);
+  color: var(--ap-text-dim) !important;
+  border: 1px solid var(--ap-glass-border);
   width: 48px;
   height: 48px;
   border-radius: 16px;
@@ -1485,19 +1513,15 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-color), #4f46e5);
-  color: white;
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
+  color: var(--ap-text-main) !important;
   border: none;
-  padding: 14px 34px;
-  border-radius: 20px;
-  font-weight: 900;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 12px 24px;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
+  transition: all 0.3s ease;
   cursor: pointer;
-  box-shadow: 0 10px 25px var(--accent-glow);
-  transition: 0.4s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
 }
 
 .btn-primary:hover {
@@ -2028,7 +2052,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: #f1f5f9;
+  background: var(--ap-sidebar-hover);
   color: #64748b;
   padding: 4px 10px;
   border-radius: 8px;
@@ -2318,4 +2342,314 @@ textarea {
 .modern-form input:focus {
   border-color: var(--accent-primary) !important;
   background: var(--bg-primary) !important;
+}
+/* =========================================
+   AI RESTO OS FUTURISTIC SAAS OVERRIDES
+   ========================================= */
+
+/* GLOBAL SAAS FONT AND BACKGROUND */
+.admin-layout, .admin-sidebar, .main-header, .view-container {
+  background: var(--ap-main-bg) !important;
+  font-family: 'Satoshi', 'General Sans', sans-serif !important;
+}
+
+/* SIDEBAR RE-STYLING */
+.admin-sidebar {
+  background: var(--ap-sidebar-bg) !important;
+  border-right: 1px solid var(--ap-glass-border) !important;
+  backdrop-filter: blur(20px);
+}
+.sidebar-logo {
+  font-family: 'Satoshi', sans-serif !important;
+  background: linear-gradient(135deg, var(--ap-text-main), var(--ap-accent-color)) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+.nav-item {
+  border-radius: 12px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.nav-item:hover {
+  transform: translateX(4px);
+  background: var(--ap-glass-bg) !important;
+}
+.nav-item.active {
+  background: rgba(139, 92, 246, 0.1) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  color: var(--ap-accent-color) !important;
+}
+.nav-item.active::before {
+  content: ''; position: absolute; left: 0; top: 15%; height: 70%; width: 3px;
+  background: #8b5cf6; border-radius: 0 4px 4px 0; box-shadow: 0 0 10px #8b5cf6;
+}
+
+/* TOP NAVBAR RE-STYLING */
+.main-header {
+  background: var(--ap-header-bg) !important;
+  backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid var(--ap-glass-border) !important;
+}
+.header-search {
+  background: var(--ap-glass-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  border-radius: 16px !important;
+  transition: all 0.3s ease !important;
+}
+.header-search:focus-within {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15) !important;
+}
+
+/* DASHBOARD CARDS (STAT CARDS) */
+.stat-card-modern {
+  background: var(--ap-glass-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  border-radius: 20px !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  backdrop-filter: blur(10px);
+}
+.stat-card-modern:hover {
+  transform: translateY(-5px);
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.15) !important;
+}
+
+/* ORDER TRACKING CARDS */
+.order-card, .kitchen-order-card {
+  background: var(--ap-card-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  border-radius: 24px !important;
+  transition: all 0.4s ease !important;
+}
+.order-card:hover, .kitchen-order-card:hover {
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* MENU INTELLIGENCE CARDS */
+.inventory-card, .dish-card-premium {
+  background: var(--ap-glass-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.inventory-card:hover, .dish-card-premium:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(139, 92, 246, 0.15) !important;
+}
+
+/* FILTER BARS & TABS */
+.filter-section, .view-header-row {
+  background: transparent !important;
+  border: none !important;
+}
+select, input.glass-input {
+  background: var(--ap-glass-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  color: var(--ap-text-main) !important;
+  border-radius: 12px !important;
+}
+select:focus, input.glass-input:focus {
+  border-color: #8b5cf6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
+}
+
+/* CUSTOM SCROLLBAR FOR PREMIUM FEEL */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* =========================================
+   SaaS Filter Bar Overrides 
+   ========================================= */
+.orders-filter-bar {
+  background: var(--ap-card-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 100px !important; /* Fully rounded pill shape */
+  padding: 10px 14px 10px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 24px !important;
+}
+
+/* Specific styling for the inputs inside the filter bar to make them blend in */
+.orders-filter-bar .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.orders-filter-bar .filter-group label {
+  font-size: 9px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-text-muted);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.orders-filter-bar input, .orders-filter-bar select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--ap-text-main) !important;
+  width: 120px !important;
+  border-radius: 0 !important;
+}
+.orders-filter-bar input:focus, .orders-filter-bar select:focus {
+  outline: none !important;
+  border-bottom: 1px solid var(--ap-accent-color) !important;
+  box-shadow: none !important;
+}
+
+/* Adjust the Matches badge */
+.orders-filter-bar .matches-badge {
+  background: var(--ap-sidebar-hover) !important;
+  color: var(--ap-accent-color) !important;
+  padding: 6px 12px !important;
+  border-radius: 20px !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  border: 1px solid var(--ap-glass-border) !important;
+}
+
+/* Make sure the New Order button looks integrated */
+.orders-filter-bar .btn-primary {
+  padding: 10px 20px !important;
+  border-radius: 40px !important;
+  font-size: 13px !important;
+  margin-left: 10px !important;
+}
+
+/* =========================================
+   KANBAN AND FILTER BAR HOTFIX
+   ========================================= */
+
+/* Fix the Filter Bar internal alignment */
+.orders-filter-bar {
+  padding: 8px 12px 8px 24px !important;
+  gap: 20px !important;
+  align-items: center !important;
+}
+.filter-group {
+  display: flex !important;
+  flex-direction: row !important; /* Force inline */
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 12px !important;
+  background: var(--ap-sidebar-hover) !important;
+  border-radius: 20px !important;
+  border: 1px solid var(--ap-glass-border) !important;
+}
+.filter-group label {
+  font-size: 11px !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+}
+.orders-filter-bar input, .orders-filter-bar select {
+  width: auto !important;
+  min-width: 90px !important;
+  font-size: 13px !important;
+  border-bottom: none !important;
+  padding: 0 !important;
+}
+.orders-filter-bar input:focus, .orders-filter-bar select:focus {
+  border-bottom: none !important;
+}
+
+/* Fix Kanban Columns Header Design */
+.kanban-board {
+  gap: 20px !important;
+  padding-bottom: 20px !important;
+}
+.kanban-column {
+  background: var(--ap-glass-bg) !important;
+  border: 1px solid var(--ap-glass-border) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02) !important;
+}
+.column-header {
+  border-bottom: 1px solid var(--ap-glass-border) !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 16px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+.column-header h2 {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1px !important;
+  margin: 0 !important;
+}
+.column-header .count-badge {
+  background: var(--ap-sidebar-hover) !important;
+  color: var(--ap-accent-color) !important;
+  font-weight: 800 !important;
+  border-radius: 50% !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+}
+
+/* Fix Topbar Search box */
+.header-search {
+  border-radius: 40px !important;
+  padding: 12px 20px !important;
+  min-width: 350px !important;
+  background: var(--ap-glass-bg) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+}
+.header-search input {
+  font-size: 13px !important;
+}
+
+/* =========================================
+   CUSTOM SAAS DROPDOWN (SELECT) FIX
+   ========================================= */
+
+/* Hide default browser arrow and use custom sleek SVG Arrow */
+.orders-filter-bar select, .glass-input select, select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='gray' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 6px center !important;
+  background-size: 14px !important;
+  padding-right: 28px !important;
+  cursor: pointer !important;
+}
+
+/* Style the internal options list */
+select option {
+  background: var(--ap-bg-panel) !important;
+  color: var(--ap-text-main) !important;
+  padding: 12px !important;
+  font-size: 14px !important;
+  font-family: 'Satoshi', sans-serif !important;
 }

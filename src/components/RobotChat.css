@@ -1148,8 +1148,8 @@
 
 .btn-secondary {
   padding: 14px;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--bg-secondary);
+  color: var(--text-main);
   border: none;
   border-radius: 30px;
   font-weight: 700;
