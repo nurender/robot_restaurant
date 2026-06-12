@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, X, Clock, ChefHat, Store, ListTodo } from 'lucide-react';
+import { CheckCircle, X, Clock, ChefHat, Store, ListTodo, Mic } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -40,6 +40,76 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [orderTracking, setOrderTracking] = useState(null);
   const [mockOtpToast, setMockOtpToast] = useState(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
+
+  const [isListening, setIsListening] = useState(false);
+  const [voiceInputString, setVoiceInputString] = useState('');
+
+  const parseVoiceCommand = (transcript) => {
+    const raw = String(transcript).toLowerCase();
+    const words = raw.split(' ');
+    const isRemove = raw.includes('remove') || raw.includes('delete') || raw.includes('cancel') || raw.includes('drop');
+    
+    let multiplierStr = words.find(w => !isNaN(parseInt(w)) && parseInt(w) > 0);
+    let multiplier = multiplierStr ? parseInt(multiplierStr) : 1;
+    if (raw.includes('two') || raw.includes('couple')) multiplier = 2;
+    if (raw.includes('three')) multiplier = 3;
+    if (raw.includes('four')) multiplier = 4;
+    
+    let matchedItem = null;
+    let matchedVariant = null;
+
+    const allItems = menuCategories.flatMap(c => c.items);
+    for (let item of allItems) {
+      if (raw.includes(item.name.toLowerCase())) {
+        matchedItem = item;
+        break;
+      }
+    }
+
+    if (matchedItem) {
+      const opts = matchedItem.options || [];
+      const decodedOpts = typeof opts === 'string' ? JSON.parse(opts) : opts;
+      if (decodedOpts.length > 0) {
+        matchedVariant = decodedOpts.find(o => raw.includes(o.size.toLowerCase())) || decodedOpts[0];
+      }
+      
+      const delta = isRemove ? -multiplier : multiplier;
+      handleManualCartUpdate(matchedItem, delta, matchedVariant, []);
+      
+      setVoiceInputString(`Recognized: ${delta > 0 ? '+' : ''}${delta} ${matchedItem.name} ${matchedVariant ? '('+matchedVariant.size+')' : ''}`);
+      setTimeout(() => setVoiceInputString(''), 4000);
+    } else {
+      setVoiceInputString(`Didn't catch that. Say e.g. "Add 2 Premium Thali"`);
+      setTimeout(() => setVoiceInputString(''), 4000);
+    }
+  };
+
+  const handleMicClick = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice ordering is not supported in this browser. Please use Chrome.");
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = false;
+    
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceInputString(`You said: "${transcript}"`);
+      parseVoiceCommand(transcript);
+    };
+    recognition.onerror = (e) => {
+      setIsListening(false);
+      setVoiceInputString("Microphone error.");
+      setTimeout(() => setVoiceInputString(''), 2000);
+    };
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.start();
+  };
 
   const getMediaUrl = (url) => {
     if (!url) return '';
@@ -172,15 +242,24 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   };
   const getCartCount = () => currentCart.reduce((acc, item) => acc + item.qty, 0);
 
-  const handleManualCartUpdate = (item, delta) => {
+  const handleManualCartUpdate = (item, delta, variant = null, addons = []) => {
     setCurrentCart(prev => {
-      const existing = prev.find(i => String(i.id) === String(item.id));
+      // Sort addons conceptually by name to ensure consistent cart ID matching
+      const sortedAddons = [...addons].sort((a,b) => a.name.localeCompare(b.name));
+      const addonsStr = sortedAddons.length > 0 ? `+${sortedAddons.map(a => a.name).join('+')}` : '';
+      const cartItemId = variant ? `${item.id}-${variant.size}${addonsStr}` : `${item.id}${addonsStr}`;
+      
+      const existing = prev.find(i => (i.cartId || String(i.id)) === cartItemId);
       if (existing) {
         const newQty = existing.qty + delta;
-        if (newQty <= 0) return prev.filter(i => String(i.id) !== String(item.id));
-        return prev.map(i => String(i.id) === String(item.id) ? { ...existing, qty: newQty } : i);
+        if (newQty <= 0) return prev.filter(i => (i.cartId || String(i.id)) !== cartItemId);
+        return prev.map(i => (i.cartId || String(i.id)) === cartItemId ? { ...existing, qty: newQty } : i);
       }
-      if (delta > 0) return [...prev, { ...item, qty: delta }];
+      if (delta > 0) {
+          const addonsPrice = sortedAddons.reduce((acc, a) => acc + Number(a.price || 0), 0);
+          const basePrice = Number(variant ? variant.price : item.price);
+          return [...prev, { ...item, cartId: cartItemId, qty: delta, selectedVariant: variant, selectedAddons: sortedAddons, price: basePrice + addonsPrice }];
+      }
       return prev;
     });
   };
@@ -199,18 +278,30 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     );
   };
 
-  const getItemQty = (itemOrId) => {
+  const getItemQty = (itemOrId, variant = null, addons = []) => {
     const menuItem = typeof itemOrId === 'object' ? itemOrId : null;
     const targetId = menuItem?.id ?? itemOrId;
-    const targetName = normalizeName(menuItem?.name || '');
+    
+    if (variant || addons.length > 0) {
+      const sortedAddons = [...addons].sort((a,b) => a.name.localeCompare(b.name));
+      const addonsStr = sortedAddons.length > 0 ? `+${sortedAddons.map(a => a.name).join('+')}` : '';
+      const cartItemId = variant ? `${targetId}-${variant.size}${addonsStr}` : `${targetId}${addonsStr}`;
+      
+      const match = currentCart.find(c => c.cartId === cartItemId);
+      return Number(match?.qty || 0);
+    }
 
-    const match = currentCart.find((cartItem) => {
+    const targetName = normalizeName(menuItem?.name || '');
+    let totalQty = 0;
+    currentCart.forEach((cartItem) => {
       const sameId = targetId !== undefined && targetId !== null && String(cartItem.id) === String(targetId);
       const sameName = targetName && normalizeName(cartItem.name) === targetName;
-      return sameId || sameName;
+      if (sameId || sameName) {
+        totalQty += Number(cartItem.qty || 0);
+      }
     });
 
-    return Number(match?.qty || 0);
+    return totalQty;
   };
 
   const completeOrderProcess = async (e) => {
@@ -471,6 +562,26 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         )}
 
 
+        <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {voiceInputString && (
+              <div className="animate-fade-in" style={{ background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0, maxWidth: '280px', wordBreak: 'break-word', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                {voiceInputString}
+              </div>
+            )}
+            <button 
+              onClick={handleMicClick}
+              className={`scale-hover ${isListening ? 'pulse' : ''}`}
+              style={{
+                width: '64px', height: '64px', borderRadius: '32px', border: 'none',
+                background: isListening ? '#f59e0b' : 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                color: 'white', boxShadow: isListening ? '0 0 20px rgba(245, 158, 11, 0.6)' : '0 10px 20px rgba(124, 58, 237, 0.4)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s'
+              }}
+            >
+               <Mic size={28} />
+            </button>
+        </div>
+
         {/* {isAiProcessing && (
           <div className="ai-typing-indicator slide-up">
             <div className="typing-dot"></div>
@@ -705,7 +816,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     <div className="items-list-tiny">
                       {order.items.map((item, i) => (
                         <div key={i} className="tiny-item-row">
-                          <span className="item-name-qty">{item.qty}x {item.name}</span>
+                          <span className="item-name-qty">{item.qty}x {item.name} {item.selectedVariant && <span style={{ opacity: 0.8, fontSize: '0.8em', color: '#f1c40f' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '0.75em' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                           <span className="item-price-sum">₹{item.price * item.qty}</span>
                         </div>
                       ))}

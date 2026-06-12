@@ -129,15 +129,30 @@ class OrderService {
                 for (const item of items) {
                     const itemName = (item.name || '').toLowerCase();
                     const qty = Number(item.qty || item.quantity || 1);
+                    
+                    let variantMultiplier = 1;
+                    if (item.selectedVariant) {
+                        const sizeStr = String(item.selectedVariant.size).toLowerCase();
+                        if (sizeStr === '30ml') variantMultiplier = 0.03; // converting ml to standard Liters unit
+                        else if (sizeStr === '60ml') variantMultiplier = 0.06;
+                        else if (sizeStr === '90ml') variantMultiplier = 0.09;
+                        else if (sizeStr.includes('pint')) variantMultiplier = 0.33;
+                        else if (sizeStr.includes('half')) variantMultiplier = 0.5;
+                        else if (sizeStr.includes('bottle')) variantMultiplier = 0.75;
+                        else if (sizeStr.includes('bucket')) variantMultiplier = 3.0; // 6 pints roughly
+                    }
 
                     if (itemName.includes('burger')) {
-                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%bun%' OR LOWER(name) LIKE '%patty%'", [qty]);
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%bun%' OR LOWER(name) LIKE '%patty%'", [qty * variantMultiplier]);
                     } else if (itemName.includes('tea') || itemName.includes('chai')) {
-                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%milk%' OR LOWER(name) LIKE '%sugar%'", [qty * 0.1]);
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%milk%' OR LOWER(name) LIKE '%sugar%'", [(qty * 0.1) * variantMultiplier]);
                     } else if (itemName.includes('paneer')) {
-                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%paneer%'", [qty * 0.2]);
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%paneer%'", [(qty * 0.2) * variantMultiplier]);
                     } else if (itemName.includes('rice')) {
-                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%rice%'", [qty * 0.15]);
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%rice%'", [(qty * 0.15) * variantMultiplier]);
+                    } else if (itemName.includes('whiskey') || itemName.includes('beer') || itemName.includes('vodka') || itemName.includes('rum') || itemName.includes('wine')) {
+                        const baseType = itemName.split(' ')[0]; // E.g. 'Kingfisher' or 'Whiskey'
+                        await pool.query("UPDATE inventory SET qty = GREATEST(0, qty - $1) WHERE LOWER(name) LIKE '%' || $2 || '%'", [qty * variantMultiplier, baseType]);
                     }
                 }
             }

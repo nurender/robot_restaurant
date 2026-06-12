@@ -37,7 +37,8 @@ import {
   Star,
   Send,
   RefreshCw,
-  X
+  X,
+  Bell
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -130,6 +131,8 @@ const AdminPanel = () => {
   };
 
   // UI States
+  const [extractedReviewData, setExtractedReviewData] = useState(null);
+  
   const [showMenuPopup, setShowMenuPopup] = useState(false);
   const [editingDishId, setEditingDishId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -145,6 +148,7 @@ const AdminPanel = () => {
     veg_type: 'veg',
     prep_time: '',
     is_featured: false,
+    options: [],
     variants: [],
     addons: []
   });
@@ -159,6 +163,7 @@ const AdminPanel = () => {
   const [showNodePopup, setShowNodePopup] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [nodeActiveTab, setNodeActiveTab] = useState('basic');
+  const [kitchenItemChecked, setKitchenItemChecked] = useState({});
   const [newStaff, setNewStaff] = useState({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
   const [newNode, setNewNode] = useState({
     name: '', branch_code: '', brand_name: '', description: '', branch_type: 'dine_in',
@@ -232,6 +237,7 @@ const AdminPanel = () => {
     is_active: true
   });
   const [editingCouponId, setEditingCouponId] = useState(null);
+  const [activeWaiterCalls, setActiveWaiterCalls] = useState([]);
 
   const [analyticsData, setAnalyticsData] = useState({
     revenueHistory: [],
@@ -423,6 +429,18 @@ const AdminPanel = () => {
       .catch(e => console.error(e));
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
+    socket.on('waiter_alert', (data) => {
+      const isMyRest = String(data.restaurant_id) === String(adminUser?.restaurant_id || 4);
+      const isSuper = adminUser?.role === 'super_admin';
+      
+      if (isMyRest || isSuper) {
+        setActiveWaiterCalls(prev => {
+          const exists = prev.find(c => String(c.table_number) === String(data.table_number));
+          if (exists) return prev;
+          return [...prev, data];
+        });
+      }
+    });
     socket.on('new_order', (order) => {
       console.log("📥 Admin Socket: new_order received", order);
       const isMyRest = String(order.restaurant_id) === String(adminUser.restaurant_id);
@@ -567,7 +585,7 @@ const AdminPanel = () => {
 
       const itemsHtml = (order.items || []).map(item => `
         <tr>
-          <td style="padding: 5px; font-size: 14px;">${item.name}</td>
+          <td style="padding: 5px; font-size: 14px;">${item.name} ${item.selectedVariant ? '(' + item.selectedVariant.size + ')' : ''} ${item.selectedAddons && item.selectedAddons.length > 0 ? '[+' + item.selectedAddons.map(a => a.name).join(', ') + ']' : ''}</td>
           <td style="padding: 5px; font-size: 14px; text-align: center;">${item.qty || 1}</td>
           <td style="padding: 5px; font-size: 14px; text-align: right;">₹${item.price * (item.qty || 1)}</td>
         </tr>
@@ -988,6 +1006,29 @@ const AdminPanel = () => {
             <input type="text" placeholder="Neural Search Engine..." />
           </div>
           <div className="header-profile-premium">
+            <div style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => {
+              if (activeWaiterCalls.length > 0) setActiveWaiterCalls([]); // temp clear all
+            }}>
+              <Bell size={22} color={activeWaiterCalls.length > 0 ? '#ef4444' : 'var(--text-muted)'} className={activeWaiterCalls.length > 0 ? 'pulse' : ''} />
+              {activeWaiterCalls.length > 0 && (
+                <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 6px', borderRadius: '10px', border: '2px solid var(--bg-deep)' }}>
+                  {activeWaiterCalls.length}
+                </span>
+              )}
+              {activeWaiterCalls.length > 0 && (
+                <div className="animate-fade-in" style={{ position: 'absolute', top: '35px', right: '-10px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '12px', width: '220px', boxShadow: 'rgba(0, 0, 0, 0.4) 0px 10px 20px', zIndex: 100 }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-muted)' }}>SERVICE ALERTS</div>
+                  {activeWaiterCalls.map((c, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>Table {c.table_number}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{new Date(c.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: '11px', textAlign: 'center', marginTop: '8px', color: '#ef4444' }}>Click bell to dismiss all</div>
+                </div>
+              )}
+            </div>
+            
             <ThemeToggle />
             <div className="profile-details-group">
               <span className="profile-name">{adminUser.name}</span>
@@ -1290,7 +1331,7 @@ const AdminPanel = () => {
                               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
-                                  <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name}</span>
+                                  <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name} {item.selectedVariant && <span style={{ opacity: 0.7, fontSize: '11px', color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '10px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                                 </div>
                                 <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
                               </div>
@@ -1441,7 +1482,7 @@ const AdminPanel = () => {
                     <span>Manage Categories</span>
                   </button>
                   <button className="btn-primary" onClick={() => {
-                    setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true });
+                    setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true, options: [] });
                     setEditingDishId(null);
                     setFormError('');
                     setShowMenuPopup(true);
@@ -1505,7 +1546,7 @@ const AdminPanel = () => {
                     <div key={catName} className="category-group-block" style={{ width: '100%' }}>
                       <h2
                         className="text-xl font-bold mb-4 flex items-center justify-between text-white"
-                        style={{ paddingLeft: '12px', borderLeft: '4px solid var(--accent-primary)', cursor: 'pointer', userSelect: 'none' }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '12px', borderLeft: '4px solid var(--accent-primary)', cursor: 'pointer', userSelect: 'none' }}
                         onClick={() => {
                           setCollapsedCats(prev => {
                             const next = new Set(prev);
@@ -1571,8 +1612,8 @@ const AdminPanel = () => {
                                   setFormError('');
                                   setShowMenuPopup(true);
                                 }}><Edit2 size={16} /></button>
-                                <button onClick={() => deleteDish(item.id)} className="btn-icon text-error hover:bg-error/10" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
-                                  {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                                <button onClick={() => deleteDish(item.id)} className="inv-btn-delete" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
+                                  {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'currentColor' }} /> : <Trash2 size={16} />}
                                 </button>
                               </div>
                             </div>
@@ -1666,8 +1707,8 @@ const AdminPanel = () => {
                                   setFormError('');
                                   setShowMenuPopup(true);
                                 }}><Edit2 size={16} /></button>
-                                <button onClick={() => deleteDish(item.id)} className="btn-icon text-error hover:bg-error/10" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
-                                  {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                                <button onClick={() => deleteDish(item.id)} className="inv-btn-delete" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
+                                  {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'currentColor' }} /> : <Trash2 size={16} />}
                                 </button>
                               </div>
                             </div>
@@ -2174,16 +2215,19 @@ const AdminPanel = () => {
                     </div>
 
                     <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-                      {(order.items || []).map((item, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
+                      {(order.items || []).map((item, i) => {
+                        const isChecked = kitchenItemChecked[`${order.id}-${i}`];
+                        return (
+                        <div key={i} onClick={() => { setKitchenItemChecked(prev => ({...prev, [`${order.id}-${i}`]: !prev[`${order.id}-${i}`]})) }} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s', opacity: isChecked ? 0.4 : 1, textDecoration: isChecked ? 'line-through' : 'none', background: isChecked ? 'rgba(0,255,100,0.02)' : 'transparent', borderRadius: '8px', margin: '2px 0', padding: '10px' }}>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ width: '32px', height: '32px', background: 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'var(--accent-primary)', fontSize: '14px' }}>
-                              {item.qty || item.quantity}x
+                            <div style={{ width: '32px', height: '32px', background: isChecked ? 'rgba(255,255,255,0.05)' : 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: isChecked ? 'var(--text-muted)' : 'var(--accent-primary)', fontSize: '14px' }}>
+                              {isChecked ? <Check size={16} /> : `${item.qty || item.quantity}x`}
                             </div>
-                            <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name}</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name} {item.selectedVariant && <span style={{ fontSize: '13px', opacity: 0.8, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ fontSize: '12px', opacity: 0.6 }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
@@ -3514,6 +3558,121 @@ const AdminPanel = () => {
                 <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer' }}>⭐ Mark as Bestseller</label>
               </div>
             </div>
+            {/* Sizes & Variants */}
+            <div style={{ marginTop: '32px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>Size Variants & Dynamic Pricing</label>
+                <button
+                  type="button"
+                  onClick={() => setNewDish({ ...newDish, options: [...(newDish.options || []), { size: '', price: '' }] })}
+                  style={{ padding: '6px 12px', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', borderRadius: '10px', fontSize: '12px', fontWeight: '700', border: '1px solid rgba(124, 58, 237, 0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={14} /> Add Variant Size
+                </button>
+              </div>
+              
+              {(!newDish.options || newDish.options.length === 0) ? (
+                 <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No variants active. Standard item price will be used.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                   {newDish.options.map((opt, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                         <input 
+                           type="text" 
+                           placeholder="e.g. 30ml, Glass, Half"
+                           value={opt.size} 
+                           onChange={(e) => {
+                             const newOpts = [...newDish.options];
+                             newOpts[idx].size = e.target.value;
+                             setNewDish({ ...newDish, options: newOpts });
+                           }} 
+                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                         />
+                         <input 
+                           type="number" 
+                           placeholder="Price (₹)"
+                           value={opt.price} 
+                           onChange={(e) => {
+                             const newOpts = [...newDish.options];
+                             newOpts[idx].price = e.target.value;
+                             setNewDish({ ...newDish, options: newOpts });
+                           }} 
+                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                         />
+                         <button 
+                           type="button" 
+                           onClick={() => {
+                             const newOpts = [...newDish.options];
+                             newOpts.splice(idx, 1);
+                             setNewDish({ ...newDish, options: newOpts });
+                           }}
+                           style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', width: '44px', height: '44px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                         >
+                            <Trash2 size={16} />
+                         </button>
+                      </div>
+                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* Add-ons & Mixers */}
+            <div style={{ marginTop: '24px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>Modifiers, Mixers & Add-ons</label>
+                <button
+                  type="button"
+                  onClick={() => setNewDish({ ...newDish, addons: [...(newDish.addons || []), { name: '', price: '' }] })}
+                  style={{ padding: '6px 12px', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', borderRadius: '10px', fontSize: '12px', fontWeight: '700', border: '1px solid rgba(124, 58, 237, 0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={14} /> Add Modifier
+                </button>
+              </div>
+              
+              {(!newDish.addons || newDish.addons.length === 0) ? (
+                 <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No add-ons active for this item.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                   {newDish.addons.map((addon, idx) => (
+                      <div key={'addon-'+idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                         <input 
+                           type="text" 
+                           placeholder="e.g. Soda, Extra Cheese, Peanuts"
+                           value={addon.name} 
+                           onChange={(e) => {
+                             const newAddons = [...newDish.addons];
+                             newAddons[idx].name = e.target.value;
+                             setNewDish({ ...newDish, addons: newAddons });
+                           }} 
+                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                         />
+                         <input 
+                           type="number" 
+                           placeholder="Price (+₹)"
+                           value={addon.price} 
+                           onChange={(e) => {
+                             const newAddons = [...newDish.addons];
+                             newAddons[idx].price = e.target.value;
+                             setNewDish({ ...newDish, addons: newAddons });
+                           }} 
+                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                         />
+                         <button 
+                           type="button" 
+                           onClick={() => {
+                             const newAddons = [...newDish.addons];
+                             newAddons.splice(idx, 1);
+                             setNewDish({ ...newDish, addons: newAddons });
+                           }}
+                           style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', width: '44px', height: '44px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                         >
+                            <Trash2 size={16} />
+                         </button>
+                      </div>
+                   ))}
+                </div>
+              )}
+            </div>
 
             {/* Toggle Switches */}
             <div style={{ display: 'flex', gap: '32px', marginTop: '24px', background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
@@ -4508,7 +4667,7 @@ const AdminPanel = () => {
                 {manualOrderData.items.map(item => (
                   <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-deep)', padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '700', fontSize: '14px' }}>{item.name}</div>
+                      <div style={{ fontWeight: '700', fontSize: '14px' }}>{item.name} {item.selectedVariant && <span style={{ opacity: 0.7, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '12px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</div>
                       <div style={{ fontSize: '12px', color: 'var(--accent-primary)' }}>₹{item.price}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-primary)', padding: '4px 12px', borderRadius: '10px' }}>

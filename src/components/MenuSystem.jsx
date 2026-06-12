@@ -21,6 +21,21 @@ const MenuSystem = ({
 }) => {
     const categoryScrollRef = useRef(null);
     const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'nonveg'
+    const [selectedVariants, setSelectedVariants] = useState({}); // { itemId: variantSize }
+    const [selectedAddonsMap, setSelectedAddonsMap] = useState({}); // { itemId: [addonObj] }
+
+    const handleVariantChange = (itemId, size) => {
+        setSelectedVariants(prev => ({ ...prev, [itemId]: size }));
+    };
+
+    const toggleAddon = (itemId, addon) => {
+        setSelectedAddonsMap(prev => {
+            const current = prev[itemId] || [];
+            const exists = current.find(a => a.name === addon.name);
+            if (exists) return { ...prev, [itemId]: current.filter(a => a.name !== addon.name) };
+            return { ...prev, [itemId]: [...current, addon] };
+        });
+    };
 
     const handleCategoryWheel = (e) => {
         const scroller = categoryScrollRef.current;
@@ -150,62 +165,132 @@ const MenuSystem = ({
                                 {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                             </div>
 
-                            {isExpanded && (
-                                <div className="category-items animate-fade-in">
-                                    {matchingItems.map((item) => {
-                                        const qty = getItemQty(item);
-                                        const isUnavailable = item.is_active === false;
-                                        return (
-                                            <div key={item.id} className={`premium-menu-item animate-slide-up ${isUnavailable ? 'unavailable' : ''}`}>
-                                                <div className="item-media">
-                                                    {item.image_url ? (
-                                                        <img
-                                                            src={getMediaUrl(item.image_url)}
-                                                            alt={item.name}
-                                                            className="item-thumb"
-                                                            onClick={() => setZoomedImage(getMediaUrl(item.image_url))}
-                                                        />
-                                                    ) : (
-                                                        <div className="item-thumb-placeholder"><ChefHat size={24} /></div>
-                                                    )}
-                                                    {isUnavailable && <div className="unavailable-overlay">SOLD OUT</div>}
-                                                    {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
-                                                </div>
+                                {isExpanded && (
+                                    <div className="category-items animate-fade-in">
+                                        {matchingItems.map((item) => {
+                                            // Handle Variants logic (mocking variants if the category matches drinks/liquors)
+                                            let itemOptions = item.options || [];
+                                            if (typeof itemOptions === 'string') {
+                                                try { itemOptions = JSON.parse(itemOptions); } catch(e) { itemOptions = []; }
+                                            }
+                                            let itemAddons = item.addons || [];
+                                            if (typeof itemAddons === 'string') {
+                                                try { itemAddons = JSON.parse(itemAddons); } catch(e) { itemAddons = []; }
+                                            }
+                                            
+                                            // Mock variants for 'Whiskey', 'Beer' etc. if options are empty
+                                            const catStr = category.category.toLowerCase();
+                                            if (itemOptions.length === 0 && (catStr.includes('whiskey') || catStr.includes('beer') || catStr.includes('drink') || catStr.includes('liquor'))) {
+                                                 itemOptions = catStr.includes('beer') ? 
+                                                     [ {size: 'Pint (330ml)', price: item.price || 150}, {size: 'Mug (500ml)', price: (item.price || 150) * 1.5}, {size: 'Bucket (6 Pints)', price: (item.price || 150) * 5} ] :
+                                                     [ {size: '30ml', price: item.price || 150}, {size: '60ml', price: (item.price || 150) * 2}, {size: 'Pauva (180ml)', price: (item.price || 150) * 5}, {size: 'Bottle (750ml)', price: (item.price || 150) * 18} ];
+                                            }
 
-                                                <div className="item-details">
-                                                    <div className="item-header">
-                                                        <h6 className="item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                                            {item.name}
-                                                            {item.spice_level > 0 && (
-                                                                <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '1px 4px', borderRadius: '4px', letterSpacing: '1px' }}>
-                                                                    {'🌶️'.repeat(Math.min(item.spice_level, 5))}
-                                                                </span>
-                                                            )}
-                                                        </h6>
-                                                        <span className="item-price">₹{item.price}</span>
-                                                    </div>
-                                                    <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
-                                                    <div className="item-actions-row">
-                                                        {isUnavailable ? (
-                                                            <button className="add-btn-disabled" disabled>Unavailable</button>
-                                                        ) : qty === 0 ? (
-                                                            <button className="add-btn-primary" onClick={() => handleManualCartUpdate(item, 1)}>
-                                                                <Plus size={14} /> ADD
-                                                            </button>
+                                            const hasVariants = itemOptions.length > 0;
+                                            const hasAddons = itemAddons.length > 0;
+                                            const selectedVariantSize = selectedVariants[item.id] || (hasVariants ? itemOptions[0].size : null);
+                                            const selectedVariant = hasVariants ? itemOptions.find(o => o.size === selectedVariantSize) : null;
+                                            const selectedAddons = selectedAddonsMap[item.id] || [];
+                                            
+                                            const basePrice = selectedVariant ? Number(selectedVariant.price) : Number(item.price);
+                                            const addonsPrice = selectedAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
+                                            const currentPrice = basePrice + addonsPrice;
+                                            const qty = getItemQty(item, selectedVariant, selectedAddons);
+                                            const isUnavailable = item.is_active === false;
+
+                                            return (
+                                                <div key={item.id} className={`premium-menu-item animate-slide-up ${isUnavailable ? 'unavailable' : ''}`}>
+                                                    <div className="item-media">
+                                                        {item.image_url ? (
+                                                            <img
+                                                                src={getMediaUrl(item.image_url)}
+                                                                alt={item.name}
+                                                                className="item-thumb"
+                                                                onClick={() => setZoomedImage(getMediaUrl(item.image_url))}
+                                                            />
                                                         ) : (
-                                                            <div className="qty-controls-premium">
-                                                                <button onClick={() => handleManualCartUpdate(item, -1)}><Minus size={14} /></button>
-                                                                <span className="qty-val">{qty}</span>
-                                                                <button onClick={() => handleManualCartUpdate(item, 1)}><Plus size={14} /></button>
+                                                            <div className="item-thumb-placeholder"><ChefHat size={24} /></div>
+                                                        )}
+                                                        {isUnavailable && <div className="unavailable-overlay">SOLD OUT</div>}
+                                                        {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
+                                                    </div>
+
+                                                    <div className="item-details">
+                                                        <div className="item-header">
+                                                            <h6 className="item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                                {item.name}
+                                                                {item.spice_level > 0 && (
+                                                                    <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '1px 4px', borderRadius: '4px', letterSpacing: '1px' }}>
+                                                                        {'🌶️'.repeat(Math.min(item.spice_level, 5))}
+                                                                    </span>
+                                                                )}
+                                                            </h6>
+                                                            <span className="item-price">₹{currentPrice}</span>
+                                                        </div>
+                                                        <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
+                                                        
+                                                        {hasVariants && (
+                                                            <div className="variants-selector" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '8px 0' }}>
+                                                                {itemOptions.map((opt, idx) => (
+                                                                    <button 
+                                                                        key={idx} 
+                                                                        onClick={() => handleVariantChange(item.id, opt.size)}
+                                                                        style={{
+                                                                            padding: '4px 8px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
+                                                                            border: selectedVariantSize === opt.size ? '1px solid #00e676' : '1px solid var(--border-default)', 
+                                                                            background: selectedVariantSize === opt.size ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                                            color: selectedVariantSize === opt.size ? '#00e676' : 'var(--text-secondary)'
+                                                                        }}
+                                                                    >
+                                                                        {opt.size}
+                                                                    </button>
+                                                                ))}
                                                             </div>
                                                         )}
+                                                        
+                                                        {hasAddons && (
+                                                            <div className="addons-selector" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '8px 0' }}>
+                                                                {itemAddons.map((addon, idx) => {
+                                                                    const isActive = selectedAddons.find(a => a.name === addon.name);
+                                                                    return (
+                                                                        <button 
+                                                                            key={'addon'+idx} 
+                                                                            onClick={() => toggleAddon(item.id, addon)}
+                                                                            style={{
+                                                                                padding: '4px 8px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
+                                                                                border: isActive ? '1px solid #f1c40f' : '1px solid var(--border-default)', 
+                                                                                background: isActive ? 'rgba(241, 196, 15, 0.1)' : 'transparent',
+                                                                                color: isActive ? '#f1c40f' : 'var(--text-secondary)'
+                                                                            }}
+                                                                        >
+                                                                            {addon.name} <span style={{opacity: 0.7}}>+₹{addon.price}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+
+                                                        <div className="item-actions-row">
+                                                            {isUnavailable ? (
+                                                                <button className="add-btn-disabled" disabled>Unavailable</button>
+                                                            ) : qty === 0 ? (
+                                                                <button className="add-btn-primary" onClick={() => handleManualCartUpdate(item, 1, selectedVariant, selectedAddons)}>
+                                                                    <Plus size={14} /> ADD
+                                                                </button>
+                                                            ) : (
+                                                                <div className="qty-controls-premium">
+                                                                    <button onClick={() => handleManualCartUpdate(item, -1, selectedVariant, selectedAddons)}><Minus size={14} /></button>
+                                                                    <span className="qty-val">{qty}</span>
+                                                                    <button onClick={() => handleManualCartUpdate(item, 1, selectedVariant, selectedAddons)}><Plus size={14} /></button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                            );
+                                        })}
+                                    </div>
+                                )}
                         </div>
                     );
                 }))}

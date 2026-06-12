@@ -37,8 +37,8 @@ const CartOverlay = ({
                             <p>Your cart is empty</p>
                         </div>
                     ) : (
-                        currentCart.map((item) => (
-                            <div key={item.id} className="cart-summary-item">
+                        currentCart.map((item, idx) => (
+                            <div key={item.cartId || `${item.id}-${idx}`} className="cart-summary-item">
                                 <div className="cart-item-photo" onClick={() => item.image_url && setZoomedImage(getMediaUrl(item.image_url))}>
                                     {item.image_url ? (
                                         <img src={getMediaUrl(item.image_url)} alt={item.name} />
@@ -49,14 +49,26 @@ const CartOverlay = ({
                                     )}
                                 </div>
                                 <div className="cart-item-info">
-                                    <span className="cart-item-name">{item.name}</span>
+                                    <span className="cart-item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        {item.name}
+                                        {item.selectedVariant && (
+                                            <span style={{ fontSize: '11px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-default)' }}>
+                                                {item.selectedVariant.size}
+                                            </span>
+                                        )}
+                                        {item.selectedAddons && item.selectedAddons.length > 0 && (
+                                            <span style={{ fontSize: '10px', color: '#f1c40f', background: 'rgba(241, 196, 15, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                + {item.selectedAddons.map(a => a.name).join(', ')}
+                                            </span>
+                                        )}
+                                    </span>
                                     <span className="cart-item-price">₹{item.price} per unit</span>
                                 </div>
                                 <div className="cart-item-actions">
                                     <div className="qty-controls-premium">
-                                        <button onClick={() => handleManualCartUpdate(item, -1)}><Minus size={14} /></button>
+                                        <button onClick={() => handleManualCartUpdate(item, -1, item.selectedVariant, item.selectedAddons)}><Minus size={14} /></button>
                                         <span className="qty-val">{item.qty}</span>
-                                        <button onClick={() => handleManualCartUpdate(item, 1)}><Plus size={14} /></button>
+                                        <button onClick={() => handleManualCartUpdate(item, 1, item.selectedVariant, item.selectedAddons)}><Plus size={14} /></button>
                                     </div>
                                     <span className="cart-item-subtotal">₹{item.price * item.qty}</span>
                                 </div>
