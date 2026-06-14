@@ -43,6 +43,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const [isListening, setIsListening] = useState(false);
   const [voiceInputString, setVoiceInputString] = useState('');
+  const [orderNote, setOrderNote] = useState('');
 
   const parseVoiceCommand = (transcript) => {
     const raw = String(transcript).toLowerCase();
@@ -257,8 +258,18 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       }
       if (delta > 0) {
           const addonsPrice = sortedAddons.reduce((acc, a) => acc + Number(a.price || 0), 0);
-          const basePrice = Number(variant ? variant.price : item.price);
-          return [...prev, { ...item, cartId: cartItemId, qty: delta, selectedVariant: variant, selectedAddons: sortedAddons, price: basePrice + addonsPrice }];
+          
+          let baseVariantPrice = Number(variant ? variant.price : item.price);
+          let discountedPrice = baseVariantPrice;
+          
+          if (item.discount_type === 'percent' && item.discount_value > 0) {
+              discountedPrice = baseVariantPrice - (baseVariantPrice * (item.discount_value / 100));
+          } else if (item.discount_type === 'flat' && item.discount_value > 0) {
+              discountedPrice = baseVariantPrice - item.discount_value;
+          }
+          if (discountedPrice < 0) discountedPrice = 0;
+
+          return [...prev, { ...item, cartId: cartItemId, qty: delta, selectedVariant: variant, selectedAddons: sortedAddons, price: Math.round(discountedPrice) + addonsPrice }];
       }
       return prev;
     });
@@ -329,7 +340,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         total: getCartTotal(),
         status: 'pending',
         customerName: customerInfo.name,
-        customerPhone: customerInfo.phone
+        customerPhone: customerInfo.phone,
+        notes: orderNote
       };
       const res = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
@@ -339,6 +351,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       if (res.ok) {
         setOrderConfirmedUI(true);
         setCurrentCart([]);
+        setOrderNote('');
         setShowCustomerForm(false);
         setCustomerInfo({ name: '', phone: '' });
         setOtpCode('');
@@ -596,7 +609,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       {showCartSummary && (
         <CartOverlay
           currentCart={currentCart}
-          
+          orderNote={orderNote}
+          setOrderNote={setOrderNote}
           setShowCartSummary={setShowCartSummary}
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}

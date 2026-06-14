@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChefHat, Minus, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChefHat, Minus, Plus, Users } from 'lucide-react';
 
 const CartOverlay = ({
     currentCart,
@@ -12,10 +12,17 @@ const CartOverlay = ({
     getCartSubtotal,
     getCartTax,
     restaurantData,
-    completeOrderProcess
+    completeOrderProcess,
+    orderNote,
+    setOrderNote
 }) => {
+    const [splitCount, setSplitCount] = useState(1);
     const { cgst, sgst } = getCartTax();
     const subtotal = getCartSubtotal();
+    
+    const finalTotal = getCartTotal();
+    const splitAmount = splitCount > 1 ? (finalTotal / splitCount).toFixed(2) : finalTotal;
+
     return (
         <div className="cart-summary-overlay animate-fade-in" onClick={() => setShowCartSummary(false)}>
             <div className="cart-summary-modal slide-up" onClick={e => e.stopPropagation()}>
@@ -77,6 +84,15 @@ const CartOverlay = ({
                     )}
                 </div>
 
+                <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-default)', borderBottom: '1px solid var(--border-default)' }}>
+                    <textarea
+                        value={orderNote || ''}
+                        onChange={(e) => setOrderNote(e.target.value)}
+                        placeholder="Any special cooking instructions? (e.g. Less spicy, Extra cheese)"
+                        style={{ width: '100%', height: '64px', borderRadius: '12px', padding: '12px', border: '1px solid var(--border-default)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', resize: 'none', outline: 'none' }}
+                    ></textarea>
+                </div>
+
                 <div className="cart-summary-footer" style={{ gap: '12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border-default)', paddingBottom: '12px', marginBottom: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -92,12 +108,23 @@ const CartOverlay = ({
                             <span>₹{sgst.toFixed(2)}</span>
                         </div>
                     </div>
+                    <div style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border-default)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                            <Users size={16} /> Split the Bill?
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button onClick={() => setSplitCount(Math.max(1, splitCount - 1))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', color: 'var(--text-main)', cursor: 'pointer' }}>-</button>
+                            <span style={{ fontWeight: '800', width: '12px', textAlign: 'center' }}>{splitCount}</span>
+                            <button onClick={() => setSplitCount(Math.min(10, splitCount + 1))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', color: 'var(--text-main)', cursor: 'pointer' }}>+</button>
+                        </div>
+                    </div>
+
                     <div className="cart-final-total">
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span>Total Amount</span>
+                            <span>{splitCount > 1 ? `Total (₹${splitAmount} x ${splitCount})` : 'Total Amount'}</span>
                             {restaurantData?.is_round_off && <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '700' }}>Rounded Off</span>}
                         </div>
-                        <strong>₹{getCartTotal()}</strong>
+                        <strong>₹{finalTotal}</strong>
                     </div>
                     <button className="final-checkout-btn" onClick={() => {
                         completeOrderProcess();

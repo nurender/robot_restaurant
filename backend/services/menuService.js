@@ -14,20 +14,20 @@ class MenuService {
     }
 
     async createMenuItem(data) {
-        const { restaurant_id, name, category, price, description, image_url, video_url, is_active, prep_time, spice_level, sku, veg_type, options, addons } = data;
+        const { restaurant_id, name, category, price, description, image_url, video_url, is_active, prep_time, spice_level, sku, veg_type, options, addons, discount_type, discount_value } = data;
         const id = 'm' + Date.now();
         const result = await pool.query(
-            "INSERT INTO menu (id, restaurant_id, name, category, price, description, image_url, video_url, is_active, prep_time, spice_level, sku, veg_type, options, addons) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
-            [id, Number(restaurant_id) || 1, name, category, Number(price) || 0, description, image_url, video_url, is_active !== undefined ? is_active : true, prep_time || null, spice_level || null, sku || null, veg_type || null, JSON.stringify(options || []), JSON.stringify(addons || [])]
+            "INSERT INTO menu (id, restaurant_id, name, category, price, description, image_url, video_url, is_active, prep_time, spice_level, sku, veg_type, options, addons, discount_type, discount_value) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id",
+            [id, Number(restaurant_id) || 1, name, category, Number(price) || 0, description, image_url, video_url, is_active !== undefined ? is_active : true, prep_time || null, spice_level || null, sku || null, veg_type || null, JSON.stringify(options || []), JSON.stringify(addons || []), discount_type || 'none', Number(discount_value) || 0]
         );
         return result.rows[0].id;
     }
 
     async updateMenuItem(id, data) {
-        const { name, category, price, description, image_url, video_url, is_active, prep_time, spice_level, sku, veg_type, options, addons } = data;
+        const { name, category, price, description, image_url, video_url, is_active, prep_time, spice_level, sku, veg_type, options, addons, discount_type, discount_value } = data;
         await pool.query(
-            "UPDATE menu SET name = $1, category = $2, price = $3, description = $4, image_url = $5, video_url = $6, is_active = $7, prep_time = $8, spice_level = $9, sku = $10, veg_type = $11, options = $13, addons = $14 WHERE id = $12",
-            [name, category, Number(price) || 0, description, image_url, video_url, is_active !== undefined ? is_active : true, prep_time || null, spice_level || null, sku || null, veg_type || null, id, JSON.stringify(options || []), JSON.stringify(addons || [])]
+            "UPDATE menu SET name = $1, category = $2, price = $3, description = $4, image_url = $5, video_url = $6, is_active = $7, prep_time = $8, spice_level = $9, sku = $10, veg_type = $11, options = $13, addons = $14, discount_type = $15, discount_value = $16 WHERE id = $12",
+            [name, category, Number(price) || 0, description, image_url, video_url, is_active !== undefined ? is_active : true, prep_time || null, spice_level || null, sku || null, veg_type || null, id, JSON.stringify(options || []), JSON.stringify(addons || []), discount_type || 'none', Number(discount_value) || 0]
         );
         return true;
     }

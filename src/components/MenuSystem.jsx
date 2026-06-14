@@ -38,17 +38,12 @@ const MenuSystem = ({
     };
 
     const handleCategoryWheel = (e) => {
-        const scroller = categoryScrollRef.current;
-        if (!scroller) return;
-
-        // Convert vertical wheel into horizontal movement for desktop users.
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-            scroller.scrollLeft += e.deltaY;
-            e.preventDefault();
+        if (categoryScrollRef.current) {
+            categoryScrollRef.current.scrollLeft += e.deltaY;
         }
     };
 
-
+    const featuredItems = (menuCategories || []).flatMap(c => c.items || []).filter(item => item.is_featured);
     const [isActive, setIsActive] = useState(false);
     const contentRef = useRef(null);
 
@@ -140,7 +135,63 @@ const MenuSystem = ({
                         ))}
                     </div>
                 ) : (
-                    menuCategories.map((category) => {
+                    <>
+                    {activeCategory === 'All' && menuSearchTerm === '' && featuredItems.length > 0 && (
+                        <div style={{ marginBottom: '24px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '900', margin: '0 16px 12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                ✨ Chef's Signatures
+                            </h3>
+                            <div className="featured-slider scrollbar-hidden" style={{ display: 'flex', gap: '16px', overflowX: 'auto', padding: '0 16px 16px 16px', scrollSnapType: 'x mandatory' }}>
+                                {featuredItems.map((fItem, idx) => {
+                                    const hasDiscount = fItem.discount_type !== 'none' && fItem.discount_value > 0;
+                                    const basePrice = Number(fItem.price);
+                                    let currentPrice = basePrice;
+                                    let discountBadge = '';
+                                    if (fItem.discount_type === 'percent') {
+                                        currentPrice = basePrice - (basePrice * (fItem.discount_value / 100));
+                                        discountBadge = `${fItem.discount_value}% OFF`;
+                                    } else if (fItem.discount_type === 'flat') {
+                                        currentPrice = basePrice - fItem.discount_value;
+                                        discountBadge = `₹${fItem.discount_value} OFF`;
+                                    }
+                                    if (currentPrice < 0) currentPrice = 0;
+                                    const fQty = getItemQty(fItem, null, []);
+                                    
+                                    return (
+                                    <div key={idx} style={{ minWidth: '160px', width: '160px', flexShrink: 0, scrollSnapAlign: 'start', background: 'var(--card-bg)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', border: '1px solid var(--card-border)', position: 'relative' }}>
+                                        {hasDiscount && (
+                                            <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'linear-gradient(90deg, #ff0f7b, #f89b29)', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', zIndex: 10 }}>{discountBadge}</div>
+                                        )}
+                                        <div style={{ width: '100%', height: '120px', background: 'var(--bg-secondary)', overflow: 'hidden' }} onClick={() => fItem.image_url && setZoomedImage(getMediaUrl(fItem.image_url))}>
+                                            {fItem.image_url ? (
+                                                <img src={getMediaUrl(fItem.image_url)} alt={fItem.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChefHat size={32} opacity={0.2} /></div>
+                                            )}
+                                        </div>
+                                        <div style={{ padding: '12px' }}>
+                                            <h5 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fItem.name}</h5>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: '900', color: 'var(--accent-primary)' }}>₹{Math.round(currentPrice)}</span>
+                                                {hasDiscount && <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)' }}>₹{basePrice}</span>}
+                                            </div>
+                                            {fQty === 0 ? (
+                                                <button onClick={() => handleManualCartUpdate(fItem, 1, null, [])} style={{ width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s' }}><Plus size={14} /> ADD</button>
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', padding: '4px', borderRadius: '8px', color: 'white' }}>
+                                                    <button onClick={() => handleManualCartUpdate(fItem, -1, null, [])} style={{ border: 'none', background: 'transparent', color: 'white', padding: '4px', cursor: 'pointer' }}><Minus size={14} /></button>
+                                                    <span style={{ fontWeight: '800', fontSize: '14px' }}>{fQty}</span>
+                                                    <button onClick={() => handleManualCartUpdate(fItem, 1, null, [])} style={{ border: 'none', background: 'transparent', color: 'white', padding: '4px', cursor: 'pointer' }}><Plus size={14} /></button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )})}
+                            </div>
+                        </div>
+                    )}
+
+                    {menuCategories.map((category) => {
                     if (activeCategory !== 'All' && category.category !== activeCategory) return null;
 
                     const matchingItems = category.items.filter(item => {
@@ -192,9 +243,26 @@ const MenuSystem = ({
                                             const selectedVariant = hasVariants ? itemOptions.find(o => o.size === selectedVariantSize) : null;
                                             const selectedAddons = selectedAddonsMap[item.id] || [];
                                             
-                                            const basePrice = selectedVariant ? Number(selectedVariant.price) : Number(item.price);
+                                            const baseVariantPrice = selectedVariant ? Number(selectedVariant.price) : Number(item.price);
+                                            
+                                            let discountedPrice = baseVariantPrice;
+                                            let hasDiscount = false;
+                                            let discountBadge = '';
+                                            if (item.discount_type === 'percent' && item.discount_value > 0) {
+                                                hasDiscount = true;
+                                                discountedPrice = baseVariantPrice - (baseVariantPrice * (item.discount_value / 100));
+                                                discountBadge = `${item.discount_value}% OFF`;
+                                            } else if (item.discount_type === 'flat' && item.discount_value > 0) {
+                                                hasDiscount = true;
+                                                discountedPrice = baseVariantPrice - item.discount_value;
+                                                discountBadge = `₹${item.discount_value} OFF`;
+                                            }
+                                            if (discountedPrice < 0) discountedPrice = 0;
+
                                             const addonsPrice = selectedAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
-                                            const currentPrice = basePrice + addonsPrice;
+                                            const currentPrice = Math.round(discountedPrice) + addonsPrice;
+                                            const originalDisplayPrice = baseVariantPrice + addonsPrice;
+
                                             const qty = getItemQty(item, selectedVariant, selectedAddons);
                                             const isUnavailable = item.is_active === false;
 
@@ -213,6 +281,11 @@ const MenuSystem = ({
                                                         )}
                                                         {isUnavailable && <div className="unavailable-overlay">SOLD OUT</div>}
                                                         {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
+                                                        {hasDiscount && (
+                                                            <div style={{ position: 'absolute', top: '4px', right: '4px', background: 'linear-gradient(90deg, #ff0f7b, #f89b29)', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', letterSpacing: '0.5px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                                                {discountBadge}
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     <div className="item-details">
@@ -225,7 +298,12 @@ const MenuSystem = ({
                                                                     </span>
                                                                 )}
                                                             </h6>
-                                                            <span className="item-price">₹{currentPrice}</span>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                                {hasDiscount && (
+                                                                    <span style={{ fontSize: '12px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{originalDisplayPrice}</span>
+                                                                )}
+                                                                <span className="item-price">₹{currentPrice}</span>
+                                                            </div>
                                                         </div>
                                                         <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
                                                         
@@ -293,7 +371,9 @@ const MenuSystem = ({
                                 )}
                         </div>
                     );
-                }))}
+                })}
+                    </>
+                )}
             </div>
             {getCartCount() > 0 && (
                 <div className="menu-cart-footer slide-up">

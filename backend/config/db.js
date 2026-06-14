@@ -168,7 +168,7 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'cash'`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
-
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS menu (
             id TEXT PRIMARY KEY,
@@ -189,6 +189,8 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS veg_type TEXT`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS options JSONB DEFAULT '[]'`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS addons JSONB DEFAULT '[]'`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_type TEXT DEFAULT 'none'`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10,2) DEFAULT 0.00`);
 
         const initialMenu = [
             ['s1', 1, 'Paneer Tikka', 'Starters', 250, 'Grilled cottage cheese with spices', 'https://www.cookwithmanali.com/wp-content/uploads/2015/07/Restaurant-Style-Recipe-Paneer-Tikka.jpg', null],

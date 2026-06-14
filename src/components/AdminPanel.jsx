@@ -141,15 +141,17 @@ const AdminPanel = () => {
     name: '',
     category: '',
     price: '',
-    offer_price: '',
+    discount_type: 'none',
+    discount_value: 0,
     description: '',
     image_url: '',
     is_active: true,
     veg_type: 'veg',
     prep_time: '',
     is_featured: false,
+    spice_level: 0,
+    sku: '',
     options: [],
-    variants: [],
     addons: []
   });
 
@@ -649,6 +651,45 @@ const AdminPanel = () => {
     } catch (e) {
       console.error("Print Error:", e);
       alert("Failed to initiate print process: " + e.message);
+    }
+  };
+
+  const printTableQR = (tableUrl, tableName) => {
+    try {
+      const printWindow = window.open('', '', 'width=600,height=800');
+      if (!printWindow) throw new Error("Popup blocker prevented printing.");
+
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(tableUrl)}`;
+      
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Print QR - ${tableName}</title>
+            <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; color: #000; }
+              .card { border: 4px solid #000; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
+              h1 { font-size: 42px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }
+              img { width: 300px; height: 300px; margin: 20px 0; border: 8px solid #000; border-radius: 10px; }
+              p { font-size: 24px; font-weight: bold; margin-top: 10px; color: #444; }
+              .scan-text { font-size: 32px; font-weight: 900; margin-top: 20px; background: #000; color: #fff; padding: 10px 20px; border-radius: 10px; display: inline-block; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>${tableName}</h1>
+              <p>Scan to Order & Pay</p>
+              <img src="${qrImageUrl}" alt="QR" onload="window.print(); window.close();" />
+              <div class="scan-text">SCAN ME</div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (e) {
+      alert("Print failed: " + e.message);
     }
   };
 
@@ -1336,6 +1377,11 @@ const AdminPanel = () => {
                                 <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
                               </div>
                             ))}
+                            {order.notes && (
+                              <div style={{ marginTop: '12px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', borderLeft: '4px solid #ef4444', fontSize: '13px', color: '#fca5a5' }}>
+                                <strong style={{ color: '#ef4444' }}>Notes:</strong> {order.notes}
+                              </div>
+                            )}
                             <button
                               onClick={() => {
                                 setIsEditingOrder(true);
@@ -2230,6 +2276,13 @@ const AdminPanel = () => {
                       })}
                     </div>
 
+                    {order.notes && (
+                      <div style={{ padding: '12px 16px', background: 'rgba(245, 158, 11, 0.1)', borderLeft: '4px solid #f59e0b', borderRadius: '8px', marginBottom: '16px', fontSize: '14px', color: '#fcd34d' }}>
+                        <span style={{ fontWeight: '800', color: '#f59e0b', marginRight: '6px' }}>COOKING INSTRUCTIONS:</span>
+                        {order.notes}
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: '12px' }}>
                       {order.status === 'accepted' ? (
                         <button
@@ -2696,7 +2749,13 @@ const AdminPanel = () => {
                           className="btn-primary"
                           style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', flex: 1, border: 'none', cursor: 'pointer' }}
                         >
-                          Copy Dine-In Link
+                          Copy Link
+                        </button>
+                        <button
+                          onClick={() => printTableQR(liveUrl, t.name || t.table || `Table ${t.table_number}`)}
+                          style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '800', fontSize: '13px', flex: 1, border: 'none', cursor: 'pointer', background: 'var(--success)', color: 'white' }}
+                        >
+                          Print QR
                         </button>
                         <button
                           onClick={async () => {
@@ -3401,14 +3460,27 @@ const AdminPanel = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Offer Price (₹)</label>
-                    <input
-                      type="number"
-                      placeholder="Promo value"
-                      value={newDish.offer_price || ''}
-                      onChange={(e) => setNewDish({ ...newDish, offer_price: e.target.value })}
-                      style={{ width: '100%', height: '52px', padding: '16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--success)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '16px', outline: 'none' }}
-                    />
+                    <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Discount Config</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={newDish.discount_type || 'none'}
+                        onChange={(e) => setNewDish({ ...newDish, discount_type: e.target.value })}
+                        style={{ flex: 1, height: '52px', padding: '0 12px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                      >
+                        <option value="none">No Discount</option>
+                        <option value="percent">% Percent OFF</option>
+                        <option value="flat">₹ Flat OFF</option>
+                      </select>
+                      {newDish.discount_type !== 'none' && (
+                        <input
+                          type="number"
+                          placeholder="Value"
+                          value={newDish.discount_value || ''}
+                          onChange={(e) => setNewDish({ ...newDish, discount_value: e.target.value })}
+                          style={{ width: '90px', height: '52px', padding: '0 12px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--success)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
 
