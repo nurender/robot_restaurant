@@ -542,8 +542,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 85px 24px 12px 24px;
-  padding-top: calc(85px + env(safe-area-inset-top, 0px));
+  padding: 50px 24px 12px 24px;
+  padding-top: calc(54px + env(safe-area-inset-top, 0px));
   background: var(--card-bg);
   border-bottom: 1px solid var(--border-default);
 }
@@ -1323,12 +1323,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 7px;
 }
 
 .cart-summary-modal {
   width: 100%;
-  max-width: 440px;
+  max-width: 520px;
   background: var(--card-bg);
   border-radius: 32px;
   border: 1px solid var(--border-default);
@@ -1354,7 +1354,7 @@
 }
 
 .cart-summary-header {
-  padding: 32px 32px 24px;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2280,6 +2280,10 @@
     height: 12px !important;
   }
 
+  .hide-on-mobile {
+    display: none !important;
+  }
+
   /* Menu System Mobile Spacing */
   .menu-header {
     padding: 45px 12px 6px 12px !important;
@@ -2357,19 +2361,27 @@
   }
 
   /* Cart Summary Mobile Optimization */
+  .cart-summary-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
   .cart-summary-modal {
-    width: 95% !important;
-    max-width: 420px !important;
-    border-radius: 28px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 24px 24px 0 0 !important;
+    height: auto !important;
+    max-height: 82vh !important;
+    margin-top: auto;
     overflow: hidden !important;
   }
 
   .cart-summary-header {
-    padding: 24px 20px !important;
+    padding: 12px 16px !important;
   }
 
   .cart-summary-header h3 {
-    font-size: 20px !important;
+    font-size: 18px !important;
   }
 
   .cart-summary-items {
@@ -2440,9 +2452,19 @@
 
   /* Tracking Modal Mobile Optimization */
   /* Tracking Modal Mobile Optimization */
+  .modal-overlay:has(.tracking-modal) {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
   .tracking-modal {
-    width: 98% !important;
-    border-radius: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 92vh !important;
+    border-radius: 24px 24px 0 0 !important;
+    margin-top: auto;
+    margin-bottom: 0;
   }
 
   .tracking-header {
@@ -2486,16 +2508,23 @@
   }
 }
 
+.modal-overlay:has(.tracking-modal) {
+  align-items: center;
+}
+
 /* Tracking Modal Base Styling */
 .tracking-modal {
   max-width: 520px;
   width: 96%;
+  max-height: 90vh;
   padding: 0;
   border-radius: 28px;
   background: var(--card-bg);
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
 }
 
 .tracking-header {
@@ -2534,9 +2563,10 @@
 }
 
 .tracking-body {
-  padding: 14px 18px;
-  max-height: 70vh;
+  padding: 24px;
+  flex: 1;
   overflow-y: auto;
+  max-height: unset;
 }
 
 .order-tracking-card {
@@ -2729,16 +2759,15 @@
 
 .close-tracking-footer-btn {
   width: 100%;
-  padding: 12px;
-  /* Slimmer button padding */
-  border-radius: 12px;
-  font-weight: 700;
+  padding: 16px;
+  border-radius: 16px;
+  font-weight: 800;
   background: var(--bg-glass);
   border: 1px solid var(--border-default);
   color: var(--text-main);
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .close-tracking-footer-btn:hover {

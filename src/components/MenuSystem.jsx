@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronRight, ChefHat, Plus, Minus, ShoppingCart, Play } from 'lucide-react';
 
 const MenuSystem = ({
+    restaurantName,
     menuCategories,
     textLanguage,
     menuSearchTerm,
@@ -17,12 +18,18 @@ const MenuSystem = ({
     setShowCartSummary,
     completeOrderProcess,
     getMediaUrl,
-    setZoomedImage
+    setZoomedImage,
+    currentCart
 }) => {
     const categoryScrollRef = useRef(null);
     const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'nonveg'
     const [selectedVariants, setSelectedVariants] = useState({}); // { itemId: variantSize }
     const [selectedAddonsMap, setSelectedAddonsMap] = useState({}); // { itemId: [addonObj] }
+    const [customizingItem, setCustomizingItem] = useState(null); // the item to customize
+    const [pickingCustomizationItem, setPickingCustomizationItem] = useState(null); // the item to pick which variant to edit
+    const [tempVariant, setTempVariant] = useState(null);
+    const [tempAddons, setTempAddons] = useState([]);
+    const [tempQty, setTempQty] = useState(1);
 
     const handleVariantChange = (itemId, size) => {
         setSelectedVariants(prev => ({ ...prev, [itemId]: size }));
@@ -35,6 +42,48 @@ const MenuSystem = ({
             if (exists) return { ...prev, [itemId]: current.filter(a => a.name !== addon.name) };
             return { ...prev, [itemId]: [...current, addon] };
         });
+    };
+
+    const openCustomization = (item, options, addons, cItemToEdit = null) => {
+        setCustomizingItem({ ...item, options, addons, editFromCartItem: cItemToEdit });
+        if (cItemToEdit) {
+            setTempVariant(cItemToEdit.selectedVariant ? cItemToEdit.selectedVariant.size : (options.length > 0 ? options[0].size : null));
+            setTempAddons(cItemToEdit.selectedAddons || []);
+            setTempQty(cItemToEdit.qty); // default to modifying the whole stack or 1? Let's default to 1 for precise editing
+        } else {
+            setTempVariant(options.length > 0 ? options[0].size : null);
+            setTempAddons([]);
+            setTempQty(1);
+        }
+        setPickingCustomizationItem(null);
+    };
+
+    const openCustomizationPicker = (item, options, addons) => {
+        setPickingCustomizationItem({ ...item, options, addons });
+    };
+
+    const handleTempAddonToggle = (addon) => {
+        const exists = tempAddons.find(a => a.name === addon.name);
+        if (exists) setTempAddons(tempAddons.filter(a => a.name !== addon.name));
+        else setTempAddons([...tempAddons, addon]);
+    };
+
+    const confirmCustomization = () => {
+        if (!customizingItem) return;
+        const optObj = tempVariant ? customizingItem.options.find(o => o.size === tempVariant) : null;
+        
+        if (customizingItem.editFromCartItem) {
+            // Remove the exact old cart item completely (qty: -oldQty) then add new one with new qty
+            handleManualCartUpdate(customizingItem.editFromCartItem, -customizingItem.editFromCartItem.qty, customizingItem.editFromCartItem.selectedVariant, customizingItem.editFromCartItem.selectedAddons);
+        }
+
+        handleManualCartUpdate(customizingItem, tempQty, optObj, tempAddons);
+        
+        // Sync back to main state so regular +/- works cleanly with last selection
+        setSelectedVariants(prev => ({ ...prev, [customizingItem.id]: tempVariant }));
+        setSelectedAddonsMap(prev => ({ ...prev, [customizingItem.id]: tempAddons }));
+        
+        setCustomizingItem(null);
     };
 
     const handleCategoryWheel = (e) => {
@@ -60,8 +109,7 @@ const MenuSystem = ({
             <div className="menu-header">
                 <div className="menu-header-top">
                     <div className="menu-title-area">
-                        <h4>Our Menu</h4>
-                        <span className="menu-subtitle">What are you craving today?</span>
+                        <h4>{restaurantName || 'AI RESTO'}</h4>
                     </div>
                 </div>
 
@@ -237,6 +285,16 @@ const MenuSystem = ({
                                                      [ {size: '30ml', price: item.price || 150}, {size: '60ml', price: (item.price || 150) * 2}, {size: 'Pauva (180ml)', price: (item.price || 150) * 5}, {size: 'Bottle (750ml)', price: (item.price || 150) * 18} ];
                                             }
 
+                                            // Mock addons for Coffee to demonstrate checkbox feature
+                                            const nameStr = (item.name || '').toLowerCase();
+                                            if (itemAddons.length === 0 && (catStr.includes('coffee') || catStr.includes('frappe') || nameStr.includes('coffee') || nameStr.includes('frappe') || nameStr.includes('coke'))) {
+                                                itemAddons = [
+                                                    { name: 'Espresso Shot', price: 40 },
+                                                    { name: 'Ice Cream (Vanilla)', price: 30 },
+                                                    { name: 'Chocolate Syrup', price: 40 }
+                                                ];
+                                            }
+
                                             const hasVariants = itemOptions.length > 0;
                                             const hasAddons = itemAddons.length > 0;
                                             const selectedVariantSize = selectedVariants[item.id] || (hasVariants ? itemOptions[0].size : null);
@@ -263,7 +321,7 @@ const MenuSystem = ({
                                             const currentPrice = Math.round(discountedPrice) + addonsPrice;
                                             const originalDisplayPrice = baseVariantPrice + addonsPrice;
 
-                                            const qty = getItemQty(item, selectedVariant, selectedAddons);
+                                            const qty = getItemQty(item, null, []);
                                             const isUnavailable = item.is_active === false;
 
                                             return (
@@ -306,60 +364,22 @@ const MenuSystem = ({
                                                             </div>
                                                         </div>
                                                         <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
-                                                        
-                                                        {hasVariants && (
-                                                            <div className="variants-selector" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '8px 0' }}>
-                                                                {itemOptions.map((opt, idx) => (
-                                                                    <button 
-                                                                        key={idx} 
-                                                                        onClick={() => handleVariantChange(item.id, opt.size)}
-                                                                        style={{
-                                                                            padding: '4px 8px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
-                                                                            border: selectedVariantSize === opt.size ? '1px solid #00e676' : '1px solid var(--border-default)', 
-                                                                            background: selectedVariantSize === opt.size ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                                                            color: selectedVariantSize === opt.size ? '#00e676' : 'var(--text-secondary)'
-                                                                        }}
-                                                                    >
-                                                                        {opt.size}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                        
-                                                        {hasAddons && (
-                                                            <div className="addons-selector" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '8px 0' }}>
-                                                                {itemAddons.map((addon, idx) => {
-                                                                    const isActive = selectedAddons.find(a => a.name === addon.name);
-                                                                    return (
-                                                                        <button 
-                                                                            key={'addon'+idx} 
-                                                                            onClick={() => toggleAddon(item.id, addon)}
-                                                                            style={{
-                                                                                padding: '4px 8px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s',
-                                                                                border: isActive ? '1px solid #f1c40f' : '1px solid var(--border-default)', 
-                                                                                background: isActive ? 'rgba(241, 196, 15, 0.1)' : 'transparent',
-                                                                                color: isActive ? '#f1c40f' : 'var(--text-secondary)'
-                                                                            }}
-                                                                        >
-                                                                            {addon.name} <span style={{opacity: 0.7}}>+₹{addon.price}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
+                                                        {(hasVariants || hasAddons) && (
+                                                            <p style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '600', marginTop: '6px' }}>Customisable</p>
                                                         )}
 
                                                         <div className="item-actions-row">
                                                             {isUnavailable ? (
                                                                 <button className="add-btn-disabled" disabled>Unavailable</button>
                                                             ) : qty === 0 ? (
-                                                                <button className="add-btn-primary" onClick={() => handleManualCartUpdate(item, 1, selectedVariant, selectedAddons)}>
+                                                                <button className="add-btn-primary" onClick={() => (hasVariants || hasAddons) ? openCustomization(item, itemOptions, itemAddons) : handleManualCartUpdate(item, 1, selectedVariant, selectedAddons)}>
                                                                     <Plus size={14} /> ADD
                                                                 </button>
                                                             ) : (
                                                                 <div className="qty-controls-premium">
-                                                                    <button onClick={() => handleManualCartUpdate(item, -1, selectedVariant, selectedAddons)}><Minus size={14} /></button>
+                                                                    <button onClick={() => (hasVariants || hasAddons) ? openCustomizationPicker(item, itemOptions, itemAddons) : handleManualCartUpdate(item, -1, selectedVariant, selectedAddons)}><Minus size={14} /></button>
                                                                     <span className="qty-val">{qty}</span>
-                                                                    <button onClick={() => handleManualCartUpdate(item, 1, selectedVariant, selectedAddons)}><Plus size={14} /></button>
+                                                                    <button onClick={() => (hasVariants || hasAddons) ? openCustomizationPicker(item, itemOptions, itemAddons) : handleManualCartUpdate(item, 1, selectedVariant, selectedAddons)}><Plus size={14} /></button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -386,6 +406,156 @@ const MenuSystem = ({
                     </button>
                 </div>
             )}
+            {customizingItem && (() => {
+                const bVariant = tempVariant ? customizingItem.options.find(o => o.size === tempVariant) : null;
+                const bPrice = bVariant ? Number(bVariant.price) : Number(customizingItem.price);
+                const addonsTot = tempAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
+                const custTotal = (bPrice + addonsTot) * tempQty;
+                const isEditing = !!customizingItem.editFromCartItem;
+
+                return (
+                <div className="cart-summary-overlay animate-fade-in" onClick={() => setCustomizingItem(null)} style={{ zIndex: 99999 }}>
+                    <div className="cart-summary-modal zomato-modal slide-up" onClick={e => e.stopPropagation()} style={{ background: '#1c1c24', padding: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', padding: '16px', background: '#252530', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            {customizingItem.image_url ? (
+                                <img src={getMediaUrl(customizingItem.image_url)} alt="food" style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', marginRight: '16px' }} />
+                            ) : (
+                                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}><ChefHat size={20} color="#fff" /></div>
+                            )}
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', ...{} }}>{customizingItem.name}</h3>
+                            <button onClick={() => setCustomizingItem(null)} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                        </div>
+                        
+                        <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {customizingItem.options.length > 0 && (
+                                <div style={{ background: '#252530', borderRadius: '16px', padding: '16px' }}>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '2px' }}>Quantity / Size</h4>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Required • Select 1 option</p>
+                                    </div>
+                                    {customizingItem.options.map((opt, idx) => (
+                                        <div key={idx} onClick={() => setTempVariant(opt.size)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: idx !== customizingItem.options.length -1 ? '1px solid rgba(255,255,255,0.05)' : 'none', cursor: 'pointer' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ width: '12px', height: '12px', border: '1px solid #10b981', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', top: '15%', left: '15%', width: '70%', height: '70%', background: '#10b981', borderRadius: '50%' }}></span>
+                                                </span>
+                                                <span style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0' }}>{opt.size}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>₹{opt.price}</span>
+                                                <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${tempVariant === opt.size ? '#00e676' : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {tempVariant === opt.size && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00e676' }}></div>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {customizingItem.addons.length > 0 && (
+                                <div style={{ background: '#252530', borderRadius: '16px', padding: '16px' }}>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '2px' }}>Add Ons</h4>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Choose optional addons</p>
+                                    </div>
+                                    {customizingItem.addons.map((addon, idx) => {
+                                        const isSelected = tempAddons.find(a => a.name === addon.name);
+                                        return (
+                                        <div key={idx} onClick={() => handleTempAddonToggle(addon)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: idx !== customizingItem.addons.length -1 ? '1px solid rgba(255,255,255,0.05)' : 'none', cursor: 'pointer' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ width: '12px', height: '12px', border: '1px solid #10b981', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', top: '15%', left: '15%', width: '70%', height: '70%', background: '#10b981', borderRadius: '50%' }}></span>
+                                                </span>
+                                                <span style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0' }}>{addon.name}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>₹{addon.price}</span>
+                                                <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${isSelected ? '#00e676' : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSelected ? '#00e676' : 'transparent' }}>
+                                                    {isSelected && <span style={{ color: '#1a1a20', fontSize: '14px', fontWeight: '900', lineHeight: 1 }}>✓</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )})}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ padding: '16px', background: '#1c1c24', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px' }}>
+                                <button onClick={() => setTempQty(Math.max(1, tempQty - 1))} style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e676', border: 'none', background: 'transparent' }}><Minus size={18} /></button>
+                                <span style={{ width: '20px', textAlign: 'center', fontWeight: '800',color: '#fff' }}>{tempQty}</span>
+                                <button onClick={() => setTempQty(tempQty + 1)} style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e676', border: 'none', background: 'transparent' }}><Plus size={18} /></button>
+                            </div>
+                            <button onClick={confirmCustomization} style={{ flex: 1, background: '#00e676', color: '#1a1a20', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '16px', cursor: 'pointer' }}>
+                                {isEditing ? `Update item - ₹${custTotal}` : `Add item - ₹${custTotal}`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                );
+            })()}
+
+            {pickingCustomizationItem && (() => {
+                const cartInstances = currentCart.filter(c => String(c.id) === String(pickingCustomizationItem.id));
+                // Automatically close picker if no instances left
+                if (cartInstances.length === 0) {
+                    setTimeout(() => setPickingCustomizationItem(null), 0);
+                    return null;
+                }
+
+                return (
+                <div className="cart-summary-overlay animate-fade-in" onClick={() => setPickingCustomizationItem(null)} style={{ zIndex: 99999 }}>
+                    <div className="cart-summary-modal zomato-modal slide-up" onClick={e => e.stopPropagation()} style={{ background: '#1c1c24', padding: '0 0 16px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800' }}>Choose customisation</h3>
+                            <button onClick={() => setPickingCustomizationItem(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                        </div>
+                        
+                        <div className="custom-scrollbar" style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 16px' }}>
+                            {cartInstances.map((cItem, idx) => {
+                                const variantStr = cItem.selectedVariant ? cItem.selectedVariant.size : '';
+                                const addonsStr = cItem.selectedAddons && cItem.selectedAddons.length > 0 ? cItem.selectedAddons.map(a => a.name).join(', ') : '';
+                                const subText = [variantStr, addonsStr].filter(Boolean).join(', ');
+
+                                return (
+                                    <div key={cItem.cartId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: idx !== cartInstances.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                                        <div style={{ flex: 1, paddingRight: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                <span style={{ width: '12px', height: '12px', border: '1px solid #10b981', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', top: '15%', left: '15%', width: '70%', height: '70%', background: '#10b981', borderRadius: '50%' }}></span>
+                                                </span>
+                                                <span style={{ fontSize: '15px', fontWeight: '700', color: '#e2e8f0' }}>{cItem.name}</span>
+                                            </div>
+                                            {subText && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', lineHeight: '1.4' }}>{subText}</p>}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <p style={{ fontSize: '13px', fontWeight: '800', color: '#fff' }}>₹{cItem.price}</p>
+                                                <button onClick={() => openCustomization(pickingCustomizationItem, pickingCustomizationItem.options, pickingCustomizationItem.addons, cItem)} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                                                    Edit <ChevronRight size={10} style={{ opacity: 0.7 }} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="qty-controls-premium" style={{ background: 'rgba(0, 230, 118, 0.1)', border: '1px solid #00e676' }}>
+                                            <button onClick={() => handleManualCartUpdate(cItem, -1, cItem.selectedVariant, cItem.selectedAddons)} style={{ color: '#00e676' }}><Minus size={14} /></button>
+                                            <span className="qty-val" style={{ color: '#fff' }}>{cItem.qty}</span>
+                                            <button onClick={() => handleManualCartUpdate(cItem, 1, cItem.selectedVariant, cItem.selectedAddons)} style={{ color: '#00e676' }}><Plus size={14} /></button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div style={{ padding: '16px 16px 0 16px', display: 'flex', justifyContent: 'center' }}>
+                            <button 
+                                onClick={() => openCustomization(pickingCustomizationItem, pickingCustomizationItem.options, pickingCustomizationItem.addons)}
+                                style={{ background: 'transparent', color: '#00e676', border: 'none', fontWeight: '700', fontSize: '15px', padding: '8px 16px', cursor: 'pointer' }}
+                            >
+                                + Add new customisation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                );
+            })()}
         </div>
     );
 };

@@ -180,18 +180,33 @@ class OrderService {
         return null;
     }
 
-    async trackTableOrder(tableNumber, restaurant_id) {
+    async trackTableOrder(tableNumber, restaurant_id, phone = null) {
         const restId = restaurant_id || 1;
-        const query = `
-            SELECT * FROM orders 
-            WHERE restaurant_id = $1 
-              AND tablenumber = $2 
-              AND status != 'completed' 
-              AND status != 'cancelled'
-              AND timestamp::date = CURRENT_DATE
-            ORDER BY timestamp DESC
-        `;
-        const result = await pool.query(query, [restId, tableNumber]);
+        let query;
+        let params;
+        if (phone) {
+            query = `
+                SELECT * FROM orders 
+                WHERE restaurant_id = $1 
+                  AND (tablenumber = $2 OR (customer_phone = $3 AND $3 != ''))
+                  AND status != 'completed' 
+                  AND status != 'cancelled'
+                ORDER BY timestamp DESC
+            `;
+            params = [restId, tableNumber, phone];
+        } else {
+            query = `
+                SELECT * FROM orders 
+                WHERE restaurant_id = $1 
+                  AND tablenumber = $2 
+                  AND status != 'completed' 
+                  AND status != 'cancelled'
+                  AND timestamp::date = CURRENT_DATE
+                ORDER BY timestamp DESC
+            `;
+            params = [restId, tableNumber];
+        }
+        const result = await pool.query(query, params);
 
         return result.rows.map(row => {
             let parsedItems = [];

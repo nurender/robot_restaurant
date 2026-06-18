@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, X, Clock, ChefHat, Store, ListTodo, Mic } from 'lucide-react';
+import { CheckCircle, X, Clock, ChefHat, Store, ListTodo, Mic, LogOut, UserCircle } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -16,10 +16,11 @@ const socket = io(API_URL, { autoConnect: true });
 const RobotChat = ({ tableNumber, restaurantId }) => {
   const [restaurantData, setRestaurantData] = useState(null);
   const [restaurantName, setRestaurantName] = useState(null);
-  
+  const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(() => !!localStorage.getItem('customerPhone'));
+
   const [showCartSummary, setShowCartSummary] = useState(false);
   const [activeOrders, setActiveOrders] = useState([]);
-  
+
   const [showOrderTracking, setShowOrderTracking] = useState(false);
   const [menuCategories, setMenuCategories] = useState([]);
   const [currentCart, setCurrentCart] = useState([]);
@@ -30,7 +31,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [zoomedImage, setZoomedImage] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
+  const [customerInfo, setCustomerInfo] = useState({ 
+      name: localStorage.getItem('customerName') || '', 
+      phone: localStorage.getItem('customerPhone') || '' 
+  });
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -49,13 +53,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     const raw = String(transcript).toLowerCase();
     const words = raw.split(' ');
     const isRemove = raw.includes('remove') || raw.includes('delete') || raw.includes('cancel') || raw.includes('drop');
-    
+
     let multiplierStr = words.find(w => !isNaN(parseInt(w)) && parseInt(w) > 0);
     let multiplier = multiplierStr ? parseInt(multiplierStr) : 1;
     if (raw.includes('two') || raw.includes('couple')) multiplier = 2;
     if (raw.includes('three')) multiplier = 3;
     if (raw.includes('four')) multiplier = 4;
-    
+
     let matchedItem = null;
     let matchedVariant = null;
 
@@ -73,11 +77,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       if (decodedOpts.length > 0) {
         matchedVariant = decodedOpts.find(o => raw.includes(o.size.toLowerCase())) || decodedOpts[0];
       }
-      
+
       const delta = isRemove ? -multiplier : multiplier;
       handleManualCartUpdate(matchedItem, delta, matchedVariant, []);
-      
-      setVoiceInputString(`Recognized: ${delta > 0 ? '+' : ''}${delta} ${matchedItem.name} ${matchedVariant ? '('+matchedVariant.size+')' : ''}`);
+
+      setVoiceInputString(`Recognized: ${delta > 0 ? '+' : ''}${delta} ${matchedItem.name} ${matchedVariant ? '(' + matchedVariant.size + ')' : ''}`);
       setTimeout(() => setVoiceInputString(''), 4000);
     } else {
       setVoiceInputString(`Didn't catch that. Say e.g. "Add 2 Premium Thali"`);
@@ -91,11 +95,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       alert("Voice ordering is not supported in this browser. Please use Chrome.");
       return;
     }
-    
+
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
     recognition.interimResults = false;
-    
+
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
@@ -108,7 +112,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setTimeout(() => setVoiceInputString(''), 2000);
     };
     recognition.onend = () => setIsListening(false);
-    
+
     recognition.start();
   };
 
@@ -161,7 +165,18 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const fetchTrackingStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`);
+      const userPhone = localStorage.getItem('customerPhone') || '';
+      if (!userPhone) {
+        setActiveOrders([]);
+        return;
+      }
+      
+      let url = `${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`;
+      if (userPhone) {
+        url += `&phone=${encodeURIComponent(userPhone)}`;
+      }
+
+      const res = await fetch(url);
       const data = await res.json();
       if (data.orders && data.orders.length > 0) {
         setActiveOrders(data.orders);
@@ -246,10 +261,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const handleManualCartUpdate = (item, delta, variant = null, addons = []) => {
     setCurrentCart(prev => {
       // Sort addons conceptually by name to ensure consistent cart ID matching
-      const sortedAddons = [...addons].sort((a,b) => a.name.localeCompare(b.name));
+      const sortedAddons = [...addons].sort((a, b) => a.name.localeCompare(b.name));
       const addonsStr = sortedAddons.length > 0 ? `+${sortedAddons.map(a => a.name).join('+')}` : '';
       const cartItemId = variant ? `${item.id}-${variant.size}${addonsStr}` : `${item.id}${addonsStr}`;
-      
+
       const existing = prev.find(i => (i.cartId || String(i.id)) === cartItemId);
       if (existing) {
         const newQty = existing.qty + delta;
@@ -257,19 +272,19 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         return prev.map(i => (i.cartId || String(i.id)) === cartItemId ? { ...existing, qty: newQty } : i);
       }
       if (delta > 0) {
-          const addonsPrice = sortedAddons.reduce((acc, a) => acc + Number(a.price || 0), 0);
-          
-          let baseVariantPrice = Number(variant ? variant.price : item.price);
-          let discountedPrice = baseVariantPrice;
-          
-          if (item.discount_type === 'percent' && item.discount_value > 0) {
-              discountedPrice = baseVariantPrice - (baseVariantPrice * (item.discount_value / 100));
-          } else if (item.discount_type === 'flat' && item.discount_value > 0) {
-              discountedPrice = baseVariantPrice - item.discount_value;
-          }
-          if (discountedPrice < 0) discountedPrice = 0;
+        const addonsPrice = sortedAddons.reduce((acc, a) => acc + Number(a.price || 0), 0);
 
-          return [...prev, { ...item, cartId: cartItemId, qty: delta, selectedVariant: variant, selectedAddons: sortedAddons, price: Math.round(discountedPrice) + addonsPrice }];
+        let baseVariantPrice = Number(variant ? variant.price : item.price);
+        let discountedPrice = baseVariantPrice;
+
+        if (item.discount_type === 'percent' && item.discount_value > 0) {
+          discountedPrice = baseVariantPrice - (baseVariantPrice * (item.discount_value / 100));
+        } else if (item.discount_type === 'flat' && item.discount_value > 0) {
+          discountedPrice = baseVariantPrice - item.discount_value;
+        }
+        if (discountedPrice < 0) discountedPrice = 0;
+
+        return [...prev, { ...item, cartId: cartItemId, qty: delta, selectedVariant: variant, selectedAddons: sortedAddons, price: Math.round(discountedPrice) + addonsPrice }];
       }
       return prev;
     });
@@ -292,12 +307,12 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const getItemQty = (itemOrId, variant = null, addons = []) => {
     const menuItem = typeof itemOrId === 'object' ? itemOrId : null;
     const targetId = menuItem?.id ?? itemOrId;
-    
+
     if (variant || addons.length > 0) {
-      const sortedAddons = [...addons].sort((a,b) => a.name.localeCompare(b.name));
+      const sortedAddons = [...addons].sort((a, b) => a.name.localeCompare(b.name));
       const addonsStr = sortedAddons.length > 0 ? `+${sortedAddons.map(a => a.name).join('+')}` : '';
       const cartItemId = variant ? `${targetId}-${variant.size}${addonsStr}` : `${targetId}${addonsStr}`;
-      
+
       const match = currentCart.find(c => c.cartId === cartItemId);
       return Number(match?.qty || 0);
     }
@@ -349,6 +364,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         body: JSON.stringify(orderData)
       });
       if (res.ok) {
+        localStorage.setItem('customerPhone', customerInfo.phone);
+
         setOrderConfirmedUI(true);
         setCurrentCart([]);
         setOrderNote('');
@@ -381,9 +398,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   };
 
   const handleSendOtp = async (e) => {
-    if(e) e.preventDefault();
-    if (!customerInfo.name || !customerInfo.phone || customerInfo.phone.length !== 10) {
-      alert('Please enter your name and a valid 10-digit phone number.');
+    if (e) e.preventDefault();
+    const isBooking = getCartCount() > 0;
+    if ((isBooking && !customerInfo.name) || !customerInfo.phone || customerInfo.phone.length !== 10) {
+      alert(isBooking ? 'Please enter your name and a valid 10-digit phone number.' : 'Please enter a valid 10-digit phone number.');
       return;
     }
     setupRecaptcha();
@@ -396,10 +414,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       console.error("Firebase Auth Error:", error);
       // MOCK FALLBACK FOR TESTING IF FIREBASE SMS FAILS
       const dummyOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Use a custom Toast instead of blocking alert so the user can type it easily
       setMockOtpToast(dummyOtp);
-      
+
       setConfirmationResult({
         confirm: async (code) => {
           if (code !== dummyOtp) throw new Error("Invalid testing OTP");
@@ -413,7 +431,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   };
 
   const handleVerifyOtpAndOrder = async (e) => {
-    if(e) e.preventDefault();
+    if (e) e.preventDefault();
     if (!otpCode || otpCode.length !== 6) {
       alert('Please enter the 6-digit OTP.');
       return;
@@ -421,8 +439,21 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     setIsSubmittingOrder(true);
     try {
       await confirmationResult.confirm(otpCode);
-      // Success, now process order
-      await completeOrderProcess();
+
+      localStorage.setItem('customerName', customerInfo.name);
+      localStorage.setItem('customerPhone', customerInfo.phone);
+      setIsCustomerLoggedIn(true);
+
+      if (getCartCount() > 0) {
+        // Success, now process order
+        await completeOrderProcess();
+      } else {
+        setShowCustomerForm(false);
+        setOtpSent(false);
+        setOtpCode('');
+        setIsSubmittingOrder(false);
+        fetchTrackingStatus();
+      }
     } catch (error) {
       console.error(error);
       alert('Invalid OTP entered.');
@@ -435,8 +466,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       alert('Your cart is empty. Please add some items first.');
       return;
     }
-    setShowCustomerForm(true);
-    setShowCartSummary(false);
+    const phone = localStorage.getItem('customerPhone');
+    if (phone && customerInfo.name && customerInfo.phone) {
+      // Auto submit order if already logged in
+      completeOrderProcess();
+    } else {
+      setShowCustomerForm(true);
+      setShowCartSummary(false);
+    }
   };
 
   const toggleCategory = (cat) => {
@@ -488,13 +525,13 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <ThemeToggle />
-          {activeOrders.length > 0 && (
+          {isCustomerLoggedIn && activeOrders.length > 0 && (
             <button
               onClick={() => setShowOrderTracking(true)}
               className="robot-header-btn tracking"
             >
               <Clock size={14} color="#a78bfa" />
-              <span>{'Tracking'}</span>
+              <span className="hide-on-mobile">Tracking</span>
               {activeOrders.length > 0 && (
                 <span style={{
                   position: 'absolute', top: '-5px', right: '-5px',
@@ -513,15 +550,42 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             className="robot-header-btn"
           >
             <span style={{ color: '#f1c40f' }}>★</span>
-            <span>{'Feedback'}</span>
+            <span className="hide-on-mobile">Feedback</span>
           </button>
+          
+          {isCustomerLoggedIn ? (
+             <button
+                onClick={() => {
+                   localStorage.removeItem('customerPhone');
+                   localStorage.removeItem('customerName');
+                   setCustomerInfo({ name: '', phone: '' });
+                   setIsCustomerLoggedIn(false);
+                   setActiveOrders([]);
+                   setShowOrderTracking(false);
+                }}
+                className="robot-header-btn"
+                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '6px 10px' }}
+                title="Logout"
+             >
+                <LogOut size={16} />
+             </button>
+          ) : (
+             <button
+                onClick={() => setShowCustomerForm(true)}
+                className="robot-header-btn"
+                style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+             >
+                <UserCircle size={16} style={{marginRight: '4px'}} />
+                <span className="hide-on-mobile">Login</span>
+             </button>
+          )}
         </div>
       </div>
 
       <div className="avatar-container">
         <MenuSystem
+          restaurantName={restaurantName || 'AI RESTO'}
           menuCategories={menuCategories}
-          
           menuSearchTerm={menuSearchTerm}
           setMenuSearchTerm={setMenuSearchTerm}
           activeCategory={activeCategory}
@@ -536,6 +600,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           completeOrderProcess={initiateCheckout}
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}
+          currentCart={currentCart}
         />
 
 
@@ -575,25 +640,25 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         )}
 
 
-        <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {voiceInputString && (
-              <div className="animate-fade-in" style={{ background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0, maxWidth: '280px', wordBreak: 'break-word', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
-                {voiceInputString}
-              </div>
-            )}
-            <button 
-              onClick={handleMicClick}
-              className={`scale-hover ${isListening ? 'pulse' : ''}`}
-              style={{
-                width: '64px', height: '64px', borderRadius: '32px', border: 'none',
-                background: isListening ? '#f59e0b' : 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                color: 'white', boxShadow: isListening ? '0 0 20px rgba(245, 158, 11, 0.6)' : '0 10px 20px rgba(124, 58, 237, 0.4)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s'
-              }}
-            >
-               <Mic size={28} />
-            </button>
-        </div>
+        {/* <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {voiceInputString && (
+            <div className="animate-fade-in" style={{ background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0, maxWidth: '280px', wordBreak: 'break-word', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+              {voiceInputString}
+            </div>
+          )}
+          <button
+            onClick={handleMicClick}
+            className={`scale-hover ${isListening ? 'pulse' : ''}`}
+            style={{
+              width: '64px', height: '64px', borderRadius: '32px', border: 'none',
+              background: isListening ? '#f59e0b' : 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+              color: 'white', boxShadow: isListening ? '0 0 20px rgba(245, 158, 11, 0.6)' : '0 10px 20px rgba(124, 58, 237, 0.4)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s'
+            }}
+          >
+            <Mic size={28} />
+          </button>
+        </div> */}
 
         {/* {isAiProcessing && (
           <div className="ai-typing-indicator slide-up">
@@ -642,42 +707,44 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         }}>
           <div className="booking-modal-content" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">
-              {'Booking Details'}
+              {getCartCount() > 0 ? 'Booking Details' : 'Login / Identify'}
             </h3>
             <p className="modal-subtitle">
-              {'Please provide your details to confirm the order.'}
+              {getCartCount() > 0 ? 'Please provide your details to confirm the order.' : 'Enter your details to view past orders.'}
             </p>
             <form onSubmit={otpSent ? handleVerifyOtpAndOrder : handleSendOtp} className="modal-form">
-              <div className="form-group">
-                <label>{'Full Name'}</label>
-                <input
-                  type="text"
-                  required
-                  disabled={otpSent}
-                  className="modal-input"
-                  placeholder={'Enter your name'}
-                  value={customerInfo.name}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                />
-              </div>
+              {getCartCount() > 0 && (
+                <div className="form-group">
+                  <label>{'Full Name'}</label>
+                  <input
+                    type="text"
+                    required={getCartCount() > 0}
+                    disabled={otpSent}
+                    className="modal-input"
+                    placeholder={'Enter your name'}
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>{'Phone Number'}</label>
-                  <input
-                    type="tel"
-                    required
-                    disabled={otpSent}
-                    pattern="[0-9]{10}"
-                    maxLength={10}
-                    className="modal-input"
-                    placeholder={'10-digit number'}
-                    value={customerInfo.phone}
-                    onChange={(e) => {
-                      const onlyNums = e.target.value.replace(/[^0-9]/g, '');
-                      setCustomerInfo({ ...customerInfo, phone: onlyNums.slice(0, 10) });
-                    }}
-                  />
+                <input
+                  type="tel"
+                  required
+                  disabled={otpSent}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  className="modal-input"
+                  placeholder={'10-digit number'}
+                  value={customerInfo.phone}
+                  onChange={(e) => {
+                    const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+                    setCustomerInfo({ ...customerInfo, phone: onlyNums.slice(0, 10) });
+                  }}
+                />
               </div>
-              
+
               {otpSent && (
                 <div className="form-group">
                   <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -723,7 +790,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   </button>
                 ) : (
                   <button type="submit" disabled={isSubmittingOrder || otpCode.length !== 6} className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`} style={{ background: otpCode.length === 6 ? 'linear-gradient(135deg, #00e676 0%, #10b981 100%)' : '' }}>
-                    {isSubmittingOrder ? ('Processing...') : ('Confirm Order')}
+                    {isSubmittingOrder ? ('Processing...') : (getCartCount() > 0 ? 'Confirm Order' : 'Verify & Login')}
                   </button>
                 )}
               </div>
@@ -818,11 +885,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   <div className="order-id-row">
                     <div className="order-id-meta">
                       <span className="order-id-badge">
-                        #ORDER-{order.id} {order.customerName && <span style={{color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px'}}>👤 {order.customerName}</span>}
+                        #ORDER-{order.id} {order.customerName && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>👤 {order.customerName}</span>}
                       </span>
                       <span className="order-amount-text">₹{order.total}</span>
                     </div>
-                    <span className="order-time-text">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="order-time-text">{new Date(order.timestamp).toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
 
                   <div className="ordered-items-box">

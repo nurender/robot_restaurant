@@ -69,7 +69,8 @@ const updateOrderStatus = async (req, res) => {
 
 const trackTableOrder = async (req, res) => {
     try {
-        const orders = await orderService.trackTableOrder(req.params.tableNumber, req.query.restaurant_id);
+        let phone = req.query.phone;
+        const orders = await orderService.trackTableOrder(req.params.tableNumber, req.query.restaurant_id, phone);
         res.json({ orders });
     } catch (err) {
         console.error("Tracking Error:", err.message);
