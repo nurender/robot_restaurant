@@ -2673,13 +2673,13 @@
   left: 12%;
   right: 12%;
   height: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-default);
   z-index: 0;
 }
 
 .timeline-step {
   position: relative;
-  opacity: 0.4;
+  opacity: 0.5;
   transition: opacity 0.3s;
   display: flex;
   flex-direction: column;
@@ -2707,12 +2707,12 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: #1a1a20;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-deep);
+  border: 1.5px solid var(--border-default);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-main);
+  color: var(--text-muted);
   transition: all 0.3s;
   z-index: 2;
 }
@@ -2723,16 +2723,14 @@
 }
 
 .step-icon-box.active {
-  background-color: #2a164d;
-  /* Solid dark purple instead of translucent */
+  background-color: rgba(124, 58, 237, 0.15);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
-  box-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
 }
 
 .step-icon-box.completed {
-  background-color: #0b2e1e;
-  /* Solid dark green */
+  background-color: rgba(0, 230, 118, 0.15);
   border-color: var(--success);
   color: var(--success);
 }

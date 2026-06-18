@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, X, Clock, ChefHat, Store, ListTodo, Mic, LogOut, UserCircle } from 'lucide-react';
+import { CheckCircle, X, Clock, ChefHat, Store, ListTodo, Mic, LogOut, UserCircle, CheckCheck } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
@@ -44,6 +44,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [orderTracking, setOrderTracking] = useState(null);
   const [mockOtpToast, setMockOtpToast] = useState(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
+  const initialFetchDone = useRef(false);
+
+  const [customerSeat, setCustomerSeat] = useState('');
+  const [showSeatSelection, setShowSeatSelection] = useState(false);
 
   const [isListening, setIsListening] = useState(false);
   const [voiceInputString, setVoiceInputString] = useState('');
@@ -152,6 +156,17 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setMenuCategories(grouped.filter(g => g.items.length > 0));
         setExpandedCats(new Set(uniqueCategoryNames));
 
+        // Fetch Table Occupancy dynamically
+        if (tableNumber) {
+          const occupancyRes = await fetch(`${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`);
+          const occupancyData = await occupancyRes.json();
+          const hasActiveOrders = occupancyData.orders && occupancyData.orders.length > 0;
+          const isLogged = !!localStorage.getItem('customerPhone');
+          if (hasActiveOrders && !isLogged) {
+            setShowSeatSelection(true);
+          }
+        }
+
       } catch (e) {
         console.error("Initialization Error:", e);
       } finally {
@@ -183,13 +198,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         // If any order just became ready, maybe show tracking popup automatically
         const anyReady = data.orders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
         const prevAnyReady = activeOrders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
-        if (anyReady && !prevAnyReady) {
+        const wasPreviouslyEmpty = activeOrders.length === 0;
+
+        if (!wasPreviouslyEmpty && anyReady && !prevAnyReady) {
           setShowOrderTracking(true);
         }
       } else {
         setActiveOrders([]);
         setShowOrderTracking(false);
       }
+      initialFetchDone.current = true;
     } catch (e) { console.error("Tracking fetch failed", e); }
   }, [tableNumber, restaurantId, activeOrders]);
 
@@ -204,24 +222,28 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       console.log("📥 Received socket update:", updatedOrder);
       const isMyTable = String(updatedOrder.tableNumber) === String(tableNumber);
       const isMyRest = String(updatedOrder.restaurant_id) === String(restaurantId);
+      const myPhone = localStorage.getItem('customerPhone') || '';
+      const isMyOrder = String(updatedOrder.customerPhone) === String(myPhone);
 
-      if (isMyTable && isMyRest) {
+      if (isMyRest && isMyOrder) {
         setActiveOrders(prev => {
-          if (updatedOrder.status === 'completed' || updatedOrder.status === 'cancelled') {
+          if (updatedOrder.status === 'cancelled') {
             return prev.filter(o => o.id !== updatedOrder.id);
           }
-
           const exists = prev.find(o => o.id === updatedOrder.id);
+          const wasReady = exists && (exists.status === 'ready' || exists.status === 'out_for_delivery');
+          
+          if (!wasReady && (updatedOrder.status === 'ready' || updatedOrder.status === 'out_for_delivery')) {
+            // Execute safely after state update
+            setTimeout(() => setShowOrderTracking(true), 100);
+          }
+
           if (exists) {
             return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
           } else {
             return [updatedOrder, ...prev];
           }
         });
-
-        if (updatedOrder.status === 'ready' || updatedOrder.status === 'out_for_delivery') {
-          setShowOrderTracking(true);
-        }
       }
     };
 
@@ -355,6 +377,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         total: getCartTotal(),
         status: 'pending',
         customerName: customerInfo.name,
+        customerSeat: customerSeat || null,
         customerPhone: customerInfo.phone,
         notes: orderNote
       };
@@ -461,11 +484,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
   };
 
-  const initiateCheckout = () => {
-    if (getCartCount() === 0) {
-      alert('Your cart is empty. Please add some items first.');
-      return;
-    }
+  const proceedToAuthOrOrder = () => {
     const phone = localStorage.getItem('customerPhone');
     if (phone && customerInfo.name && customerInfo.phone) {
       // Auto submit order if already logged in
@@ -474,6 +493,22 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setShowCustomerForm(true);
       setShowCartSummary(false);
     }
+  };
+
+  const initiateCheckout = () => {
+    if (getCartCount() === 0) {
+      alert('Your cart is empty. Please add some items first.');
+      return;
+    }
+    
+    // Check if table has active orders and we haven't asked for a seat yet
+    if (activeOrders.length > 0 && !customerSeat) {
+      setShowSeatSelection(true);
+      setShowCartSummary(false);
+      return;
+    }
+
+    proceedToAuthOrOrder();
   };
 
   const toggleCategory = (cat) => {
@@ -520,6 +555,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       <div className="avatar-header">
         <div className="header-badge">
           <span style={{ opacity: 0.7 }}>Table</span> {tableNumber}
+          {customerSeat && (
+            <span style={{ marginLeft: '6px', background: 'rgba(255, 255, 255, 0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '800' }}>{customerSeat}</span>
+          )}
           <span style={{ opacity: 0.3, margin: '0 4px' }}>|</span>
           <span style={{ color: '#00e676' }}>₹{getCartTotal()}</span>
         </div>
@@ -701,6 +739,76 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         </div>
       )}
 
+      {showSeatSelection && (
+        <div className="modal-overlay" style={{ zIndex: 10005 }} onClick={() => setShowSeatSelection(false)}>
+          <div className="booking-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <h3 className="view-title" style={{ fontSize: '1.6rem', marginBottom: '8px' }}>Shared Table 🪑</h3>
+              <button className="close-modal-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setShowSeatSelection(false)}><X size={24} /></button>
+            </div>
+            <p className="text-muted" style={{ marginBottom: '20px' }}>
+              There are other active orders on this table. Please specify your <strong>Seat Number</strong> or <strong>Name</strong> so the waiter knows who ordered this!
+            </p>
+            <div className="booking-form">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                {['Seat A', 'Seat B', 'Seat C', 'Seat D', 'Seat E', 'Seat F'].map(seat => (
+                  <button
+                    key={seat}
+                    type="button"
+                    onClick={() => {
+                      setCustomerSeat(seat);
+                      setShowSeatSelection(false);
+                      if (currentCart && currentCart.length > 0) {
+                        setTimeout(() => proceedToAuthOrOrder(), 50);
+                      }
+                    }}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: '12px',
+                      border: customerSeat === seat ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                      background: customerSeat === seat ? 'rgba(124, 58, 237, 0.1)' : 'var(--bg-deep)',
+                      color: customerSeat === seat ? 'var(--accent-primary)' : 'var(--text-main)',
+                      fontWeight: '800',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {seat}
+                  </button>
+                ))}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
+                <span style={{ height: '1px', flex: 1, background: 'var(--border-default)' }} />
+                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>OR TYPE CUSTOM</span>
+                <span style={{ height: '1px', flex: 1, background: 'var(--border-default)' }} />
+              </div>
+
+              <input
+                className="modal-input"
+                placeholder="e.g. Kid seat, or Red Shirt"
+                value={customerSeat}
+                onChange={(e) => setCustomerSeat(e.target.value)}
+              />
+              <button 
+                className="btn-primary" 
+                style={{ width: '100%', marginTop: '16px' }}
+                onClick={() => {
+                  if(!customerSeat) { alert('Please select or specify your seat details.'); return; }
+                  setShowSeatSelection(false);
+                  if (currentCart && currentCart.length > 0) {
+                     proceedToAuthOrOrder();
+                  }
+                }}
+              >
+                Continue to Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCustomerForm && (
         <div className="modal-overlay" onClick={() => {
           setShowCustomerForm(false);
@@ -871,8 +979,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           <div className="tracking-modal animate-slide-up">
             <div className="tracking-header">
               <div className="tracking-header-info">
-                <h3>Active Orders</h3>
-                <p>Table {tableNumber} • Today</p>
+                <h3>My Orders</h3>
+                <p>Full History</p>
               </div>
               <button className="close-tracking-btn" onClick={() => setShowOrderTracking(false)}>
                 <X size={20} />
@@ -885,7 +993,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   <div className="order-id-row">
                     <div className="order-id-meta">
                       <span className="order-id-badge">
-                        #ORDER-{order.id} {order.customerName && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>👤 {order.customerName}</span>}
+                        #ORDER-{order.id} 
+                        <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>🍽️ Table {order.tableNumber}</span>
+                        {order.customerSeat && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>🪑 {order.customerSeat}</span>}
+                        {order.customerName && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>👤 {order.customerName}</span>}
                       </span>
                       <span className="order-amount-text">₹{order.total}</span>
                     </div>
@@ -911,13 +1022,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                       { key: 'pending', label: 'Placed', icon: ListTodo },
                       { key: 'accepted', label: 'Accepted', icon: CheckCircle },
                       { key: 'preparing', label: 'Cooking', icon: ChefHat },
-                      { key: 'ready', label: 'Ready', icon: Store }
+                      { key: 'ready', label: 'Ready', icon: Store },
+                      { key: 'completed', label: 'Served', icon: CheckCheck }
                     ].map((step, i) => {
                       const statuses = ['pending', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'completed'];
                       const currentIndex = statuses.indexOf(order.status);
                       const stepIndex = statuses.indexOf(step.key);
-                      const isCompleted = stepIndex < currentIndex;
-                      const isActive = step.key === order.status || (step.key === 'ready' && order.status === 'out_for_delivery');
+                      const isCompleted = stepIndex < currentIndex || (step.key === 'completed' && order.status === 'completed');
+                      const isActive = (step.key === order.status || (step.key === 'ready' && order.status === 'out_for_delivery')) && !isCompleted;
 
                       return (
                         <div key={i} className={`timeline-step ${isCompleted || isActive ? 'active' : ''}`}>

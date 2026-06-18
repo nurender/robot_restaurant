@@ -132,7 +132,7 @@ const AdminPanel = () => {
 
   // UI States
   const [extractedReviewData, setExtractedReviewData] = useState(null);
-  
+
   const [showMenuPopup, setShowMenuPopup] = useState(false);
   const [editingDishId, setEditingDishId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -224,10 +224,10 @@ const AdminPanel = () => {
   const [showCouponPopup, setShowCouponPopup] = useState(false);
   const [showRiderPopup, setShowRiderPopup] = useState(false);
   const [editingRiderId, setEditingRiderId] = useState(null);
-  const [newRider, setNewRider] = useState({ 
-    name: '', phone: '', status: 'online', 
-    vehicle_number: '', license_number: '', 
-    address: '', emergency_contact: '' 
+  const [newRider, setNewRider] = useState({
+    name: '', phone: '', status: 'online',
+    vehicle_number: '', license_number: '',
+    address: '', emergency_contact: ''
   });
   const [newCoupon, setNewCoupon] = useState({
     code: '',
@@ -434,7 +434,7 @@ const AdminPanel = () => {
     socket.on('waiter_alert', (data) => {
       const isMyRest = String(data.restaurant_id) === String(adminUser?.restaurant_id || 4);
       const isSuper = adminUser?.role === 'super_admin';
-      
+
       if (isMyRest || isSuper) {
         setActiveWaiterCalls(prev => {
           const exists = prev.find(c => String(c.table_number) === String(data.table_number));
@@ -660,7 +660,7 @@ const AdminPanel = () => {
       if (!printWindow) throw new Error("Popup blocker prevented printing.");
 
       const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(tableUrl)}`;
-      
+
       const html = `
         <!DOCTYPE html>
         <html>
@@ -879,9 +879,9 @@ const AdminPanel = () => {
 
   const handleEditRider = (rider) => {
     setEditingRiderId(rider.id);
-    setNewRider({ 
-      name: rider.name, 
-      phone: rider.phone, 
+    setNewRider({
+      name: rider.name,
+      phone: rider.phone,
       status: rider.status || 'online',
       vehicle_number: rider.vehicle_number || '',
       license_number: rider.license_number || '',
@@ -909,10 +909,10 @@ const AdminPanel = () => {
       }
       setShowRiderPopup(false);
       setEditingRiderId(null);
-      setNewRider({ 
-        name: '', phone: '', status: 'online', 
-        vehicle_number: '', license_number: '', 
-        address: '', emergency_contact: '' 
+      setNewRider({
+        name: '', phone: '', status: 'online',
+        vehicle_number: '', license_number: '',
+        address: '', emergency_contact: ''
       });
       fetchData();
     } catch (e) { alert(editingRiderId ? "Failed to update rider" : "Failed to recruit rider"); }
@@ -1062,14 +1062,14 @@ const AdminPanel = () => {
                   {activeWaiterCalls.map((c, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '4px' }}>
                       <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>Table {c.table_number}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{new Date(c.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   ))}
                   <div style={{ fontSize: '11px', textAlign: 'center', marginTop: '8px', color: '#ef4444' }}>Click bell to dismiss all</div>
                 </div>
               )}
             </div>
-            
+
             <ThemeToggle />
             <div className="profile-details-group">
               <span className="profile-name">{adminUser.name}</span>
@@ -1319,7 +1319,7 @@ const AdminPanel = () => {
                               Table {order.table_number || order.tableNumber}
                             </div>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Clock size={12} /> {formatDate(order.created_at || order.timestamp)}
+                              <span style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', border: '1px solid var(--card-border)', padding: '4px 8px', fontSize: '12px', borderRadius: '8px', fontWeight: '700' }}>#{order.id}</span>
                             </span>
                           </div>
 
@@ -1360,7 +1360,10 @@ const AdminPanel = () => {
                                   >
                                     <Edit2 size={11} />
                                   </button>
-                                  {(order.customerName || order.customer_name) && <div><span style={{ color: 'var(--text-muted)' }}>Customer:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerName || order.customer_name}</strong></div>}
+                                  {(order.customerName || order.customer_name) && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ color: 'var(--text-muted)' }}>Customer:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerName || order.customer_name}</strong>
+                                    {order.customerSeat && <span style={{ marginLeft: '4px', background: 'rgba(124, 58, 237, 0.2)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '800' }}>🪑 {order.customerSeat}</span>}
+                                  </div>}
+                                  {!order.customerName && !order.customer_name && order.customerSeat && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ color: 'var(--text-muted)' }}>Seat:</span> <strong style={{ background: 'rgba(124, 58, 237, 0.2)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '800' }}>🪑 {order.customerSeat}</strong></div>}
                                   {(order.customerPhone || order.customer_phone) && <div><span style={{ color: 'var(--text-muted)' }}>Phone:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerPhone || order.customer_phone}</strong></div>}
                                 </>
                               )}
@@ -1391,7 +1394,7 @@ const AdminPanel = () => {
                                   const qty = parseInt(curr.qty || curr.quantity || 1);
                                   return acc + (price * qty);
                                 }, 0);
-                                
+
                                 setManualOrderData({
                                   id: order.id,
                                   tableNumber: (order.table_number || order.tableNumber || '1').toString(),
@@ -2252,26 +2255,26 @@ const AdminPanel = () => {
                           )}
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+                      {/* <div style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning)', fontWeight: '800', fontSize: '18px' }}>
                           <Clock size={20} />
                           {Math.floor((Date.now() - (order.timestamp || Date.now())) / 60000)}m ago
                         </div>
-                      </div>
+                      </div> */}
                     </div>
 
                     <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
                       {(order.items || []).map((item, i) => {
                         const isChecked = kitchenItemChecked[`${order.id}-${i}`];
                         return (
-                        <div key={i} onClick={() => { setKitchenItemChecked(prev => ({...prev, [`${order.id}-${i}`]: !prev[`${order.id}-${i}`]})) }} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s', opacity: isChecked ? 0.4 : 1, textDecoration: isChecked ? 'line-through' : 'none', background: isChecked ? 'rgba(0,255,100,0.02)' : 'transparent', borderRadius: '8px', margin: '2px 0', padding: '10px' }}>
-                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ width: '32px', height: '32px', background: isChecked ? 'rgba(255,255,255,0.05)' : 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: isChecked ? 'var(--text-muted)' : 'var(--accent-primary)', fontSize: '14px' }}>
-                              {isChecked ? <Check size={16} /> : `${item.qty || item.quantity}x`}
+                          <div key={i} onClick={() => { setKitchenItemChecked(prev => ({ ...prev, [`${order.id}-${i}`]: !prev[`${order.id}-${i}`] })) }} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s', opacity: isChecked ? 0.4 : 1, textDecoration: isChecked ? 'line-through' : 'none', background: isChecked ? 'rgba(0,255,100,0.02)' : 'transparent', borderRadius: '8px', margin: '2px 0', padding: '10px' }}>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <div style={{ width: '32px', height: '32px', background: isChecked ? 'rgba(255,255,255,0.05)' : 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: isChecked ? 'var(--text-muted)' : 'var(--accent-primary)', fontSize: '14px' }}>
+                                {isChecked ? <Check size={16} /> : `${item.qty || item.quantity}x`}
+                              </div>
+                              <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name} {item.selectedVariant && <span style={{ fontSize: '13px', opacity: 0.8, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ fontSize: '12px', opacity: 0.6 }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                             </div>
-                            <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name} {item.selectedVariant && <span style={{ fontSize: '13px', opacity: 0.8, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ fontSize: '12px', opacity: 0.6 }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                           </div>
-                        </div>
                         );
                       })}
                     </div>
@@ -3072,7 +3075,7 @@ const AdminPanel = () => {
                     setCurrentRoleData({ name: '', permissions: [] });
                     setIsRoleModalOpen(true);
                   }}
-                  style={{ 
+                  style={{
                     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px', borderRadius: '14px',
                     background: 'var(--accent-primary)', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer'
                   }}
@@ -3096,8 +3099,8 @@ const AdminPanel = () => {
                       <tr key={role.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }} className="table-row-hover">
                         <td style={{ padding: '20px 24px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: role.name === 'super_admin' ? '#10b981' : 'var(--accent-primary)' }} />
-                             <span style={{ fontWeight: '700', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{(role.name || '').replace('_', ' ')}</span>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: role.name === 'super_admin' ? '#10b981' : 'var(--accent-primary)' }} />
+                            <span style={{ fontWeight: '700', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{(role.name || '').replace('_', ' ')}</span>
                           </div>
                         </td>
                         <td style={{ padding: '20px 24px' }}>
@@ -3120,10 +3123,10 @@ const AdminPanel = () => {
                                 setCurrentRoleData(role);
                                 setIsRoleModalOpen(true);
                               }}
-                              style={{ 
-                                background: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.2)', 
-                                color: '#a78bfa', cursor: 'pointer', padding: '10px 18px', borderRadius: '12px', 
-                                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '13px' 
+                              style={{
+                                background: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.2)',
+                                color: '#a78bfa', cursor: 'pointer', padding: '10px 18px', borderRadius: '12px',
+                                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '13px'
                               }}
                             >
                               <Edit size={16} /> Edit Role
@@ -3156,8 +3159,8 @@ const AdminPanel = () => {
                         <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'white' }}>{currentRoleData.id ? 'Edit Access Role' : 'Initialize New Role'}</h2>
                         <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Modify the security parameters and permitted system modules.</p>
                       </div>
-                      <button 
-                        onClick={() => setIsRoleModalOpen(false)} 
+                      <button
+                        onClick={() => setIsRoleModalOpen(false)}
                         style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Plus size={20} style={{ transform: 'rotate(45deg)' }} />
@@ -3194,16 +3197,16 @@ const AdminPanel = () => {
                                   else newPerms.push(mod);
                                   setCurrentRoleData({ ...currentRoleData, permissions: newPerms });
                                 }}
-                                style={{ 
-                                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', 
-                                  background: isSelected ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.03)', 
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px',
+                                  background: isSelected ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.03)',
                                   borderRadius: '16px', cursor: 'pointer', border: '1px solid',
                                   borderColor: isSelected ? 'var(--accent-primary)' : 'transparent',
                                   transition: 'all 0.2s'
                                 }}
                               >
                                 <div style={{ width: '18px', height: '18px', borderRadius: '5px', border: '2px solid', borderColor: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)', background: isSelected ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                   {isSelected && <Check size={12} color="white" strokeWidth={4} />}
+                                  {isSelected && <Check size={12} color="white" strokeWidth={4} />}
                                 </div>
                                 <span style={{ fontSize: '14px', color: isSelected ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'capitalize' }}>{(mod || '').replace('_', ' ')}</span>
                               </div>
@@ -3289,35 +3292,35 @@ const AdminPanel = () => {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '900', color: item.is_active ? 'var(--accent-primary)' : '#666', letterSpacing: '1px' }}>{item.is_active ? 'VISIBLE' : 'HIDDEN'}</span>
-                            <button 
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  await axios.post(`${API_URL}/api/mgmt/sidebar/toggle/${item.id}`, {
-                                    is_active: !item.is_active
-                                  });
-                                  const updated = [...orderedSidebar];
-                                  updated[index].is_active = !item.is_active;
-                                  setOrderedSidebar(updated);
-                                } catch (err) { alert("Failed to toggle visibility"); }
-                              }}
-                              style={{ 
-                                width: '48px', height: '24px', borderRadius: '12px', 
-                                background: item.is_active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
-                                border: 'none', cursor: 'pointer', position: 'relative', marginTop: '6px',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                              }}
-                            >
-                               <div style={{ 
-                                 width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                                 position: 'absolute', top: '3px', left: item.is_active ? '27px' : '3px',
-                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                 boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
-                               }} />
-                            </button>
-                         </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '900', color: item.is_active ? 'var(--accent-primary)' : '#666', letterSpacing: '1px' }}>{item.is_active ? 'VISIBLE' : 'HIDDEN'}</span>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await axios.post(`${API_URL}/api/mgmt/sidebar/toggle/${item.id}`, {
+                                  is_active: !item.is_active
+                                });
+                                const updated = [...orderedSidebar];
+                                updated[index].is_active = !item.is_active;
+                                setOrderedSidebar(updated);
+                              } catch (err) { alert("Failed to toggle visibility"); }
+                            }}
+                            style={{
+                              width: '48px', height: '24px', borderRadius: '12px',
+                              background: item.is_active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
+                              border: 'none', cursor: 'pointer', position: 'relative', marginTop: '6px',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                          >
+                            <div style={{
+                              width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                              position: 'absolute', top: '3px', left: item.is_active ? '27px' : '3px',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                            }} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -3642,48 +3645,48 @@ const AdminPanel = () => {
                   <Plus size={14} /> Add Variant Size
                 </button>
               </div>
-              
+
               {(!newDish.options || newDish.options.length === 0) ? (
-                 <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No variants active. Standard item price will be used.</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No variants active. Standard item price will be used.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                   {newDish.options.map((opt, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                         <input 
-                           type="text" 
-                           placeholder="e.g. 30ml, Glass, Half"
-                           value={opt.size} 
-                           onChange={(e) => {
-                             const newOpts = [...newDish.options];
-                             newOpts[idx].size = e.target.value;
-                             setNewDish({ ...newDish, options: newOpts });
-                           }} 
-                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                         />
-                         <input 
-                           type="number" 
-                           placeholder="Price (₹)"
-                           value={opt.price} 
-                           onChange={(e) => {
-                             const newOpts = [...newDish.options];
-                             newOpts[idx].price = e.target.value;
-                             setNewDish({ ...newDish, options: newOpts });
-                           }} 
-                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                         />
-                         <button 
-                           type="button" 
-                           onClick={() => {
-                             const newOpts = [...newDish.options];
-                             newOpts.splice(idx, 1);
-                             setNewDish({ ...newDish, options: newOpts });
-                           }}
-                           style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', width: '44px', height: '44px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                         >
-                            <Trash2 size={16} />
-                         </button>
-                      </div>
-                   ))}
+                  {newDish.options.map((opt, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input
+                        type="text"
+                        placeholder="e.g. 30ml, Glass, Half"
+                        value={opt.size}
+                        onChange={(e) => {
+                          const newOpts = [...newDish.options];
+                          newOpts[idx].size = e.target.value;
+                          setNewDish({ ...newDish, options: newOpts });
+                        }}
+                        style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price (₹)"
+                        value={opt.price}
+                        onChange={(e) => {
+                          const newOpts = [...newDish.options];
+                          newOpts[idx].price = e.target.value;
+                          setNewDish({ ...newDish, options: newOpts });
+                        }}
+                        style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newOpts = [...newDish.options];
+                          newOpts.splice(idx, 1);
+                          setNewDish({ ...newDish, options: newOpts });
+                        }}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', width: '44px', height: '44px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -3700,48 +3703,48 @@ const AdminPanel = () => {
                   <Plus size={14} /> Add Modifier
                 </button>
               </div>
-              
+
               {(!newDish.addons || newDish.addons.length === 0) ? (
-                 <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No add-ons active for this item.</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No add-ons active for this item.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                   {newDish.addons.map((addon, idx) => (
-                      <div key={'addon-'+idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                         <input 
-                           type="text" 
-                           placeholder="e.g. Soda, Extra Cheese, Peanuts"
-                           value={addon.name} 
-                           onChange={(e) => {
-                             const newAddons = [...newDish.addons];
-                             newAddons[idx].name = e.target.value;
-                             setNewDish({ ...newDish, addons: newAddons });
-                           }} 
-                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                         />
-                         <input 
-                           type="number" 
-                           placeholder="Price (+₹)"
-                           value={addon.price} 
-                           onChange={(e) => {
-                             const newAddons = [...newDish.addons];
-                             newAddons[idx].price = e.target.value;
-                             setNewDish({ ...newDish, addons: newAddons });
-                           }} 
-                           style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
-                         />
-                         <button 
-                           type="button" 
-                           onClick={() => {
-                             const newAddons = [...newDish.addons];
-                             newAddons.splice(idx, 1);
-                             setNewDish({ ...newDish, addons: newAddons });
-                           }}
-                           style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', width: '44px', height: '44px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                         >
-                            <Trash2 size={16} />
-                         </button>
-                      </div>
-                   ))}
+                  {newDish.addons.map((addon, idx) => (
+                    <div key={'addon-' + idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input
+                        type="text"
+                        placeholder="e.g. Soda, Extra Cheese, Peanuts"
+                        value={addon.name}
+                        onChange={(e) => {
+                          const newAddons = [...newDish.addons];
+                          newAddons[idx].name = e.target.value;
+                          setNewDish({ ...newDish, addons: newAddons });
+                        }}
+                        style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price (+₹)"
+                        value={addon.price}
+                        onChange={(e) => {
+                          const newAddons = [...newDish.addons];
+                          newAddons[idx].price = e.target.value;
+                          setNewDish({ ...newDish, addons: newAddons });
+                        }}
+                        style={{ flex: 1, height: '44px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--accent-primary)', fontWeight: '800', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newAddons = [...newDish.addons];
+                          newAddons.splice(idx, 1);
+                          setNewDish({ ...newDish, addons: newAddons });
+                        }}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', width: '44px', height: '44px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -4542,12 +4545,12 @@ const AdminPanel = () => {
               </div>
               {editingRiderId && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                   <label style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-muted)', marginBottom: '4px' }}>CURRENT STATUS</label>
-                   <select 
-                    value={newRider.status} 
-                    onChange={(e) => setNewRider({ ...newRider, status: e.target.value })} 
+                  <label style={{ fontSize: '10px', fontWeight: '900', color: 'var(--text-muted)', marginBottom: '4px' }}>CURRENT STATUS</label>
+                  <select
+                    value={newRider.status}
+                    onChange={(e) => setNewRider({ ...newRider, status: e.target.value })}
                     style={{ padding: '6px 12px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'white', fontSize: '12px' }}
-                   >
+                  >
                     <option value="online">Online</option>
                     <option value="busy">Busy</option>
                     <option value="offline">Offline</option>

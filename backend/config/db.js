@@ -169,6 +169,7 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'cash'`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_seat TEXT`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS menu (
             id TEXT PRIMARY KEY,

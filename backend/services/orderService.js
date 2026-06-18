@@ -2,7 +2,7 @@ const { pool } = require('../config/db');
 
 class OrderService {
     async createOrder(data) {
-        const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone, notes } = data;
+        const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone, notes, customerSeat } = data;
         const finalRestId = restaurant_id || 1;
 
         const client = await pool.connect();
@@ -10,9 +10,9 @@ class OrderService {
             await client.query('BEGIN');
 
             const orderRes = await client.query(
-                `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status, customer_name, customer_phone, notes) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-                [finalRestId, tableNumber, JSON.stringify(items), total, new Date(), status || 'pending', customerName || '', customerPhone || '', notes || null]
+                `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status, customer_name, customer_phone, notes, customer_seat) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+                [finalRestId, tableNumber, JSON.stringify(items), total, new Date(), status || 'pending', customerName || '', customerPhone || '', notes || null, customerSeat || null]
             );
             const orderId = orderRes.rows[0].id;
 
@@ -64,7 +64,7 @@ class OrderService {
             let parsedItems = [];
             try {
                 parsedItems = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
-            } catch (e) {}
+            } catch (e) { }
 
             return {
                 ...row,
@@ -72,6 +72,7 @@ class OrderService {
                 timestamp: row.timestamp,
                 customerName: row.customer_name,
                 customerPhone: row.customer_phone,
+                customerSeat: row.customer_seat,
                 items: parsedItems
             };
         });
@@ -129,7 +130,7 @@ class OrderService {
                 for (const item of items) {
                     const itemName = (item.name || '').toLowerCase();
                     const qty = Number(item.qty || item.quantity || 1);
-                    
+
                     let variantMultiplier = 1;
                     if (item.selectedVariant) {
                         const sizeStr = String(item.selectedVariant.size).toLowerCase();
@@ -167,7 +168,7 @@ class OrderService {
             let parsedItems = [];
             try {
                 parsedItems = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
-            } catch (e) {}
+            } catch (e) { }
             return {
                 ...row,
                 tableNumber: row.tablenumber,
@@ -188,12 +189,12 @@ class OrderService {
             query = `
                 SELECT * FROM orders 
                 WHERE restaurant_id = $1 
-                  AND (tablenumber = $2 OR (customer_phone = $3 AND $3 != ''))
-                  AND status != 'completed' 
+                  AND customer_phone = $2 
+                  AND customer_phone != ''
                   AND status != 'cancelled'
                 ORDER BY timestamp DESC
             `;
-            params = [restId, tableNumber, phone];
+            params = [restId, phone];
         } else {
             query = `
                 SELECT * FROM orders 
@@ -212,13 +213,14 @@ class OrderService {
             let parsedItems = [];
             try {
                 parsedItems = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
-            } catch (e) {}
+            } catch (e) { }
             return {
                 ...row,
                 tableNumber: row.tablenumber,
                 timestamp: row.timestamp,
                 customerName: row.customer_name,
                 customerPhone: row.customer_phone,
+                customerSeat: row.customer_seat,
                 items: parsedItems
             };
         });
