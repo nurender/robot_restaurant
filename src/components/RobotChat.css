@@ -3228,3 +3228,52 @@
     left: 200%;
   }
 }
+
+/* Zomato Style Veg Toggle */
+.zomato-pure-toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  background: #3f3f46;
+  position: relative;
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.zomato-pure-toggle.on {
+  background: #219653; /* Pure green */
+  border-color: #219653;
+}
+
+.zomato-pure-toggle .toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 1.5px;
+  left: 2px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zomato-pure-toggle.on .toggle-thumb {
+  transform: translateX(16px);
+  box-shadow: 0 2px 4px rgba(33, 150, 83, 0.3);
+}
+
+.zomato-pure-toggle .toggle-thumb::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #ef4444; /* red dot when off */
+  border-radius: 50%;
+  display: block;
+}
+
+.zomato-pure-toggle.on .toggle-thumb::before {
+  background: #219653; /* green dot when on */
+}
