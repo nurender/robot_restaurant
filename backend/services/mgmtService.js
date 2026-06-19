@@ -3,7 +3,15 @@ const { pool } = require('../config/db');
 class MgmtService {
     // --- Coupons ---
     async getCoupons(restaurant_id) {
-        const result = await pool.query("SELECT * FROM coupons WHERE restaurant_id = $1 ORDER BY created_at DESC", [restaurant_id || 4]);
+        const result = await pool.query(`
+            SELECT c.*, 
+                   (SELECT COUNT(*) FROM orders WHERE applied_coupon = c.code AND status != 'cancelled') as current_usage_count,
+                   (SELECT COALESCE(json_agg(json_build_object('customer_name', o.customer_name, 'customer_phone', o.customer_phone, 'total', o.total, 'items', o.items, 'timestamp', o.timestamp, 'discount_amount', o.discount_amount)), '[]'::json) 
+                    FROM orders o WHERE o.applied_coupon = c.code AND o.status != 'cancelled') as usage_history
+            FROM coupons c 
+            WHERE c.restaurant_id = $1 
+            ORDER BY c.created_at DESC
+        `, [restaurant_id || 4]);
         return result.rows;
     }
 

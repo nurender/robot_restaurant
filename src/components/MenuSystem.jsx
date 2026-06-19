@@ -19,7 +19,11 @@ const MenuSystem = ({
     completeOrderProcess,
     getMediaUrl,
     setZoomedImage,
-    currentCart
+    currentCart,
+    availableCoupons,
+    activeCoupon,
+    setActiveCoupon,
+    getDiscountAmount
 }) => {
     const categoryScrollRef = useRef(null);
     const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'nonveg'
@@ -388,7 +392,16 @@ const MenuSystem = ({
                                                                 </div>
                                                             </div>
                                                             <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
-                                                            {(hasVariants || hasAddons) && (
+                                                            
+                                                            {item.is_combo && Array.isArray(item.combo_components) && item.combo_components.length > 0 && (
+                                                                <div style={{ marginTop: '6px', padding: '6px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontWeight: '600' }}>
+                                                                        <span style={{ color: 'var(--accent-primary)' }}>Includes:</span> {item.combo_components.map(c => `${c.qty}x ${c.name}`).join(' + ')}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+
+                                                            {(hasVariants || hasAddons) && !item.is_combo && (
                                                                 <p style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '600', marginTop: '6px' }}>Customisable</p>
                                                             )}
 

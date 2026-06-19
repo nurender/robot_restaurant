@@ -2,7 +2,7 @@ const { pool } = require('../config/db');
 
 class OrderService {
     async createOrder(data) {
-        const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone, notes, customerSeat } = data;
+        const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone, notes, customerSeat, applied_coupon, discount_amount } = data;
         const finalRestId = restaurant_id || 1;
 
         const client = await pool.connect();
@@ -10,9 +10,9 @@ class OrderService {
             await client.query('BEGIN');
 
             const orderRes = await client.query(
-                `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status, customer_name, customer_phone, notes, customer_seat) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-                [finalRestId, tableNumber, JSON.stringify(items), total, new Date(), status || 'pending', customerName || '', customerPhone || '', notes || null, customerSeat || null]
+                `INSERT INTO orders (restaurant_id, tablenumber, items, total, timestamp, status, customer_name, customer_phone, notes, customer_seat, applied_coupon, discount_amount) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+                [finalRestId, tableNumber, JSON.stringify(items), total, new Date(), status || 'pending', customerName || '', customerPhone || '', notes || null, customerSeat || null, applied_coupon || null, discount_amount || 0]
             );
             const orderId = orderRes.rows[0].id;
 

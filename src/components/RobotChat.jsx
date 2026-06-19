@@ -40,6 +40,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [activeCoupon, setActiveCoupon] = useState(null);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderTracking, setOrderTracking] = useState(null);
   const [mockOtpToast, setMockOtpToast] = useState(null);
@@ -143,18 +144,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           setRestaurantData(mine);
         }
 
-        // Fetch Menu
-        const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
-        const menuData = await menuRes.json();
-        const allItems = menuData.data || [];
-        const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
-        const grouped = uniqueCategoryNames.map(catName => ({
-          category: catName,
-          items: allItems.filter(item => (item.category || 'Other') === catName)
-        }));
-        grouped.sort((a, b) => a.category.localeCompare(b.category));
-        setMenuCategories(grouped.filter(g => g.items.length > 0));
-        setExpandedCats(new Set(uniqueCategoryNames));
+        await fetchMenuData();
 
         // Fetch Table Occupancy dynamically
         if (tableNumber) {
@@ -175,6 +165,33 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     };
     initApp();
   }, [restaurantId]);
+
+  const fetchMenuData = async () => {
+    if (!restaurantId) return;
+    try {
+      const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
+      const menuData = await menuRes.json();
+      const allItems = menuData.data || [];
+      const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
+      const grouped = uniqueCategoryNames.map(catName => ({
+        category: catName,
+        items: allItems.filter(item => (item.category || 'Other') === catName)
+      }));
+      grouped.sort((a, b) => a.category.localeCompare(b.category));
+      setMenuCategories(grouped.filter(g => g.items.length > 0));
+      setExpandedCats(new Set(uniqueCategoryNames));
+
+      const cpRes = await fetch(`${API_URL}/api/mgmt/coupons?restaurant_id=${restaurantId}`);
+      if (cpRes.ok) {
+        const cpData = await cpRes.json();
+        if (cpData.data) {
+          setAvailableCoupons(cpData.data.filter(c => c.is_active));
+        }
+      }
+    } catch (e) {
+      console.error("Menu Fetch Error:", e);
+    }
+  };
 
 
 
@@ -248,32 +265,48 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     };
 
     socket.on('order_updated', handleOrderUpdate);
+    socket.on('menu_updated', fetchMenuData);
+    socket.on('categories_updated', fetchMenuData);
+
     return () => {
       socket.off('order_updated', handleOrderUpdate);
+      socket.off('menu_updated', fetchMenuData);
+      socket.off('categories_updated', fetchMenuData);
     };
   }, [tableNumber, restaurantId]);
 
   const getCartSubtotal = () => currentCart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
-  const getCartTax = () => {
+  const getDiscountAmount = () => {
+    if (!activeCoupon) return 0;
     const subtotal = getCartSubtotal();
+    if (activeCoupon.min_order_value && subtotal < activeCoupon.min_order_value) return 0;
+    
+    let discount = 0;
+    if (activeCoupon.discount_type === 'flat') {
+      discount = Number(activeCoupon.discount_value);
+    } else {
+      discount = subtotal * (Number(activeCoupon.discount_value) / 100);
+    }
+    return Math.min(discount, subtotal);
+  };
+
+  const getCartTax = () => {
+    const discountedSubtotal = Math.max(0, getCartSubtotal() - getDiscountAmount());
     const cgstRate = Number(restaurantData?.cgst || 0) / 100;
     const sgstRate = Number(restaurantData?.sgst || 0) / 100;
     return {
-      cgst: subtotal * cgstRate,
-      sgst: subtotal * sgstRate
+      cgst: discountedSubtotal * cgstRate,
+      sgst: discountedSubtotal * sgstRate
     };
   };
 
   const getCartTotal = () => {
-    const subtotal = getCartSubtotal();
+    const discountedSubtotal = Math.max(0, getCartSubtotal() - getDiscountAmount());
     const { cgst, sgst } = getCartTax();
-    let total = subtotal + cgst + sgst;
+    let total = discountedSubtotal + cgst + sgst;
 
     if (restaurantData?.is_round_off) {
-      // User example: 100.60 -> 100. This is Math.floor or Math.round?
-      // Usually it's Math.round for "round to nearest integer". 
-      // But if user explicitly said "100.60 to 100", I'll use Math.floor as requested.
       return Math.floor(total);
     }
     return Number(total.toFixed(2));
@@ -379,7 +412,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         customerName: customerInfo.name,
         customerSeat: customerSeat || null,
         customerPhone: customerInfo.phone,
-        notes: orderNote
+        notes: orderNote,
+        applied_coupon: activeCoupon ? activeCoupon.code : null,
+        discount_amount: getDiscountAmount()
       };
       const res = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
@@ -392,6 +427,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setOrderConfirmedUI(true);
         setCurrentCart([]);
         setOrderNote('');
+        setActiveCoupon(null);
         setShowCustomerForm(false);
         setCustomerInfo({ name: '', phone: '' });
         setOtpCode('');
@@ -639,6 +675,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}
           currentCart={currentCart}
+          availableCoupons={availableCoupons}
+          activeCoupon={activeCoupon}
+          setActiveCoupon={setActiveCoupon}
+          getDiscountAmount={getDiscountAmount}
         />
 
 
@@ -723,6 +763,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           getCartTax={getCartTax}
           restaurantData={restaurantData}
           completeOrderProcess={initiateCheckout}
+          availableCoupons={availableCoupons}
+          activeCoupon={activeCoupon}
+          setActiveCoupon={setActiveCoupon}
+          getDiscountAmount={getDiscountAmount}
         />
       )}
 

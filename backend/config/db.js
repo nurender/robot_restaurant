@@ -191,8 +191,10 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS options JSONB DEFAULT '[]'`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS addons JSONB DEFAULT '[]'`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_type TEXT DEFAULT 'none'`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_type TEXT DEFAULT 'none'`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10,2) DEFAULT 0.00`);
-
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_combo BOOLEAN DEFAULT FALSE`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS combo_components JSONB DEFAULT '[]'`);
         const initialMenu = [
             ['s1', 1, 'Paneer Tikka', 'Starters', 250, 'Grilled cottage cheese with spices', 'https://www.cookwithmanali.com/wp-content/uploads/2015/07/Restaurant-Style-Recipe-Paneer-Tikka.jpg', null],
             ['s2', 1, 'French Fries', 'Starters', 120, 'Crispy salted potato fries', 'https://www.allrecipes.com/thmb/8_B6OD1w6h1V0zPi8KAGzD41Kzs=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/50223-homemade-crispy-seasoned-french-fries-VAT-Beauty-4x3-789ecb2eaed34d6e879b9a93dd56a50a.jpg', null],
@@ -599,6 +601,7 @@ const connectDB = async () => {
         await pool.query(`
             INSERT INTO admin_sidebar_items (id, label, icon_name, roles, sort_order)
             VALUES 
+                ('combos', 'Combos & Offers', 'Package', '{super_admin}', 5),
                 ('sidebar_order', 'Sidebar Ordering', 'Settings', '{super_admin}', 8),
                 ('roles', 'Role Management', 'Users', '{super_admin}', 20)
             ON CONFLICT (id) DO UPDATE SET is_active = TRUE
@@ -627,6 +630,8 @@ const connectDB = async () => {
                 await pool.query("INSERT INTO admin_roles (name, permissions) VALUES ($1,$2)", role);
             }
         }
+        await pool.query("UPDATE admin_roles SET permissions = array_append(permissions, 'combos') WHERE name IN ('super_admin', 'manager') AND NOT ('combos' = ANY(permissions))");
+
         console.log("✅ Admin Roles Verified");
     } catch (e) { 
         console.error("❌ DB Init Error:", e.message); 

@@ -14,7 +14,11 @@ const CartOverlay = ({
     restaurantData,
     completeOrderProcess,
     orderNote,
-    setOrderNote
+    setOrderNote,
+    availableCoupons,
+    activeCoupon,
+    setActiveCoupon,
+    getDiscountAmount
 }) => {
     const [splitCount, setSplitCount] = useState(1);
     const [showBillDetails, setShowBillDetails] = useState(false);
@@ -89,6 +93,41 @@ const CartOverlay = ({
                 </div> */}
 
                 <div className="cart-summary-footer" style={{ gap: '12px' }}>
+                    <div style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
+                        {!activeCoupon ? (
+                            <form 
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const code = e.target.couponCode.value.toUpperCase();
+                                    if (!code) return;
+                                    const found = (availableCoupons || []).find(c => c.code.toUpperCase() === code);
+                                    if (found) {
+                                        if (found.min_order_value && subtotal < found.min_order_value) {
+                                            alert(`Order value must be at least ₹${found.min_order_value} to apply this coupon.`);
+                                        } else if (found.usage_limit && Number(found.current_usage_count) >= found.usage_limit) {
+                                            alert("This coupon has reached its maximum usage limit.");
+                                        } else if (found.expiry_date && new Date(found.expiry_date) < new Date(new Date().setHours(0,0,0,0))) {
+                                            alert("This coupon has expired.");
+                                        } else {
+                                            setActiveCoupon(found);
+                                        }
+                                    } else {
+                                        alert("Invalid or expired coupon code.");
+                                    }
+                                }} 
+                                style={{ display: 'flex', gap: '8px' }}
+                            >
+                                <input name="couponCode" type="text" placeholder="Got a Neural Promotion Code?" style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '13px' }} />
+                                <button type="submit" style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(124, 58, 237, 0.2)', color: '#a78bfa', fontWeight: '800', fontSize: '12px', cursor: 'pointer', border: 'none' }}>Apply</button>
+                            </form>
+                        ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px' }}>
+                                <span style={{ color: '#10b981', fontSize: '13px', fontWeight: '800' }}>✓ {activeCoupon.code} Applied</span>
+                                <button onClick={() => setActiveCoupon(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontWeight: '800' }}>Remove</button>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Space reserved for bill details to be moved down */}
                     <div style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border-default)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -120,6 +159,12 @@ const CartOverlay = ({
                                 <span>Item Total</span>
                                 <span>₹{subtotal.toFixed(2)}</span>
                             </div>
+                            {activeCoupon && getDiscountAmount() > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#10b981', fontWeight: '800' }}>
+                                    <span>Discount ({activeCoupon.code})</span>
+                                    <span>-₹{getDiscountAmount().toFixed(2)}</span>
+                                </div>
+                            )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
                                 <span>Taxes (CGST {restaurantData?.cgst || 0}%)</span>
                                 <span>₹{cgst.toFixed(2)}</span>

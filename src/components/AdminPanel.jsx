@@ -60,6 +60,7 @@ import './AdminPanel.css';
 import AdminSidebar from './AdminSidebar';
 import ThemeToggle from './ThemeToggle';
 import SmartInventory from './SmartInventory';
+import CombosManager from './CombosManager';
 import { API_URL } from '../config';
 
 const socket = io(API_URL, { autoConnect: true });
@@ -537,6 +538,11 @@ const AdminPanel = () => {
         setRestaurantTables(tablesRes.data.data || []);
       }
 
+      if (activeTab === 'coupons') {
+        const couponsRes = await fetchHelper(`${API_URL}/api/mgmt/coupons`);
+        setCoupons(couponsRes.data.data || []);
+      }
+
     } catch (error) {
       console.error("Fetch Error:", error);
     } finally {
@@ -629,6 +635,7 @@ const AdminPanel = () => {
                 ${itemsHtml}
               </tbody>
             </table>
+            ${order.applied_coupon && order.discount_amount > 0 ? `<div style="text-align: right; padding-right: 5px; font-size: 14px; color: #10b981; border-top: 1px dashed #000; padding-top: 5px;">Discount (${order.applied_coupon}): -₹${order.discount_amount}</div>` : ''}
             <div class="total">Grand Total: ₹${order.total}</div>
             <div class="footer">
               <p>Thank you for dining with us!</p>
@@ -933,8 +940,8 @@ const AdminPanel = () => {
 
     // Priority 2: Hardcoded Defaults (Fallback)
     const permissions = {
-      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles'],
-      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings'],
+      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles', 'combos'],
+      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'combos'],
       staff: ['orders', 'monitor'],
       chef: ['kitchen', 'orders', 'monitor']
     };
@@ -1411,8 +1418,15 @@ const AdminPanel = () => {
                             </button>
                           </div>
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Total: <strong>₹{order.total}</strong></span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                {order.applied_coupon && order.discount_amount > 0 && (
+                                    <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '800' }}>
+                                        {order.applied_coupon} Applied (-₹{order.discount_amount})
+                                    </span>
+                                )}
+                                <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '800' }}>Total: <strong>₹{order.total}</strong></span>
+                            </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <button
                                 onClick={() => handlePrintBill(order)}
@@ -1769,6 +1783,10 @@ const AdminPanel = () => {
                 })()}
               </div>
             </div>
+          )}
+
+          {activeTab === 'combos' && (
+            <CombosManager adminUser={adminUser} restaurantId={adminUser.restaurant_id || 4} />
           )}
 
           {activeTab === 'staff' && adminUser.role === 'super_admin' && (
@@ -2422,12 +2440,28 @@ const AdminPanel = () => {
                       <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
                         Expires: {new Date(c.expiry_date).toLocaleDateString()}
                       </div>
-                      {c.usage_limit && (
-                        <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>
-                          Limit: {c.usage_limit}
-                        </div>
-                      )}
+                      <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>
+                        Used: {c.current_usage_count || 0} {c.usage_limit ? `/ ${c.usage_limit}` : ''}
+                      </div>
                     </div>
+
+                    {c.usage_history && c.usage_history.length > 0 && (
+                      <details style={{ marginTop: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
+                        <summary style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', outline: 'none' }}>View Usage History ({c.usage_history.length})</summary>
+                        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto', paddingRight: '4px' }} className="custom-scrollbar">
+                          {c.usage_history.map((hist, hIdx) => (
+                            <div key={hIdx} style={{ fontSize: '12px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px', borderLeft: '2px solid var(--accent-primary)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>{hist.customer_name || 'Guest'}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>{new Date(hist.timestamp).toLocaleDateString()}</span>
+                              </div>
+                              <div style={{ color: 'var(--text-dim)', marginBottom: '2px' }}>{hist.customer_phone || 'No Phone'}</div>
+                              <div style={{ color: '#10b981', fontWeight: '700' }}>Order Total: ₹{hist.total} (Saved: ₹{hist.discount_amount || 0})</div>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 ))}
                 {coupons.length === 0 && (
