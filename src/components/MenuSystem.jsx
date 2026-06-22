@@ -28,25 +28,25 @@ const MenuSystem = ({
     const categoryScrollRef = useRef(null);
     const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'nonveg'
     const [showVegOffConfirm, setShowVegOffConfirm] = useState(false);
-    
+
     // Inject "Recommended" virtual categories (Top Picks, Today's Special, etc.)
     const extendedMenuCategories = React.useMemo(() => {
         if (!menuCategories) return [];
         let allItems = [];
         menuCategories.forEach(c => { allItems = allItems.concat(c.items) });
-        
+
         // Remove duplicates just in case
         allItems = Array.from(new Map(allItems.map(i => [i.id, i])).values());
-        
+
         let bestSellers = allItems.filter(i => i.is_best_seller);
         let todaySpecials = allItems.filter(i => i.is_today_special);
         let chefSpecials = allItems.filter(i => i.is_chef_special);
-        
+
         let virtualCats = [];
         if (todaySpecials.length > 0) virtualCats.push({ category: "✨ Today's Special", items: todaySpecials, isVirtual: true });
         if (bestSellers.length > 0) virtualCats.push({ category: "🔥 Best Sellers", items: bestSellers, isVirtual: true });
         if (chefSpecials.length > 0) virtualCats.push({ category: "👨‍🍳 Chef's Special", items: chefSpecials, isVirtual: true });
-        
+
         return [...virtualCats, ...menuCategories];
     }, [menuCategories]);
     const [selectedVariants, setSelectedVariants] = useState({}); // { itemId: variantSize }
@@ -296,7 +296,7 @@ const MenuSystem = ({
 
                                 const vType = item.veg_type ? item.veg_type.toLowerCase() : '';
                                 const matchesVeg = vegFilter === 'all' ||
-                                    (vegFilter === 'veg' && vType !== 'nonveg') ||
+                                    (vegFilter === 'veg' && vType !== 'nonveg' && vType !== 'egg') ||
                                     (vegFilter === 'nonveg' && vType === 'nonveg');
 
                                 return matchesSearch && matchesVeg;
@@ -396,6 +396,21 @@ const MenuSystem = ({
                                                         <div className="item-details">
                                                             <div className="item-header">
                                                                 <h6 className="item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                                    {item.veg_type === 'veg' && (
+                                                                        <div style={{ width: '12px', height: '12px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.veg_type === 'nonveg' && (
+                                                                        <div style={{ width: '12px', height: '12px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                                                            <div style={{ width: '0', height: '0', borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderBottom: '6px solid #ef4444' }}></div>
+                                                                        </div>
+                                                                    )}
+                                                                    {item.veg_type === 'egg' && (
+                                                                        <div style={{ width: '12px', height: '12px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
+                                                                        </div>
+                                                                    )}
                                                                     {item.name}
                                                                     {item.spice_level > 0 && (
                                                                         <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '1px 4px', borderRadius: '4px', letterSpacing: '1px' }}>
@@ -427,7 +442,7 @@ const MenuSystem = ({
                                                                 )}
                                                             </div>
                                                             <p className="item-description" style={{ marginTop: '4px' }}>{item.description || "Delicately crafted for your tech palate."}</p>
-                                                            
+
                                                             {item.is_combo && Array.isArray(item.combo_components) && item.combo_components.length > 0 && (
                                                                 <div style={{ marginTop: '6px', padding: '6px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
                                                                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontWeight: '600' }}>

@@ -1390,8 +1390,8 @@ const AdminPanel = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                       <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
                                       <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>
-                                        {item.name} 
-                                        {item.selectedVariant && <span style={{ opacity: 0.7, fontSize: '11px', color: 'var(--warning)', marginLeft: '4px' }}>({item.selectedVariant.size})</span>} 
+                                        {item.name}
+                                        {item.selectedVariant && <span style={{ opacity: 0.7, fontSize: '11px', color: 'var(--warning)', marginLeft: '4px' }}>({item.selectedVariant.size})</span>}
                                         {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '10px', marginLeft: '4px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}
                                       </span>
                                     </div>
@@ -1440,12 +1440,12 @@ const AdminPanel = () => {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                {order.applied_coupon && order.discount_amount > 0 && (
-                                    <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '800' }}>
-                                        {order.applied_coupon} Applied (-₹{order.discount_amount})
-                                    </span>
-                                )}
-                                <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '800' }}>Total: <strong>₹{order.total}</strong></span>
+                              {order.applied_coupon && order.discount_amount > 0 && (
+                                <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '800' }}>
+                                  {order.applied_coupon} Applied (-₹{order.discount_amount})
+                                </span>
+                              )}
+                              <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '800' }}>Total: <strong>₹{order.total}</strong></span>
                             </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <button
@@ -1565,7 +1565,7 @@ const AdminPanel = () => {
                     <span>Manage Categories</span>
                   </button>
                   <button className="btn-primary" onClick={() => {
-                    setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true, options: [] });
+                    setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true, veg_type: 'veg', options: [] });
                     setEditingDishId(null);
                     setFormError('');
                     setShowMenuPopup(true);
@@ -1666,7 +1666,24 @@ const AdminPanel = () => {
                               <div className="inv-details">
                                 <div className="inv-main">
                                   <div className="flex justify-between items-start">
-                                    <strong className="text-lg">{item.name}</strong>
+                                    <strong className="text-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      {item.veg_type === 'veg' && (
+                                          <div style={{ width: '12px', height: '12px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
+                                          </div>
+                                      )}
+                                      {item.veg_type === 'nonveg' && (
+                                          <div style={{ width: '12px', height: '12px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                              <div style={{ width: '0', height: '0', borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderBottom: '6px solid #ef4444' }}></div>
+                                          </div>
+                                      )}
+                                      {item.veg_type === 'egg' && (
+                                          <div style={{ width: '12px', height: '12px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
+                                          </div>
+                                      )}
+                                      {item.name}
+                                    </strong>
                                     {/* <span className="inv-cat-tag shadow-sm">{item.category}</span> */}
                                   </div>
                                 </div>
@@ -3547,7 +3564,7 @@ const AdminPanel = () => {
                     <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Can cart level coupons (like Neural Promotions) be applied on top of this item?</span>
                   </div>
                   <label className="switch">
-                    <input type="checkbox" checked={newDish.allow_coupons !== false} onChange={(e) => setNewDish({...newDish, allow_coupons: e.target.checked})} />
+                    <input type="checkbox" checked={newDish.allow_coupons !== false} onChange={(e) => setNewDish({ ...newDish, allow_coupons: e.target.checked })} />
                     <span className="slider round"></span>
                   </label>
                 </div>
@@ -3559,7 +3576,7 @@ const AdminPanel = () => {
                       <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Best Seller</strong>
                     </div>
                     <label className="switch">
-                      <input type="checkbox" checked={newDish.is_best_seller || false} onChange={(e) => setNewDish({...newDish, is_best_seller: e.target.checked})} />
+                      <input type="checkbox" checked={newDish.is_best_seller || false} onChange={(e) => setNewDish({ ...newDish, is_best_seller: e.target.checked })} />
                       <span className="slider round"></span>
                     </label>
                   </div>
@@ -3569,7 +3586,7 @@ const AdminPanel = () => {
                       <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Today's Special</strong>
                     </div>
                     <label className="switch">
-                      <input type="checkbox" checked={newDish.is_today_special || false} onChange={(e) => setNewDish({...newDish, is_today_special: e.target.checked})} />
+                      <input type="checkbox" checked={newDish.is_today_special || false} onChange={(e) => setNewDish({ ...newDish, is_today_special: e.target.checked })} />
                       <span className="slider round"></span>
                     </label>
                   </div>
@@ -3579,7 +3596,7 @@ const AdminPanel = () => {
                       <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Chef's Special</strong>
                     </div>
                     <label className="switch">
-                      <input type="checkbox" checked={newDish.is_chef_special || false} onChange={(e) => setNewDish({...newDish, is_chef_special: e.target.checked})} />
+                      <input type="checkbox" checked={newDish.is_chef_special || false} onChange={(e) => setNewDish({ ...newDish, is_chef_special: e.target.checked })} />
                       <span className="slider round"></span>
                     </label>
                   </div>
@@ -3688,49 +3705,7 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Advanced Metrics */}
-            <div style={{ marginTop: '32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Prep Time (mins)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 15"
-                  value={newDish.prep_time || ''}
-                  onChange={(e) => setNewDish({ ...newDish, prep_time: e.target.value })}
-                  style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Spice Level (1-5)</label>
-                <input
-                  type="number"
-                  min="1" max="5"
-                  placeholder="🌶️ 1 to 5"
-                  value={newDish.spice_level || ''}
-                  onChange={(e) => setNewDish({ ...newDish, spice_level: e.target.value })}
-                  style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>SKU Code</label>
-                <input
-                  type="text"
-                  placeholder="SKU-XXX"
-                  value={newDish.sku || ''}
-                  onChange={(e) => setNewDish({ ...newDish, sku: e.target.value })}
-                  style={{ width: '100%', height: '48px', padding: '12px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '28px' }}>
-                <input
-                  type="checkbox"
-                  checked={newDish.is_featured}
-                  onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })}
-                  style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: 'var(--warning)' }}
-                />
-                <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer' }}>⭐ Mark as Bestseller</label>
-              </div>
-            </div>
+            {/* Advanced Metrics removed */}
             {/* Sizes & Variants */}
             <div style={{ marginTop: '32px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -3857,13 +3832,13 @@ const AdminPanel = () => {
                 <span style={{ fontSize: '14px', fontWeight: '700' }}>Available for Orders</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
+              {/* <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
                 <div style={{ position: 'relative', width: '50px', height: '26px', background: newDish.is_featured ? 'var(--success)' : 'rgba(255,255,255,0.1)', borderRadius: '20px', transition: 'all 0.3s' }}>
                   <div style={{ position: 'absolute', top: '3px', left: newDish.is_featured ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', transition: 'all 0.3s' }}></div>
                 </div>
                 <input type="checkbox" checked={newDish.is_featured} onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })} style={{ display: 'none' }} />
                 <span style={{ fontSize: '14px', fontWeight: '700' }}>Featured Dish</span>
-              </label>
+              </label> */}
             </div>
 
             {/* Sticky/Fixed Footer Controls */}
@@ -4761,13 +4736,13 @@ const AdminPanel = () => {
                   let displayDVal = Number.isInteger(dVal) ? dVal : dVal.toFixed(2);
 
                   if (item.discount_type === 'percent' && dVal > 0) {
-                      hasDiscount = true;
-                      discountedPrice = item.price - (item.price * (dVal / 100));
-                      discountBadge = `${displayDVal}% OFF`;
+                    hasDiscount = true;
+                    discountedPrice = item.price - (item.price * (dVal / 100));
+                    discountBadge = `${displayDVal}% OFF`;
                   } else if (item.discount_type === 'flat' && dVal > 0) {
-                      hasDiscount = true;
-                      discountedPrice = item.price - dVal;
-                      discountBadge = `₹${displayDVal} OFF`;
+                    hasDiscount = true;
+                    discountedPrice = item.price - dVal;
+                    discountBadge = `₹${displayDVal} OFF`;
                   }
                   if (discountedPrice < 0) discountedPrice = 0;
                   discountedPrice = Math.round(discountedPrice);
@@ -4775,7 +4750,7 @@ const AdminPanel = () => {
                   return (
                     <div
                       key={item.id}
-                      onClick={() => addToManualOrder({...item, price: discountedPrice})}
+                      onClick={() => addToManualOrder({ ...item, price: discountedPrice })}
                       style={{
                         padding: '16px',
                         borderRadius: '20px',
@@ -4793,16 +4768,33 @@ const AdminPanel = () => {
                       <div style={{ width: '100%', height: '100px', borderRadius: '12px', overflow: 'hidden', background: '#222' }}>
                         <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
-                      <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</strong>
+                      <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {item.veg_type === 'veg' && (
+                              <div style={{ width: '10px', height: '10px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#22c55e' }}></div>
+                              </div>
+                          )}
+                          {item.veg_type === 'nonveg' && (
+                              <div style={{ width: '10px', height: '10px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                  <div style={{ width: '0', height: '0', borderLeft: '2px solid transparent', borderRight: '2px solid transparent', borderBottom: '4px solid #ef4444' }}></div>
+                              </div>
+                          )}
+                          {item.veg_type === 'egg' && (
+                              <div style={{ width: '10px', height: '10px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#eab308' }}></div>
+                              </div>
+                          )}
+                          {item.name}
+                      </strong>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>₹{discountedPrice}</span>
-                            {hasDiscount && (
-                                <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{Math.round(item.price)}</span>
-                            )}
+                          <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>₹{discountedPrice}</span>
+                          {hasDiscount && (
+                            <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{Math.round(item.price)}</span>
+                          )}
                         </div>
                         {hasDiscount && (
-                            <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '800', letterSpacing: '0.5px' }}>{discountBadge}</span>
+                          <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '800', letterSpacing: '0.5px' }}>{discountBadge}</span>
                         )}
                       </div>
                     </div>
