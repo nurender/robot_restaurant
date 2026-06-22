@@ -1521,7 +1521,7 @@
   font-weight: 700;
   border-radius: 12px;
   padding: 0 24px;
-  /* min-height: 48px; */
+  min-height: 27px;
   box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
   transition: all 0.3s ease;
   cursor: pointer;

@@ -518,8 +518,8 @@ const AdminPanel = () => {
         setStaffList(staffRes.data.data || []);
       }
 
-      if (activeTab === 'restaurants') {
-        const restRes = await axios.get(`${API_URL}/api/mgmt/restaurants`).catch(() => ({ data: { data: [] } }));
+      if (activeTab === 'restaurants' || activeTab === 'staff') {
+        const restRes = await axios.get(`${API_URL}/api/restaurants`).catch(() => ({ data: { data: [] } }));
         setRestaurantsList(restRes.data.data || []);
       }
 
@@ -1884,37 +1884,66 @@ const AdminPanel = () => {
                         </button>
                       </div>
                     </div>
-                    <div className="inventory-grid">
-                      {restoStaff.length > 0 ? restoStaff.map(staff => (
-                        <div key={staff.id} className="inventory-card glass-panel shadow-premium">
-                          <div className="inv-icon-box shadow-lg">
-                            <Users size={28} />
-                          </div>
-                          <div className="inv-details">
-                            <div className="staff-card-header mb-2">
-                              <span className={`role-badge ${staff.role} shadow-sm`}>{(staff.role || 'user').replace('_', ' ')}</span>
-                            </div>
-                            <div className="inv-main">
-                              <strong className="text-lg">{staff.name}</strong>
-                              <span className="text-sm text-muted block mt-1">{staff.email}</span>
-                            </div>
-                          </div>
-                          <div className="inv-actions">
-                            <button className="inv-btn-edit" onClick={() => {
-                              setNewStaff({ ...staff });
-                              setEditingStaffId(staff.id);
-                              setShowStaffPopup(true);
-                            }}><Edit2 size={16} /></button>
-                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)} disabled={loadingStates[`delete_user_${staff.id}`]}>
-                              {loadingStates[`delete_user_${staff.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                      )) : (
-                        <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed var(--card-border)', color: 'var(--text-muted)', fontSize: '14px' }}>
-                          No members found in this restaurant.
-                        </div>
-                      )}
+                    <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', background: 'var(--bg-deep)' }}>
+                            <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>NAME & EMAIL</th>
+                            <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>SYSTEM ROLE</th>
+                            <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>CONTROL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {restoStaff.length > 0 ? restoStaff.map(staff => (
+                            <tr key={staff.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }} className="table-row-hover">
+                              <td style={{ padding: '20px 24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Users size={16} />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '14px' }}>{staff.name}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{staff.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '20px 24px' }}>
+                                <span className={`role-badge ${staff.role} shadow-sm`}>{(staff.role || 'user').replace('_', ' ')}</span>
+                              </td>
+                              <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => {
+                                      setNewStaff({ ...staff });
+                                      setEditingStaffId(staff.id);
+                                      setShowStaffPopup(true);
+                                    }}
+                                    style={{
+                                      background: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.2)',
+                                      color: '#a78bfa', cursor: 'pointer', padding: '8px 14px', borderRadius: '12px',
+                                      transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '12px'
+                                    }}
+                                  >
+                                    <Edit2 size={14} /> Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deleteUser(staff.id)} disabled={loadingStates[`delete_user_${staff.id}`]}
+                                    style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px' }}
+                                  >
+                                    {loadingStates[`delete_user_${staff.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )) : (
+                            <tr>
+                              <td colSpan="3" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                                No members found in this restaurant.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 );
@@ -1935,33 +1964,60 @@ const AdminPanel = () => {
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Unassigned or Master Accounts</p>
                       </div>
                     </div>
-                    <div className="inventory-grid">
-                      {globalStaff.map(staff => (
-                        <div key={staff.id} className="inventory-card glass-panel shadow-premium">
-                          <div className="inv-icon-box shadow-lg">
-                            <Users size={28} />
-                          </div>
-                          <div className="inv-details">
-                            <div className="staff-card-header mb-2">
-                              <span className={`role-badge ${staff.role} shadow-sm`}>{(staff.role || 'user').replace('_', ' ')}</span>
-                            </div>
-                            <div className="inv-main">
-                              <strong className="text-lg">{staff.name}</strong>
-                              <span className="text-sm text-muted block mt-1">{staff.email}</span>
-                            </div>
-                          </div>
-                          <div className="inv-actions">
-                            <button className="inv-btn-edit" onClick={() => {
-                              setNewStaff({ ...staff });
-                              setEditingStaffId(staff.id);
-                              setShowStaffPopup(true);
-                            }}><Edit2 size={16} /></button>
-                            <button className="inv-btn-delete" onClick={() => deleteUser(staff.id)} disabled={loadingStates[`delete_user_${staff.id}`]}>
-                              {loadingStates[`delete_user_${staff.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', background: 'var(--bg-deep)' }}>
+                            <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>NAME & EMAIL</th>
+                            <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>SYSTEM ROLE</th>
+                            <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>CONTROL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {globalStaff.map(staff => (
+                            <tr key={staff.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }} className="table-row-hover">
+                              <td style={{ padding: '20px 24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Users size={16} />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '14px' }}>{staff.name}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{staff.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '20px 24px' }}>
+                                <span className={`role-badge ${staff.role} shadow-sm`}>{(staff.role || 'user').replace('_', ' ')}</span>
+                              </td>
+                              <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => {
+                                      setNewStaff({ ...staff });
+                                      setEditingStaffId(staff.id);
+                                      setShowStaffPopup(true);
+                                    }}
+                                    style={{
+                                      background: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.2)',
+                                      color: '#a78bfa', cursor: 'pointer', padding: '8px 14px', borderRadius: '12px',
+                                      transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '12px'
+                                    }}
+                                  >
+                                    <Edit2 size={14} /> Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deleteUser(staff.id)} disabled={loadingStates[`delete_user_${staff.id}`]}
+                                    style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: '12px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px' }}
+                                  >
+                                    {loadingStates[`delete_user_${staff.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 );
@@ -1981,86 +2037,86 @@ const AdminPanel = () => {
                   <span>Add New Restaurant</span>
                 </button>
               </div>
-              <div className="inventory-grid">
-                {restaurantsList.map(res => {
-                  const nodeStaff = staffList.filter(s => s.restaurant_id === res.id);
-                  return (
-                    <div key={res.id} className="inventory-card glass-panel fleet-branch-card shadow-premium" style={{ display: 'flex', flexDirection: 'column', gap: '0', padding: '0', overflow: 'hidden', border: '1px solid var(--card-border)' }}>
-                      {/* Card Content */}
-                      <div style={{ padding: '24px', width: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <div className="inv-icon-box shadow-lg" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white' }}>
-                            <Store size={24} />
-                          </div>
-                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                            <button className="inv-btn-edit" title="Edit Restaurant" onClick={() => {
-                              setNewNode({ ...res });
-                              setEditingNodeId(res.id);
-                              setShowNodePopup(true);
-                            }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s' }}><Edit2 size={14} /></button>
-                            <button className="inv-btn-delete" title="Delete Restaurant" onClick={() => deleteRestaurant(res.id)} disabled={loadingStates[`delete_restaurant_${res.id}`]} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', cursor: loadingStates[`delete_restaurant_${res.id}`] ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-                              {loadingStates[`delete_restaurant_${res.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={14} />}
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{ marginTop: '20px' }}>
-                          <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{res.name}</h3>
-                          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <TrendingUp size={14} style={{ color: '#22c55e' }} />
-                            {res.city || 'Active Restaurant'} • {res.branch_code || 'ID: ' + res.id}
-                          </p>
-                        </div>
-
-                        {/* Team Section */}
-                        <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--card-border)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Members ({nodeStaff.length})</span>
-                            <button onClick={() => {
-                              setNewStaff({ ...newStaff, restaurant_id: res.id });
-                              setShowStaffPopup(true);
-                            }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontWeight: '700', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Plus size={12} /> ADD MEMBER
-                            </button>
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {nodeStaff.length > 0 ? nodeStaff.slice(0, 3).map(s => (
-                              <div key={s.id}
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', background: 'var(--bg-deep)' }}>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>RESTAURANT INFO</th>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>LOCATION & CODE</th>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>TEAM MEMBERS</th>
+                      <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>CONTROL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {restaurantsList.length > 0 ? restaurantsList.map(res => {
+                      const nodeStaff = staffList.filter(s => s.restaurant_id === res.id);
+                      return (
+                        <tr key={res.id} style={{ borderBottom: '1px solid var(--card-border)', transition: 'background 0.2s' }} className="table-row-hover">
+                          <td style={{ padding: '20px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Store size={16} />
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '14px' }}>{res.name}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#22c55e', marginTop: '4px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} className="animate-pulse"></div> Active Live Sync
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '20px 24px' }}>
+                            <div style={{ fontWeight: '700', color: 'var(--text-dim)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                               {res.city || 'Active Restaurant'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{res.branch_code || 'ID: ' + res.id}</div>
+                          </td>
+                          <td style={{ padding: '20px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>{nodeStaff.length} Members</span>
+                              <button onClick={() => {
+                                setNewStaff({ ...newStaff, restaurant_id: res.id });
+                                setShowStaffPopup(true);
+                              }} style={{ background: 'rgba(124, 58, 237, 0.1)', border: 'none', color: 'var(--accent-primary)', borderRadius: '6px', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Add Member">
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                              <button
                                 onClick={() => {
-                                  setNewStaff({ ...s });
-                                  setEditingStaffId(s.id);
-                                  setShowStaffPopup(true);
+                                  setNewNode({ ...res });
+                                  setEditingNodeId(res.id);
+                                  setShowNodePopup(true);
                                 }}
-                                className="staff-tag-hover"
                                 style={{
-                                  display: 'flex', alignItems: 'center', gap: '6px',
-                                  background: 'rgba(255,255,255,0.03)', padding: '4px 10px',
-                                  borderRadius: '20px', border: '1px solid var(--card-border)',
-                                  cursor: 'pointer', transition: 'all 0.2s'
+                                  background: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.2)',
+                                  color: '#a78bfa', cursor: 'pointer', padding: '8px 14px', borderRadius: '12px',
+                                  transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '12px'
                                 }}
                               >
-                                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'var(--accent-primary)', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'white' }}>{s.name[0]}</div>
-                                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-dim)' }}>{s.name.split(' ')[0]}</span>
-                                <Edit2 size={10} style={{ color: 'var(--text-muted)', marginLeft: '2px' }} />
-                              </div>
-                            )) : (
-                              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No staff assigned</span>
-                            )}
-                            {nodeStaff.length > 3 && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>+{nodeStaff.length - 3} more</span>}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="fleet-card-footer" style={{ background: 'rgba(255,255,255,0.02)', padding: '16px 24px', borderTop: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="branch-id-tag" style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)' }}>RESTO ID: {res.branch_code || res.id}</span>
-                        <div className="staff-count-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#22c55e', fontWeight: '800', textTransform: 'uppercase' }}>
-                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                          <span>Active Live Sync</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                                <Edit2 size={14} /> Edit
+                              </button>
+                              <button
+                                onClick={() => deleteRestaurant(res.id)} disabled={loadingStates[`delete_restaurant_${res.id}`]}
+                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', cursor: loadingStates[`delete_restaurant_${res.id}`] ? 'not-allowed' : 'pointer', padding: '8px', borderRadius: '12px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px' }}
+                              >
+                                {loadingStates[`delete_restaurant_${res.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'var(--error)' }} /> : <Trash2 size={16} />}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr>
+                        <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                          No restaurants found in the network.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -3114,7 +3170,7 @@ const AdminPanel = () => {
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
               <div className="view-header-row mb-8" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div className="header-left">
-                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'white' }}>Role Management</h1>
+                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Role Management</h1>
                   <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Configure system-wide administrative privileges and module access.</p>
                 </div>
                 <button
@@ -3125,17 +3181,17 @@ const AdminPanel = () => {
                   }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px', borderRadius: '14px',
-                    background: 'var(--accent-primary)', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer'
+                    background: 'var(--accent-primary)', border: 'none', color: '#fff', fontWeight: '700', cursor: 'pointer'
                   }}
                 >
                   <Plus size={20} /> Add New Role
                 </button>
               </div>
 
-              <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
                   <thead>
-                    <tr style={{ textAlign: 'left', background: 'rgba(255,255,255,0.03)' }}>
+                    <tr style={{ textAlign: 'left', background: 'var(--bg-deep)' }}>
                       <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>IDENTITY / ROLE NAME</th>
                       <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>ACCESS SCOPE</th>
                       <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>MODULES</th>
@@ -3148,7 +3204,7 @@ const AdminPanel = () => {
                         <td style={{ padding: '20px 24px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: role.name === 'super_admin' ? '#10b981' : 'var(--accent-primary)' }} />
-                            <span style={{ fontWeight: '700', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{(role.name || '').replace('_', ' ')}</span>
+                            <span style={{ fontWeight: '700', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{(role.name || '').replace('_', ' ')}</span>
                           </div>
                         </td>
                         <td style={{ padding: '20px 24px' }}>
@@ -3159,7 +3215,7 @@ const AdminPanel = () => {
                         <td style={{ padding: '20px 24px' }}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '400px' }}>
                             {role.permissions.slice(0, 4).map(p => (
-                              <span key={p} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.05)', padding: '3px 10px', borderRadius: '6px', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>{(p || '').replace('_', ' ')}</span>
+                              <span key={p} style={{ fontSize: '11px', background: 'var(--bg-deep)', padding: '3px 10px', borderRadius: '6px', color: 'var(--text-main)', border: '1px solid var(--card-border)' }}>{(p || '').replace('_', ' ')}</span>
                             ))}
                             {role.permissions.length > 4 && <span style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '3px' }}>+{role.permissions.length - 4} more</span>}
                           </div>
@@ -3202,14 +3258,14 @@ const AdminPanel = () => {
               {isRoleModalOpen && (
                 <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: '20px' }}>
                   <div className="glass-panel" style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'hidden', background: 'var(--card-bg)', borderRadius: '32px', border: '1px solid var(--card-border)', boxShadow: '0 40px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '40px 40px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '40px 40px 20px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'white' }}>{currentRoleData.id ? 'Edit Access Role' : 'Initialize New Role'}</h2>
+                        <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{currentRoleData.id ? 'Edit Access Role' : 'Initialize New Role'}</h2>
                         <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Modify the security parameters and permitted system modules.</p>
                       </div>
                       <button
                         onClick={() => setIsRoleModalOpen(false)}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ background: 'var(--bg-deep)', border: 'none', color: 'var(--text-main)', width: '40px', height: '40px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Plus size={20} style={{ transform: 'rotate(45deg)' }} />
                       </button>
@@ -3223,7 +3279,7 @@ const AdminPanel = () => {
                           value={currentRoleData.name}
                           onChange={(e) => setCurrentRoleData({ ...currentRoleData, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
                           placeholder="e.g. store_manager"
-                          style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--card-border)', color: 'white', outline: 'none', fontSize: '16px', fontWeight: '600' }}
+                          style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', outline: 'none', fontSize: '16px', fontWeight: '600' }}
                         />
                       </div>
 
@@ -3247,16 +3303,16 @@ const AdminPanel = () => {
                                 }}
                                 style={{
                                   display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px',
-                                  background: isSelected ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.03)',
+                                  background: isSelected ? 'rgba(124, 58, 237, 0.15)' : 'var(--bg-deep)',
                                   borderRadius: '16px', cursor: 'pointer', border: '1px solid',
                                   borderColor: isSelected ? 'var(--accent-primary)' : 'transparent',
                                   transition: 'all 0.2s'
                                 }}
                               >
-                                <div style={{ width: '18px', height: '18px', borderRadius: '5px', border: '2px solid', borderColor: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)', background: isSelected ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  {isSelected && <Check size={12} color="white" strokeWidth={4} />}
+                                <div style={{ width: '18px', height: '18px', borderRadius: '5px', border: '2px solid', borderColor: isSelected ? 'var(--accent-primary)' : 'var(--card-border)', background: isSelected ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {isSelected && <Check size={12} color="#fff" strokeWidth={4} />}
                                 </div>
-                                <span style={{ fontSize: '14px', color: isSelected ? 'white' : 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'capitalize' }}>{(mod || '').replace('_', ' ')}</span>
+                                <span style={{ fontSize: '14px', color: isSelected ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: '700', textTransform: 'capitalize' }}>{(mod || '').replace('_', ' ')}</span>
                               </div>
                             );
                           })}
@@ -3458,10 +3514,10 @@ const AdminPanel = () => {
       {showMenuPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)' }}>
           <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '900px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '19px', borderRadius: '28px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid var(--card-border)', paddingBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>
               <div>
-                <h2 style={{ fontSize: '28px', fontWeight: '900', background: 'linear-gradient(135deg, #fff 0%, var(--text-muted) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{editingDishId ? '✏️ Edit Menu Item' : '➕ Add New Menu Item'}</h2>
-                <p className="text-muted" style={{ fontSize: '14px', marginTop: '4px' }}>Fill out item specifications mapped to your SaaS metrics.</p>
+                <h2 style={{ fontSize: '28px', fontWeight: '900', background: 'linear-gradient(135deg, #fff 0%, var(--text-muted) 100%)', WebkitBackgroundClip: 'text', }}>{editingDishId ? '✏️ Edit Menu Item' : '➕ Add New Menu Item'}</h2>
+                {/* <p className="text-muted" style={{ fontSize: '14px', marginTop: '4px' }}>Fill out item specifications mapped to your SaaS metrics.</p> */}
               </div>
               <button className="text-muted hover:text-white" onClick={() => setShowMenuPopup(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>✕</button>
             </div>
@@ -3574,38 +3630,7 @@ const AdminPanel = () => {
                 </div>
 
 
-                <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>🔥</span>
-                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Best Seller</strong>
-                    </div>
-                    <label className="switch">
-                      <input type="checkbox" checked={newDish.is_best_seller || false} onChange={(e) => setNewDish({ ...newDish, is_best_seller: e.target.checked })} />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>✨</span>
-                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Today's Special</strong>
-                    </div>
-                    <label className="switch">
-                      <input type="checkbox" checked={newDish.is_today_special || false} onChange={(e) => setNewDish({ ...newDish, is_today_special: e.target.checked })} />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>👨‍🍳</span>
-                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Chef's Special</strong>
-                    </div>
-                    <label className="switch">
-                      <input type="checkbox" checked={newDish.is_chef_special || false} onChange={(e) => setNewDish({ ...newDish, is_chef_special: e.target.checked })} />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-                </div>
+
 
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Food Classification</label>
@@ -3707,6 +3732,57 @@ const AdminPanel = () => {
                     style={{ width: '100%', minHeight: '94px', padding: '16px', borderRadius: '14px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', resize: 'none', outline: 'none' }}
                   />
                 </div>
+                <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)', display: 'grid', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>🔥</span>
+                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Best Seller</strong>
+                    </div>
+                    <label className="switch">
+                      <input type="checkbox" checked={newDish.is_best_seller || false} onChange={(e) => setNewDish({ ...newDish, is_best_seller: e.target.checked })} />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>✨</span>
+                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Today's Special</strong>
+                    </div>
+                    <label className="switch">
+                      <input type="checkbox" checked={newDish.is_today_special || false} onChange={(e) => setNewDish({ ...newDish, is_today_special: e.target.checked })} />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>👨‍🍳</span>
+                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Chef's Special</strong>
+                    </div>
+                    <label className="switch">
+                      <input type="checkbox" checked={newDish.is_chef_special || false} onChange={(e) => setNewDish({ ...newDish, is_chef_special: e.target.checked })} />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+                {/* Toggle Switches */}
+                <div style={{ display: 'flex', gap: '32px', marginTop: '24px', background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
+                    <div style={{ position: 'relative', width: '50px', height: '26px', background: newDish.is_active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', borderRadius: '20px', transition: 'all 0.3s' }}>
+                      <div style={{ position: 'absolute', top: '3px', left: newDish.is_active ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', transition: 'all 0.3s' }}></div>
+                    </div>
+                    <input type="checkbox" checked={newDish.is_active} onChange={(e) => setNewDish({ ...newDish, is_active: e.target.checked })} style={{ display: 'none' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '700' }}>Available for Orders</span>
+                  </label>
+
+                  {/* <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
+                <div style={{ position: 'relative', width: '50px', height: '26px', background: newDish.is_featured ? 'var(--success)' : 'rgba(255,255,255,0.1)', borderRadius: '20px', transition: 'all 0.3s' }}>
+                  <div style={{ position: 'absolute', top: '3px', left: newDish.is_featured ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', transition: 'all 0.3s' }}></div>
+                </div>
+                <input type="checkbox" checked={newDish.is_featured} onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })} style={{ display: 'none' }} />
+                <span style={{ fontSize: '14px', fontWeight: '700' }}>Featured Dish</span>
+              </label> */}
+                </div>
+
               </div>
             </div>
 
@@ -3827,24 +3903,6 @@ const AdminPanel = () => {
               )}
             </div>
 
-            {/* Toggle Switches */}
-            <div style={{ display: 'flex', gap: '32px', marginTop: '24px', background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
-                <div style={{ position: 'relative', width: '50px', height: '26px', background: newDish.is_active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', borderRadius: '20px', transition: 'all 0.3s' }}>
-                  <div style={{ position: 'absolute', top: '3px', left: newDish.is_active ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', transition: 'all 0.3s' }}></div>
-                </div>
-                <input type="checkbox" checked={newDish.is_active} onChange={(e) => setNewDish({ ...newDish, is_active: e.target.checked })} style={{ display: 'none' }} />
-                <span style={{ fontSize: '14px', fontWeight: '700' }}>Available for Orders</span>
-              </label>
-
-              {/* <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1 }}>
-                <div style={{ position: 'relative', width: '50px', height: '26px', background: newDish.is_featured ? 'var(--success)' : 'rgba(255,255,255,0.1)', borderRadius: '20px', transition: 'all 0.3s' }}>
-                  <div style={{ position: 'absolute', top: '3px', left: newDish.is_featured ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'white', transition: 'all 0.3s' }}></div>
-                </div>
-                <input type="checkbox" checked={newDish.is_featured} onChange={(e) => setNewDish({ ...newDish, is_featured: e.target.checked })} style={{ display: 'none' }} />
-                <span style={{ fontSize: '14px', fontWeight: '700' }}>Featured Dish</span>
-              </label> */}
-            </div>
 
             {/* Sticky/Fixed Footer Controls */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '40px', borderTop: '1px solid var(--card-border)', paddingTop: '24px' }}>
