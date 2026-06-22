@@ -31,9 +31,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [zoomedImage, setZoomedImage] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState({ 
-      name: localStorage.getItem('customerName') || '', 
-      phone: localStorage.getItem('customerPhone') || '' 
+  const [customerInfo, setCustomerInfo] = useState({
+    name: localStorage.getItem('customerName') || '',
+    phone: localStorage.getItem('customerPhone') || ''
   });
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -202,7 +202,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         setActiveOrders([]);
         return;
       }
-      
+
       let url = `${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`;
       if (userPhone) {
         url += `&phone=${encodeURIComponent(userPhone)}`;
@@ -249,7 +249,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           }
           const exists = prev.find(o => o.id === updatedOrder.id);
           const wasReady = exists && (exists.status === 'ready' || exists.status === 'out_for_delivery');
-          
+
           if (!wasReady && (updatedOrder.status === 'ready' || updatedOrder.status === 'out_for_delivery')) {
             // Execute safely after state update
             setTimeout(() => setShowOrderTracking(true), 100);
@@ -281,7 +281,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     if (!activeCoupon) return 0;
     const subtotal = getCartSubtotal();
     if (activeCoupon.min_order_value && subtotal < activeCoupon.min_order_value) return 0;
-    
+
     // Calculate eligible subtotal by summing items that don't have allow_coupons === false
     const eligibleSubtotal = currentCart.reduce((acc, item) => {
       // If item explicitly disallows coupons, or if it already has an item-level discount and allow_coupons isn't true... wait, the logic is:
@@ -291,7 +291,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }, 0);
 
     if (eligibleSubtotal === 0) return 0; // No items eligible
-    
+
     let discount = 0;
     if (activeCoupon.discount_type === 'flat') {
       discount = Number(activeCoupon.discount_value);
@@ -546,7 +546,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       alert('Your cart is empty. Please add some items first.');
       return;
     }
-    
+
     // Check if table has active orders and we haven't asked for a seat yet
     if (activeOrders.length > 0 && !customerSeat) {
       setShowSeatSelection(true);
@@ -636,32 +636,32 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <span style={{ color: '#f1c40f' }}>★</span>
             <span className="hide-on-mobile">Feedback</span>
           </button>
-          
+
           {isCustomerLoggedIn ? (
-             <button
-                onClick={() => {
-                   localStorage.removeItem('customerPhone');
-                   localStorage.removeItem('customerName');
-                   setCustomerInfo({ name: '', phone: '' });
-                   setIsCustomerLoggedIn(false);
-                   setActiveOrders([]);
-                   setShowOrderTracking(false);
-                }}
-                className="robot-header-btn"
-                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '6px 10px' }}
-                title="Logout"
-             >
-                <LogOut size={16} />
-             </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem('customerPhone');
+                localStorage.removeItem('customerName');
+                setCustomerInfo({ name: '', phone: '' });
+                setIsCustomerLoggedIn(false);
+                setActiveOrders([]);
+                setShowOrderTracking(false);
+              }}
+              className="robot-header-btn"
+              style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '6px 10px' }}
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
           ) : (
-             <button
-                onClick={() => setShowCustomerForm(true)}
-                className="robot-header-btn"
-                style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
-             >
-                <UserCircle size={16} style={{marginRight: '4px'}} />
-                <span className="hide-on-mobile">Login</span>
-             </button>
+            <button
+              onClick={() => setShowCustomerForm(true)}
+              className="robot-header-btn"
+              style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+            >
+              <UserCircle size={16} style={{ marginRight: '4px' }} />
+              <span className="hide-on-mobile">Login</span>
+            </button>
           )}
         </div>
       </div>
@@ -820,7 +820,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                       padding: '12px 8px',
                       borderRadius: '12px',
                       border: customerSeat === seat ? '1px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                      background: customerSeat === seat ? 'rgba(124, 58, 237, 0.1)' : 'var(--bg-deep)',
+                      background: customerSeat === seat ? 'var(--sidebar-hover)' : 'var(--bg-deep)',
                       color: customerSeat === seat ? 'var(--accent-primary)' : 'var(--text-main)',
                       fontWeight: '800',
                       fontSize: '13px',
@@ -832,7 +832,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   </button>
                 ))}
               </div>
-              
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
                 <span style={{ height: '1px', flex: 1, background: 'var(--border-default)' }} />
                 <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>OR TYPE CUSTOM</span>
@@ -845,14 +845,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 value={customerSeat}
                 onChange={(e) => setCustomerSeat(e.target.value)}
               />
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 style={{ width: '100%', marginTop: '16px' }}
                 onClick={() => {
-                  if(!customerSeat) { alert('Please select or specify your seat details.'); return; }
+                  if (!customerSeat) { alert('Please select or specify your seat details.'); return; }
                   setShowSeatSelection(false);
                   if (currentCart && currentCart.length > 0) {
-                     proceedToAuthOrOrder();
+                    proceedToAuthOrOrder();
                   }
                 }}
               >
@@ -1047,7 +1047,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   <div className="order-id-row">
                     <div className="order-id-meta">
                       <span className="order-id-badge">
-                        #ORDER-{order.id} 
+                        #ORDER-{order.id}
                         <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>🍽️ Table {order.tableNumber}</span>
                         {order.customerSeat && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>🪑 {order.customerSeat}</span>}
                         {order.customerName && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>👤 {order.customerName}</span>}

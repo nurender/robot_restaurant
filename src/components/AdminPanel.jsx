@@ -1210,9 +1210,20 @@ const AdminPanel = () => {
           {activeTab === 'orders' && (
             <div className="view-container animate-slide-up">
               <div className="view-header-row">
-                <div className="header-left">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <h1 className="view-title">Orders Hub</h1>
+                {/* <div className="header-left"> */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div> <h1 className="view-title">Orders Hub</h1>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                    <div className="filter-stats" style={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', padding: '6px 12px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
+                      Matches: <strong style={{ color: 'var(--text-main)' }}>{orders.filter(o => {
+                        const matchDate = safeGetISODate(o) === selectedDate;
+                        const matchTable = tableSearch ? (o.table_number || o.tableNumber || '').toString() === tableSearch.toString() : true;
+                        const matchPhone = phoneSearch ? (o.customer_phone || '').includes(phoneSearch) : true;
+                        const matchName = nameSearch ? (o.customer_name || '').toLowerCase().includes(nameSearch.toLowerCase()) : true;
+                        return matchDate && matchTable && matchPhone && matchName;
+                      }).length}</strong>
+                    </div>
                     <button
                       onClick={fetchData}
                       className="btn-icon"
@@ -1226,73 +1237,64 @@ const AdminPanel = () => {
                     >
                       <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                     </button>
+                    <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', height: '40px' }}>
+                      <Plus size={18} /> New Order
+                    </button>
                   </div>
-                  <p className="text-muted">Real-time neural order synchronization across the network.</p>
                 </div>
-                <div className="orders-filter-bar shadow-premium">
-                  <div className="filter-group">
-                    <label><Calendar size={14} /> Filter Date</label>
-                    <input
-                      type="date"
-                      className="filter-input"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="filter-group">
-                    <label><Search size={14} /> Table #</label>
-                    <select
-                      className="filter-input"
-                      value={tableSearch}
-                      onChange={(e) => setTableSearch(e.target.value)}
-                      style={{ width: '130px' }}
-                    >
-                      <option value="">All Tables</option>
-                      {restaurantTables.map((t, idx) => (
-                        <option key={idx} value={t.table_number || (idx + 1)}>
-                          {t.name || t.table || `Table ${t.table_number || (idx + 1)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="filter-group">
-                    <label><Phone size={14} /> Phone</label>
-                    <input
-                      type="text"
-                      placeholder="9876..."
-                      className="filter-input"
-                      value={phoneSearch}
-                      onChange={(e) => setPhoneSearch(e.target.value)}
-                      style={{ width: '120px' }}
-                    />
-                  </div>
-                  <div className="filter-group">
-                    <label><Users size={14} /> Name</label>
-                    <input
-                      type="text"
-                      placeholder="Customer Name..."
-                      className="filter-input"
-                      value={nameSearch}
-                      onChange={(e) => setNameSearch(e.target.value)}
-                      style={{ width: '150px' }}
-                    />
-                  </div>
-                  <div className="filter-stats">
-                    Matches: <strong>{orders.filter(o => {
-                      const matchDate = safeGetISODate(o) === selectedDate;
-                      const matchTable = tableSearch ? (o.table_number || o.tableNumber || '').toString() === tableSearch.toString() : true;
-                      const matchPhone = phoneSearch ? (o.customer_phone || '').includes(phoneSearch) : true;
-                      const matchName = nameSearch ? (o.customer_name || '').toLowerCase().includes(nameSearch.toLowerCase()) : true;
-                      return matchDate && matchTable && matchPhone && matchName;
-                    }).length}</strong>
-                  </div>
-                  <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', marginLeft: '12px', height: '40px' }}>
-                    <Plus size={18} /> New Order
-                  </button>
+                {/* <p className="text-muted">Real-time neural order synchronization across the network.</p> */}
+                {/* </div> */}
+
+              </div>
+              <div className="orders-filter-bar ">
+                <div className="filter-group">
+                  <label><Calendar size={14} /> Filter Date</label>
+                  <input
+                    type="date"
+                    className="filter-input"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                  />
+                </div>
+                <div className="filter-group">
+                  <label><Search size={14} /> Table #</label>
+                  <select
+                    className="filter-input"
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    style={{ width: '130px' }}
+                  >
+                    <option value="">All Tables</option>
+                    {restaurantTables.map((t, idx) => (
+                      <option key={idx} value={t.table_number || (idx + 1)}>
+                        {t.name || t.table || `Table ${t.table_number || (idx + 1)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <label><Phone size={14} /> Phone</label>
+                  <input
+                    type="text"
+                    placeholder="9876..."
+                    className="filter-input"
+                    value={phoneSearch}
+                    onChange={(e) => setPhoneSearch(e.target.value)}
+                    style={{ width: '120px' }}
+                  />
+                </div>
+                <div className="filter-group">
+                  <label><Users size={14} /> Name</label>
+                  <input
+                    type="text"
+                    placeholder="Customer Name..."
+                    className="filter-input"
+                    value={nameSearch}
+                    onChange={(e) => setNameSearch(e.target.value)}
+                  />
                 </div>
               </div>
-
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'start', marginTop: '24px', overflowX: 'auto', paddingBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'start', overflowX: 'auto', paddingBottom: '20px' }}>
                 {['pending', 'accepted', 'preparing', 'out_for_delivery', 'completed', 'cancelled'].map(columnStatus => (
                   <div key={columnStatus} style={{ minWidth: '320px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '20px', minHeight: '600px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '2px solid var(--card-border)' }}>

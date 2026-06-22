@@ -442,7 +442,7 @@
   justify-content: space-between;
   align-items: center;
   /* Adjusted from flex-start to center for better SaaS balance */
-  margin-bottom: 32px;
+  margin-bottom: 12px;
   gap: 20px;
   flex-wrap: wrap;
 }
@@ -1521,7 +1521,7 @@
   font-weight: 700;
   border-radius: 12px;
   padding: 0 24px;
-  min-height: 48px;
+  /* min-height: 48px; */
   box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -1541,7 +1541,7 @@
   color: var(--ap-text-main);
   border: 1px solid var(--ap-glass-border);
   padding: 0 18px;
-  min-height: 48px;
+  /* min-height: 48px; */
   border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
