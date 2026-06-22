@@ -3552,6 +3552,39 @@ const AdminPanel = () => {
                   </label>
                 </div>
 
+                <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>🔥</span>
+                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Best Seller</strong>
+                    </div>
+                    <label className="switch">
+                      <input type="checkbox" checked={newDish.is_best_seller || false} onChange={(e) => setNewDish({...newDish, is_best_seller: e.target.checked})} />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>✨</span>
+                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Today's Special</strong>
+                    </div>
+                    <label className="switch">
+                      <input type="checkbox" checked={newDish.is_today_special || false} onChange={(e) => setNewDish({...newDish, is_today_special: e.target.checked})} />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>👨‍🍳</span>
+                      <strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>Chef's Special</strong>
+                    </div>
+                    <label className="switch">
+                      <input type="checkbox" checked={newDish.is_chef_special || false} onChange={(e) => setNewDish({...newDish, is_chef_special: e.target.checked})} />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Food Classification</label>
                   <div style={{ display: 'flex', gap: '12px' }}>

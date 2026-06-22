@@ -195,6 +195,9 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10,2) DEFAULT 0.00`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_combo BOOLEAN DEFAULT FALSE`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS combo_components JSONB DEFAULT '[]'`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_best_seller BOOLEAN DEFAULT FALSE`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_today_special BOOLEAN DEFAULT FALSE`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_chef_special BOOLEAN DEFAULT FALSE`);
         const initialMenu = [
             ['s1', 1, 'Paneer Tikka', 'Starters', 250, 'Grilled cottage cheese with spices', 'https://www.cookwithmanali.com/wp-content/uploads/2015/07/Restaurant-Style-Recipe-Paneer-Tikka.jpg', null],
             ['s2', 1, 'French Fries', 'Starters', 120, 'Crispy salted potato fries', 'https://www.allrecipes.com/thmb/8_B6OD1w6h1V0zPi8KAGzD41Kzs=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/50223-homemade-crispy-seasoned-french-fries-VAT-Beauty-4x3-789ecb2eaed34d6e879b9a93dd56a50a.jpg', null],

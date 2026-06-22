@@ -28,6 +28,27 @@ const MenuSystem = ({
     const categoryScrollRef = useRef(null);
     const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'nonveg'
     const [showVegOffConfirm, setShowVegOffConfirm] = useState(false);
+    
+    // Inject "Recommended" virtual categories (Top Picks, Today's Special, etc.)
+    const extendedMenuCategories = React.useMemo(() => {
+        if (!menuCategories) return [];
+        let allItems = [];
+        menuCategories.forEach(c => { allItems = allItems.concat(c.items) });
+        
+        // Remove duplicates just in case
+        allItems = Array.from(new Map(allItems.map(i => [i.id, i])).values());
+        
+        let bestSellers = allItems.filter(i => i.is_best_seller);
+        let todaySpecials = allItems.filter(i => i.is_today_special);
+        let chefSpecials = allItems.filter(i => i.is_chef_special);
+        
+        let virtualCats = [];
+        if (todaySpecials.length > 0) virtualCats.push({ category: "✨ Today's Special", items: todaySpecials, isVirtual: true });
+        if (bestSellers.length > 0) virtualCats.push({ category: "🔥 Best Sellers", items: bestSellers, isVirtual: true });
+        if (chefSpecials.length > 0) virtualCats.push({ category: "👨‍🍳 Chef's Special", items: chefSpecials, isVirtual: true });
+        
+        return [...virtualCats, ...menuCategories];
+    }, [menuCategories]);
     const [selectedVariants, setSelectedVariants] = useState({}); // { itemId: variantSize }
     const [selectedAddonsMap, setSelectedAddonsMap] = useState({}); // { itemId: [addonObj] }
     const [customizingItem, setCustomizingItem] = useState(null); // the item to customize
@@ -177,9 +198,9 @@ const MenuSystem = ({
                         className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
                         onClick={() => setActiveCategory('All')}
                     >
-                        All <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '4px' }}>({menuCategories.reduce((acc, cat) => acc + cat.items.length, 0)})</span>
+                        All <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '4px' }}>({extendedMenuCategories.reduce((acc, cat) => cat.isVirtual ? acc : acc + cat.items.length, 0)})</span>
                     </button>
-                    {menuCategories.map((cat) => (
+                    {extendedMenuCategories.map((cat) => (
                         <button
                             key={cat.category}
                             className={`category-chip ${activeCategory === cat.category ? 'active' : ''}`}
@@ -266,7 +287,7 @@ const MenuSystem = ({
                             </div>
                         )}
 
-                        {menuCategories.map((category) => {
+                        {extendedMenuCategories.map((category) => {
                             if (activeCategory !== 'All' && category.category !== activeCategory) return null;
 
                             const matchingItems = category.items.filter(item => {
@@ -394,7 +415,18 @@ const MenuSystem = ({
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
+                                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                                {item.is_best_seller && (
+                                                                    <span style={{ fontSize: '10px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', letterSpacing: '0.5px' }}>🔥 BEST SELLER</span>
+                                                                )}
+                                                                {item.is_today_special && (
+                                                                    <span style={{ fontSize: '10px', background: 'rgba(124, 58, 237, 0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', letterSpacing: '0.5px' }}>✨ TODAY'S SPECIAL</span>
+                                                                )}
+                                                                {item.is_chef_special && (
+                                                                    <span style={{ fontSize: '10px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', letterSpacing: '0.5px' }}>👨‍🍳 CHEF'S SPECIAL</span>
+                                                                )}
+                                                            </div>
+                                                            <p className="item-description" style={{ marginTop: '4px' }}>{item.description || "Delicately crafted for your tech palate."}</p>
                                                             
                                                             {item.is_combo && Array.isArray(item.combo_components) && item.combo_components.length > 0 && (
                                                                 <div style={{ marginTop: '6px', padding: '6px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
