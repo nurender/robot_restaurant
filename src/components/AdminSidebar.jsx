@@ -76,7 +76,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
                 </button>
             </div>
 
-            <nav className="sidebar-nav scrollbar-hidden" style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+            <nav className="sidebar-nav scrollbar-hidden" style={{ flex: 1, overflowY: 'auto' }}>
                 {filteredItems.map((item) => (
                     <button
                         key={item.id}

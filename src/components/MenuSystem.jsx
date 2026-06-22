@@ -374,7 +374,30 @@ const MenuSystem = ({
                                                 const originalDisplayPrice = baseVariantPrice + addonsPrice;
 
                                                 const qty = getItemQty(item, null, []);
-                                                const isUnavailable = item.is_active === false;
+                                                
+                                                let outOfTime = false;
+                                                let timeMsg = '';
+                                                if (item.available_from && item.available_to) {
+                                                    const now = new Date();
+                                                    const currVal = now.getHours() * 60 + now.getMinutes();
+                                                    let [fH, fM] = item.available_from.split(':').map(Number);
+                                                    let [tH, tM] = item.available_to.split(':').map(Number);
+                                                    const fromVal = fH * 60 + (fM||0);
+                                                    const toVal = tH * 60 + (tM||0);
+
+                                                    if (fromVal <= toVal) {
+                                                        if (currVal < fromVal || currVal > toVal) outOfTime = true;
+                                                    } else {
+                                                        if (currVal < fromVal && currVal > toVal) outOfTime = true;
+                                                    }
+
+                                                    if (outOfTime) {
+                                                        const formatAMPM = (h, m) => `${h % 12 || 12}:${String(m||0).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+                                                        timeMsg = `Available ${formatAMPM(fH, fM)} - ${formatAMPM(tH, tM)}`;
+                                                    }
+                                                }
+
+                                                const isUnavailable = item.is_active === false || outOfTime;
 
                                                 return (
                                                     <div key={item.id} className={`premium-menu-item animate-slide-up ${isUnavailable ? 'unavailable' : ''}`}>
@@ -389,7 +412,11 @@ const MenuSystem = ({
                                                             ) : (
                                                                 <div className="item-thumb-placeholder"><ChefHat size={24} /></div>
                                                             )}
-                                                            {isUnavailable && <div className="unavailable-overlay">SOLD OUT</div>}
+                                                            {isUnavailable && (
+                                                                <div className="unavailable-overlay" style={timeMsg ? { background: 'rgba(0,0,0,0.8)', color: '#eab308' } : {}}>
+                                                                    {timeMsg ? <span style={{ fontSize: '11px', lineHeight: '1.4', textAlign: 'center', padding: '0 4px' }}>{timeMsg}</span> : 'SOLD OUT'}
+                                                                </div>
+                                                            )}
                                                             {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
                                                         </div>
 

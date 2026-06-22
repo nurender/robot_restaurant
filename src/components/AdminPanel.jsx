@@ -1565,7 +1565,7 @@ const AdminPanel = () => {
                     <span>Manage Categories</span>
                   </button>
                   <button className="btn-primary" onClick={() => {
-                    setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true, veg_type: 'veg', options: [] });
+                    setNewDish({ name: '', category: '', price: '', description: '', image_url: '', is_active: true, veg_type: 'veg', options: [], available_from: '', available_to: '' });
                     setEditingDishId(null);
                     setFormError('');
                     setShowMenuPopup(true);
@@ -1707,7 +1707,11 @@ const AdminPanel = () => {
                                   {item.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                                 <button className="inv-btn-edit" onClick={() => {
-                                  setNewDish(item);
+                                  setNewDish({
+                                    ...item,
+                                    available_from: item.available_from ? item.available_from.substring(0, 5) : '',
+                                    available_to: item.available_to ? item.available_to.substring(0, 5) : ''
+                                  });
                                   setEditingDishId(item.id);
                                   setFormError('');
                                   setShowMenuPopup(true);
@@ -1802,7 +1806,11 @@ const AdminPanel = () => {
                                   {item.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                                 <button className="inv-btn-edit" onClick={() => {
-                                  setNewDish(item);
+                                  setNewDish({
+                                    ...item,
+                                    available_from: item.available_from ? item.available_from.substring(0, 5) : '',
+                                    available_to: item.available_to ? item.available_to.substring(0, 5) : ''
+                                  });
                                   setEditingDishId(item.id);
                                   setFormError('');
                                   setShowMenuPopup(true);
@@ -3535,6 +3543,34 @@ const AdminPanel = () => {
                     <span className="slider round"></span>
                   </label>
                 </div>
+
+                <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px' }}>⏳ Time Restriction (Optional)</strong>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Set specific hours this item is available (e.g. Breakfast from 8am to 12pm). Leave empty for 24/7 availability.</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>Start Time</label>
+                      <input
+                        type="time"
+                        value={newDish.available_from || ''}
+                        onChange={(e) => setNewDish({ ...newDish, available_from: e.target.value })}
+                        style={{ width: '100%', height: '48px', padding: '0 16px', borderRadius: '12px', background: 'var(--bg-primary)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '15px', outline: 'none' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>End Time</label>
+                      <input
+                        type="time"
+                        value={newDish.available_to || ''}
+                        onChange={(e) => setNewDish({ ...newDish, available_to: e.target.value })}
+                        style={{ width: '100%', height: '48px', padding: '0 16px', borderRadius: '12px', background: 'var(--bg-primary)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '15px', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
 
                 <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
