@@ -577,7 +577,6 @@ const connectDB = async () => {
                 ['orders', 'Order Management', 'ListTodo', '{super_admin, manager, staff}', 1],
                 ['kitchen', 'Kitchen Hub', 'ChefHat', '{super_admin, manager, chef}', 2],
                 ['marketing', 'Marketing Hub', 'Send', '{super_admin, manager}', 3],
-                ['monitor', 'Neural Live Feed', 'Bot', '{super_admin, manager, staff}', 4],
                 ['menu', 'Menu Management', 'UtensilsCrossed', '{super_admin, manager}', 6],
                 ['menu_order', 'Menu Ordering', 'ListTodo', '{super_admin, manager}', 7],
                 ['sidebar_order', 'Sidebar Ordering', 'Settings', '{super_admin}', 8],

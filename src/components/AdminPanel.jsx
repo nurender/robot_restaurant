@@ -940,10 +940,10 @@ const AdminPanel = () => {
 
     // Priority 2: Hardcoded Defaults (Fallback)
     const permissions = {
-      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles', 'combos'],
-      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'combos'],
-      staff: ['orders', 'monitor'],
-      chef: ['kitchen', 'orders', 'monitor']
+      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles', 'combos'],
+      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'combos'],
+      staff: ['orders'],
+      chef: ['kitchen', 'orders']
     };
     return permissions[roleName] || ['orders'];
   };
@@ -2241,8 +2241,23 @@ const AdminPanel = () => {
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
               <div className="view-header-row mb-8">
                 <div className="header-left">
-                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Kitchen Display System</h1>
-                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Live order orchestration for culinary excellence.</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Kitchen Display System</h1>
+                    <button
+                      onClick={fetchData}
+                      className="btn-icon"
+                      disabled={isLoading}
+                      title="Manual Refresh"
+                      style={{
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)',
+                        padding: '8px', borderRadius: '10px', color: 'var(--text-muted)',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                    >
+                      <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+                    </button>
+                  </div>
+                  <p className="text-muted" style={{ marginTop: '8px', fontSize: '15px' }}>Live order orchestration for culinary excellence.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                   <div className="status-pill active" style={{ padding: '8px 16px', fontSize: '12px' }}>
@@ -2251,125 +2266,134 @@ const AdminPanel = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
-                {kitchenOrders.map((order, idx) => (
-                  <div key={idx} className="glass-panel animate-scale-in" style={{
-                    padding: '24px',
-                    borderRadius: '28px',
-                    border: '2px solid var(--card-border)',
-                    background: 'var(--card-bg)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '20px',
-                    boxShadow: '0 15px 40px rgba(0,0,0,0.1)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                          Table {order.tableNumber}
-                        </div>
-                        <h2 style={{ fontSize: '24px', fontWeight: '900', marginTop: '4px' }}>Order #{order.id}</h2>
-                        <div style={{ fontSize: '14px', fontWeight: '700', position: 'relative' }}>
-                          {editingOrderId === order.id ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              <input
-                                className="filter-input"
-                                value={editFormData.name}
-                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                                placeholder="Name"
-                                style={{ padding: '4px 8px', fontSize: '12px' }}
-                              />
-                              <input
-                                className="filter-input"
-                                value={editFormData.phone}
-                                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                                placeholder="Phone"
-                                style={{ padding: '4px 8px', fontSize: '12px' }}
-                              />
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '4px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Save</button>
-                                <button onClick={() => setEditingOrderId(null)} style={{ padding: '4px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Cancel</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {order.customer_name || 'Guest'}
-                                <button
-                                  onClick={() => {
-                                    setEditingOrderId(order.id);
-                                    setEditFormData({ name: order.customer_name || '', phone: order.customer_phone || '' });
-                                  }}
-                                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                                >
-                                  <Edit2 size={12} />
-                                </button>
-                              </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{order.customer_phone}</div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {/* <div style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning)', fontWeight: '800', fontSize: '18px' }}>
-                          <Clock size={20} />
-                          {Math.floor((Date.now() - (order.timestamp || Date.now())) / 60000)}m ago
-                        </div>
-                      </div> */}
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'start', marginTop: '24px', overflowX: 'auto', paddingBottom: '20px' }}>
+                {['accepted', 'preparing'].map(columnStatus => (
+                  <div key={columnStatus} style={{ minWidth: '400px', flex: 1, background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '20px', minHeight: '600px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '2px solid var(--card-border)' }}>
+                      <h3 style={{ textTransform: 'uppercase', fontSize: '13px', fontWeight: '800', color: columnStatus === 'accepted' ? 'var(--warning)' : 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: columnStatus === 'accepted' ? 'var(--warning)' : 'var(--accent-primary)' }} />
+                        {columnStatus === 'accepted' ? 'TO PREPARE' : 'COOKING'}
+                      </h3>
+                      <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>
+                        {kitchenOrders.filter(o => o.status === columnStatus).length}
+                      </span>
                     </div>
 
-                    <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-                      {(order.items || []).map((item, i) => {
-                        const isChecked = kitchenItemChecked[`${order.id}-${i}`];
-                        return (
-                          <div key={i} onClick={() => { setKitchenItemChecked(prev => ({ ...prev, [`${order.id}-${i}`]: !prev[`${order.id}-${i}`] })) }} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s', opacity: isChecked ? 0.4 : 1, textDecoration: isChecked ? 'line-through' : 'none', background: isChecked ? 'rgba(0,255,100,0.02)' : 'transparent', borderRadius: '8px', margin: '2px 0', padding: '10px' }}>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                              <div style={{ width: '32px', height: '32px', background: isChecked ? 'rgba(255,255,255,0.05)' : 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: isChecked ? 'var(--text-muted)' : 'var(--accent-primary)', fontSize: '14px' }}>
-                                {isChecked ? <Check size={16} /> : `${item.qty || item.quantity}x`}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }} className="scrollbar-hidden">
+                      {kitchenOrders.filter(order => order.status === columnStatus).map((order, idx) => (
+                        <div key={idx} className="glass-panel animate-scale-in" style={{
+                          padding: '24px',
+                          borderRadius: '28px',
+                          border: '2px solid var(--card-border)',
+                          background: 'var(--card-bg)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '20px',
+                          boxShadow: '0 15px 40px rgba(0,0,0,0.1)'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                Table {order.tableNumber || order.table_number}
                               </div>
-                              <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name} {item.selectedVariant && <span style={{ fontSize: '13px', opacity: 0.8, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ fontSize: '12px', opacity: 0.6 }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
+                              <h2 style={{ fontSize: '24px', fontWeight: '900', marginTop: '4px' }}>Order #{order.id}</h2>
+                              <div style={{ fontSize: '14px', fontWeight: '700', position: 'relative' }}>
+                                {editingOrderId === order.id ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <input
+                                      className="filter-input"
+                                      value={editFormData.name}
+                                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                      placeholder="Name"
+                                      style={{ padding: '4px 8px', fontSize: '12px' }}
+                                    />
+                                    <input
+                                      className="filter-input"
+                                      value={editFormData.phone}
+                                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                      placeholder="Phone"
+                                      style={{ padding: '4px 8px', fontSize: '12px' }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                      <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '4px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Save</button>
+                                      <button onClick={() => setEditingOrderId(null)} style={{ padding: '4px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '11px' }}>Cancel</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      {order.customer_name || order.customerName || 'Guest'}
+                                      <button
+                                        onClick={() => {
+                                          setEditingOrderId(order.id);
+                                          setEditFormData({ name: order.customer_name || order.customerName || '', phone: order.customer_phone || order.customerPhone || '' });
+                                        }}
+                                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                                      >
+                                        <Edit2 size={12} />
+                                      </button>
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>{order.customer_phone || order.customerPhone}</div>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
 
-                    {order.notes && (
-                      <div style={{ padding: '12px 16px', background: 'rgba(245, 158, 11, 0.1)', borderLeft: '4px solid #f59e0b', borderRadius: '8px', marginBottom: '16px', fontSize: '14px', color: '#fcd34d' }}>
-                        <span style={{ fontWeight: '800', color: '#f59e0b', marginRight: '6px' }}>COOKING INSTRUCTIONS:</span>
-                        {order.notes}
-                      </div>
-                    )}
+                          <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
+                            {(order.items || []).map((item, i) => {
+                              const isChecked = kitchenItemChecked[`${order.id}-${i}`];
+                              return (
+                                <div key={i} onClick={() => { setKitchenItemChecked(prev => ({ ...prev, [`${order.id}-${i}`]: !prev[`${order.id}-${i}`] })) }} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i === (order.items || []).length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s', opacity: isChecked ? 0.4 : 1, textDecoration: isChecked ? 'line-through' : 'none', background: isChecked ? 'rgba(0,255,100,0.02)' : 'transparent', borderRadius: '8px', margin: '2px 0', padding: '10px' }}>
+                                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <div style={{ width: '32px', height: '32px', background: isChecked ? 'rgba(255,255,255,0.05)' : 'var(--bg-deep)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: isChecked ? 'var(--text-muted)' : 'var(--accent-primary)', fontSize: '14px' }}>
+                                      {isChecked ? <Check size={16} /> : `${item.qty || item.quantity}x`}
+                                    </div>
+                                    <span style={{ fontSize: '16px', fontWeight: '700' }}>{item.name} {item.selectedVariant && <span style={{ fontSize: '13px', opacity: 0.8, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ fontSize: '12px', opacity: 0.6 }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
 
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      {order.status === 'accepted' ? (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'preparing')}
-                          className="btn-primary"
-                          style={{ flex: 1, padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', fontWeight: '800' }}
-                        >
-                          START PREPARING
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'out_for_delivery')}
-                          className="btn-primary"
-                          style={{ flex: 1, padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981, #059669)', fontWeight: '800' }}
-                        >
-                          MARK AS READY
-                        </button>
+                          {order.notes && (
+                            <div style={{ padding: '12px 16px', background: 'rgba(245, 158, 11, 0.1)', borderLeft: '4px solid #f59e0b', borderRadius: '8px', marginBottom: '16px', fontSize: '14px', color: '#fcd34d' }}>
+                              <span style={{ fontWeight: '800', color: '#f59e0b', marginRight: '6px' }}>COOKING INSTRUCTIONS:</span>
+                              {order.notes}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            {order.status === 'accepted' ? (
+                              <button
+                                onClick={() => updateOrderStatus(order.id, 'preparing')}
+                                className="btn-primary"
+                                style={{ flex: 1, padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', fontWeight: '800' }}
+                              >
+                                START PREPARING
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => updateOrderStatus(order.id, 'out_for_delivery')}
+                                className="btn-primary"
+                                style={{ flex: 1, padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981, #059669)', fontWeight: '800' }}
+                              >
+                                MARK AS READY
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {kitchenOrders.filter(order => order.status === columnStatus).length === 0 && (
+                        <div style={{ padding: '60px', textAlign: 'center', opacity: 0.3 }}>
+                          <ChefHat size={40} style={{ margin: '0 auto 10px' }} />
+                          <h3 style={{ fontSize: '16px', fontWeight: '800' }}>Empty Queue</h3>
+                        </div>
                       )}
                     </div>
                   </div>
                 ))}
-
-                {kitchenOrders.length === 0 && (
-                  <div style={{ gridColumn: '1 / -1', padding: '100px', textAlign: 'center', opacity: 0.3 }}>
-                    <ChefHat size={80} style={{ margin: '0 auto 20px' }} />
-                    <h3 style={{ fontSize: '24px', fontWeight: '800' }}>Kitchen is Clean</h3>
-                    <p>No active culinary protocols at the moment.</p>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -2525,63 +2549,6 @@ const AdminPanel = () => {
             </div>
           )}
 
-          {activeTab === 'monitor' && (
-            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-              <div className="view-header-row mb-8">
-                <div className="header-left">
-                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Neural Live Feed</h1>
-                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Real-time monitoring of AI interactions and customer sentiment.</p>
-                </div>
-                <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '10px 18px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                  <span style={{ fontWeight: '700', fontSize: '14px' }}>Live Connection Active</span>
-                </div>
-              </div>
-
-              <div className="glass-panel scrollbar-hidden" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '0', boxShadow: 'var(--shadow-md)', overflowY: 'auto', maxHeight: 'calc(100vh - 250px)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg)', zIndex: 10 }}>
-                    <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'left' }}>
-                      <th style={{ padding: '20px' }}>TIMESTAMP</th>
-                      <th style={{ padding: '20px' }}>TABLE</th>
-                      <th style={{ padding: '20px' }}>CUSTOMER SAID</th>
-                      <th style={{ padding: '20px' }}>ROBOT REPLIED</th>
-                      <th style={{ padding: '20px' }}>MOOD</th>
-                      <th style={{ padding: '20px' }}>ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {chatLogs.map((log) => (
-                      <tr key={log.id} style={{ borderBottom: '1px solid var(--card-border)', fontSize: '14px', transition: 'background 0.2s' }}>
-                        <td style={{ padding: '20px', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{formatDate(log.created_at)}</td>
-                        <td style={{ padding: '20px' }}>
-                          <span style={{ background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '8px', fontWeight: '800' }}>Table {log.table_number}</span>
-                        </td>
-                        <td style={{ padding: '20px', color: 'var(--text-main)', maxWidth: '300px' }}>{log.customer_transcript}</td>
-                        <td style={{ padding: '20px', color: 'var(--text-dim)', maxWidth: '400px' }}>{log.ai_reply}</td>
-                        <td style={{ padding: '20px', textAlign: 'center' }}>
-                          <span title={log.customer_mood} style={{ fontSize: '20px' }}>
-                            {log.customer_mood === 'happy' ? '😊' : log.customer_mood === 'angry' ? '😠' : log.customer_mood === 'sad' ? '😔' : '😐'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '20px' }}>
-                          <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '11px', background: log.action_taken === 'CHAT' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)', color: log.action_taken === 'CHAT' ? '#60a5fa' : 'var(--success)', fontWeight: '700' }}>{log.action_taken}</span>
-                        </td>
-                      </tr>
-                    ))}
-                    {chatLogs.length === 0 && (
-                      <tr>
-                        <td colSpan="5" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                          <Bot size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
-                          <p>No neural logs detected yet in this branch.</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'rider_fleet' && (
             <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
@@ -3254,7 +3221,7 @@ const AdminPanel = () => {
                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '15px', fontWeight: '800', letterSpacing: '1px' }}>ACCESS MATRIX</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px' }}>
                           {[
-                            'dashboard', 'orders', 'kitchen', 'marketing', 'monitor', 'menu', 'menu_order',
+                            'dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order',
                             'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes',
                             'feedback', 'settings', 'staff', 'restaurants', 'roles'
                           ].map(mod => {

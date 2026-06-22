@@ -8,6 +8,7 @@ const CombosManager = ({ adminUser, restaurantId }) => {
     const [combos, setCombos] = useState([]);
     const [menuItems, setMenuItems] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
 
     // Modal state for Add/Edit Combo
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -196,8 +197,66 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                             </div>
                             
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>Image URL (Optional)</label>
-                                <input className="glass-input" type="text" value={comboForm.image_url} onChange={e => setComboForm({...comboForm, image_url: e.target.value})} style={{ width: '100%', padding: '12px', outline: 'none' }} placeholder="https://..." />
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>Image Upload or URL (Optional)</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <label 
+                                        style={{
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px dashed var(--card-border)', transition: 'all 0.2s', color: 'var(--text-muted)'
+                                        }}
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
+                                        onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--card-border)'; }}
+                                        onDrop={async (e) => {
+                                            e.preventDefault();
+                                            const file = e.dataTransfer.files[0];
+                                            if (file) {
+                                                const formData = new FormData();
+                                                formData.append('file', file);
+                                                setUploading(true);
+                                                try {
+                                                    const res = await axios.post(`${API_URL}/api/upload`, formData);
+                                                    setComboForm({ ...comboForm, image_url: res.data.url });
+                                                } catch (err) { alert("Upload failed"); } finally { setUploading(false); }
+                                            }
+                                        }}
+                                    >
+                                        {uploading ? (
+                                            <div className="animate-spin" style={{ width: '24px', height: '24px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ fontWeight: '700', fontSize: '14px', color: 'white' }}>Drag & drop or Click to Browse</span>
+                                                <span style={{ fontSize: '12px' }}>Upload a picture for this combo</span>
+                                            </div>
+                                        )}
+                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const formData = new FormData();
+                                                formData.append('file', file);
+                                                setUploading(true);
+                                                try {
+                                                    const res = await axios.post(`${API_URL}/api/upload`, formData);
+                                                    setComboForm({ ...comboForm, image_url: res.data.url });
+                                                } catch (err) { alert("Upload failed"); } finally { setUploading(false); }
+                                            }
+                                        }} />
+                                    </label>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ flex: 1, height: '1px', background: 'var(--card-border)' }}></div>
+                                        <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>OR</span>
+                                        <div style={{ flex: 1, height: '1px', background: 'var(--card-border)' }}></div>
+                                    </div>
+
+                                    <input className="glass-input" type="text" value={comboForm.image_url} onChange={e => setComboForm({...comboForm, image_url: e.target.value})} style={{ width: '100%', padding: '12px', outline: 'none' }} placeholder="Paste external image URL here (https://...)" />
+
+                                    {comboForm.image_url && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)', marginTop: '4px' }}>
+                                            <img src={comboForm.image_url.startsWith('http') ? comboForm.image_url : `${API_URL}${comboForm.image_url}`} alt="Preview" style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} />
+                                            <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: '600', flex: 1, wordBreak: 'break-all' }}>{comboForm.image_url}</span>
+                                            <button type="button" onClick={() => setComboForm({ ...comboForm, image_url: '' })} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: '700', cursor: 'pointer' }}>Remove</button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div>

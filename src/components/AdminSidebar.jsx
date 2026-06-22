@@ -49,6 +49,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
     }, []);
 
     const filteredItems = menuItems.filter(item => {
+        if (item.id === 'monitor') return false;
         // Ensure roles is an array (sometimes PG arrays come as strings depending on config)
         let rolesArray = item.roles;
         if (typeof rolesArray === 'string') {
