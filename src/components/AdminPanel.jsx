@@ -1009,7 +1009,7 @@ const AdminPanel = () => {
         }
         /* Input theming */
         input, textarea, select {
-          background: var(--input-bg) !important;
+          // background: var(--input-bg) !important;
           border-color: var(--input-border) !important;
           color: var(--input-text) !important;
         }
@@ -1021,7 +1021,7 @@ const AdminPanel = () => {
         .role-badge.admin       { background: rgba(59,130,246,0.1); color: #60a5fa; }
         /* Filter dropdown */
         .filter-input {
-          background: var(--input-bg) !important;
+          // background: var(--input-bg) !important;
           border: 1px solid var(--input-border) !important;
           color: var(--text-main) !important;
         }
@@ -1526,8 +1526,8 @@ const AdminPanel = () => {
                   <h1 className="view-title">Neural Inventory</h1>
                   <p className="text-muted">Manage your digital menu items and system parameters.</p>
                 </div>
-                <div className="flex gap-4 items-center">
-                  <label className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="flex gap-4 items-center flex-wrap" style={{ justifyContent: 'flex-end', display: 'flex', gap: '8px' }}>
+                  {/* <label className="btn-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Sparkles size={20} className="text-warning" />
                     <span>{isImporting ? 'Analyzing...' : 'AI Import Menu'}</span>
                     <input
@@ -1553,13 +1553,13 @@ const AdminPanel = () => {
                         }
                       }}
                     />
-                  </label>
-                  <button className="btn-secondary" onClick={fetchData} style={{ borderRadius: '14px' }}>
+                  </label> */}
+                  <button className="btn-secondary" onClick={fetchData}>
                     <Clock size={18} /> Refresh Hub
                   </button>
-                  <button className="btn-primary" style={{ borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
+                  {/* <button className="btn-primary" style={{ borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
                     <Bot size={18} /> AI Menu Insights
-                  </button>
+                  </button> */}
                   <button className="btn-secondary" onClick={() => setShowCatPopup(true)}>
                     <Settings size={20} />
                     <span>Manage Categories</span>
@@ -1668,19 +1668,19 @@ const AdminPanel = () => {
                                   <div className="flex justify-between items-start">
                                     <strong className="text-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       {item.veg_type === 'veg' && (
-                                          <div style={{ width: '12px', height: '12px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
-                                          </div>
+                                        <div style={{ width: '12px', height: '12px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
+                                        </div>
                                       )}
                                       {item.veg_type === 'nonveg' && (
-                                          <div style={{ width: '12px', height: '12px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                              <div style={{ width: '0', height: '0', borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderBottom: '6px solid #ef4444' }}></div>
-                                          </div>
+                                        <div style={{ width: '12px', height: '12px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                          <div style={{ width: '0', height: '0', borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderBottom: '6px solid #ef4444' }}></div>
+                                        </div>
                                       )}
                                       {item.veg_type === 'egg' && (
-                                          <div style={{ width: '12px', height: '12px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
-                                          </div>
+                                        <div style={{ width: '12px', height: '12px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
+                                        </div>
                                       )}
                                       {item.name}
                                     </strong>
@@ -4736,22 +4736,22 @@ const AdminPanel = () => {
                         <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                       <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {item.veg_type === 'veg' && (
-                              <div style={{ width: '10px', height: '10px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#22c55e' }}></div>
-                              </div>
-                          )}
-                          {item.veg_type === 'nonveg' && (
-                              <div style={{ width: '10px', height: '10px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                  <div style={{ width: '0', height: '0', borderLeft: '2px solid transparent', borderRight: '2px solid transparent', borderBottom: '4px solid #ef4444' }}></div>
-                              </div>
-                          )}
-                          {item.veg_type === 'egg' && (
-                              <div style={{ width: '10px', height: '10px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#eab308' }}></div>
-                              </div>
-                          )}
-                          {item.name}
+                        {item.veg_type === 'veg' && (
+                          <div style={{ width: '10px', height: '10px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#22c55e' }}></div>
+                          </div>
+                        )}
+                        {item.veg_type === 'nonveg' && (
+                          <div style={{ width: '10px', height: '10px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                            <div style={{ width: '0', height: '0', borderLeft: '2px solid transparent', borderRight: '2px solid transparent', borderBottom: '4px solid #ef4444' }}></div>
+                          </div>
+                        )}
+                        {item.veg_type === 'egg' && (
+                          <div style={{ width: '10px', height: '10px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
+                            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#eab308' }}></div>
+                          </div>
+                        )}
+                        {item.name}
                       </strong>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

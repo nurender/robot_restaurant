@@ -4,19 +4,20 @@
 */
 
 /* ── local aliases so existing selectors don't break ── */
-:root, [data-theme="dark"] {
+:root,
+[data-theme="dark"] {
   /* AI RESTO Premium SaaS Dark Mode Overrides */
-  --ap-sidebar-bg: #09090b; 
+  --ap-sidebar-bg: #09090b;
   --ap-sidebar-hover: rgba(124, 58, 237, 0.15);
   --ap-header-bg: rgba(9, 9, 11, 0.8);
   --ap-main-bg: #050508;
-  --ap-accent-color: #8b5cf6; 
+  --ap-accent-color: #8b5cf6;
   --ap-accent-glow: rgba(139, 92, 246, 0.5);
-  --ap-success: #10b981; 
+  --ap-success: #10b981;
   --ap-text-main: #ffffff;
-  --ap-text-dim: #a1a1aa; 
-  --ap-text-muted: #71717a; 
-  --ap-glass-bg: rgba(24, 24, 27, 0.6); 
+  --ap-text-dim: #a1a1aa;
+  --ap-text-muted: #71717a;
+  --ap-glass-bg: rgba(24, 24, 27, 0.6);
   --ap-glass-border: rgba(255, 255, 255, 0.08);
   --ap-card-bg: rgba(24, 24, 27, 0.4);
 
@@ -24,24 +25,24 @@
   --glass-bg: rgba(24, 24, 27, 0.6);
   --glass-border: rgba(255, 255, 255, 0.08);
   --premium-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  
+
   --card-bg: #09090b;
   --card-border: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="light"] {
   /* AI RESTO Premium SaaS Light Mode Overrides */
-  --ap-sidebar-bg: #ffffff; 
+  --ap-sidebar-bg: #ffffff;
   --ap-sidebar-hover: rgba(124, 58, 237, 0.08);
   --ap-header-bg: rgba(255, 255, 255, 0.8);
   --ap-main-bg: #f8fafc;
-  --ap-accent-color: #7c3aed; 
+  --ap-accent-color: #7c3aed;
   --ap-accent-glow: rgba(124, 58, 237, 0.4);
-  --ap-success: #059669; 
+  --ap-success: #059669;
   --ap-text-main: #0f172a;
-  --ap-text-dim: #475569; 
-  --ap-text-muted: #64748b; 
-  --ap-glass-bg: rgba(255, 255, 255, 0.6); 
+  --ap-text-dim: #475569;
+  --ap-text-muted: #64748b;
+  --ap-glass-bg: rgba(255, 255, 255, 0.6);
   --ap-glass-border: rgba(15, 23, 42, 0.08);
   --ap-card-bg: rgba(255, 255, 255, 0.9);
 
@@ -49,7 +50,7 @@
   --glass-bg: rgba(255, 255, 255, 0.6);
   --glass-border: rgba(15, 23, 42, 0.08);
   --premium-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
-  
+
   --card-bg: #ffffff;
   --card-border: rgba(15, 23, 42, 0.08);
 }
@@ -439,7 +440,8 @@
 .view-header-row {
   display: flex;
   justify-content: space-between;
-  align-items: center; /* Adjusted from flex-start to center for better SaaS balance */
+  align-items: center;
+  /* Adjusted from flex-start to center for better SaaS balance */
   margin-bottom: 32px;
   gap: 20px;
   flex-wrap: wrap;
@@ -1514,14 +1516,19 @@
 
 .btn-primary {
   background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
-  color: var(--ap-text-main) !important;
+  color: #ffffff !important;
   border: none;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 12px;
-  padding: 12px 24px;
+  padding: 0 24px;
+  min-height: 48px;
   box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
   transition: all 0.3s ease;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .btn-primary:hover {
@@ -1530,24 +1537,26 @@
 }
 
 .btn-secondary {
-  background: white;
-  color: var(--text-muted);
-  border: 2px solid #f1f5f9;
-  padding: 12px 24px;
-  border-radius: 16px;
-  font-weight: 800;
+  background: var(--ap-glass-bg);
+  color: var(--ap-text-main);
+  border: 1px solid var(--ap-glass-border);
+  padding: 0 18px;
+  min-height: 48px;
+  border-radius: 12px;
+  font-weight: 700;
   cursor: pointer;
   transition: 0.3s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-secondary:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #ffffff;
+  transform: translateY(-2px);
 }
 
 .scrollbar-hidden::-webkit-scrollbar {
@@ -2194,12 +2203,12 @@
   color: var(--text-main) !important;
 }
 
-.admin-layout p,
+/* .admin-layout p,
 .admin-layout span,
 .admin-layout .text-muted,
 .admin-layout label {
   color: var(--text-muted) !important;
-}
+} */
 
 .glass-panel,
 .inventory-card,
@@ -2343,12 +2352,16 @@ textarea {
   border-color: var(--accent-primary) !important;
   background: var(--bg-primary) !important;
 }
+
 /* =========================================
    AI RESTO OS FUTURISTIC SAAS OVERRIDES
    ========================================= */
 
 /* GLOBAL SAAS FONT AND BACKGROUND */
-.admin-layout, .admin-sidebar, .main-header, .view-container {
+.admin-layout,
+.admin-sidebar,
+.main-header,
+.view-container {
   background: var(--ap-main-bg) !important;
   font-family: 'Satoshi', 'General Sans', sans-serif !important;
 }
@@ -2359,28 +2372,40 @@ textarea {
   border-right: 1px solid var(--ap-glass-border) !important;
   backdrop-filter: blur(20px);
 }
+
 .sidebar-logo {
   font-family: 'Satoshi', sans-serif !important;
   background: linear-gradient(135deg, var(--ap-text-main), var(--ap-accent-color)) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
 }
+
 .nav-item {
   border-radius: 12px !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
+
 .nav-item:hover {
   transform: translateX(4px);
   background: var(--ap-glass-bg) !important;
 }
+
 .nav-item.active {
   background: rgba(139, 92, 246, 0.1) !important;
   border: 1px solid rgba(139, 92, 246, 0.2) !important;
   color: var(--ap-accent-color) !important;
 }
+
 .nav-item.active::before {
-  content: ''; position: absolute; left: 0; top: 15%; height: 70%; width: 3px;
-  background: #8b5cf6; border-radius: 0 4px 4px 0; box-shadow: 0 0 10px #8b5cf6;
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 3px;
+  background: #8b5cf6;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px #8b5cf6;
 }
 
 /* TOP NAVBAR RE-STYLING */
@@ -2389,12 +2414,14 @@ textarea {
   backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid var(--ap-glass-border) !important;
 }
+
 .header-search {
   background: var(--ap-glass-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 16px !important;
   transition: all 0.3s ease !important;
 }
+
 .header-search:focus-within {
   border-color: #8b5cf6 !important;
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15) !important;
@@ -2408,6 +2435,7 @@ textarea {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
   backdrop-filter: blur(10px);
 }
+
 .stat-card-modern:hover {
   transform: translateY(-5px);
   border-color: rgba(139, 92, 246, 0.3) !important;
@@ -2415,44 +2443,55 @@ textarea {
 }
 
 /* ORDER TRACKING CARDS */
-.order-card, .kitchen-order-card {
+.order-card,
+.kitchen-order-card {
   background: var(--ap-card-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 24px !important;
   transition: all 0.4s ease !important;
 }
-.order-card:hover, .kitchen-order-card:hover {
+
+.order-card:hover,
+.kitchen-order-card:hover {
   border-color: rgba(139, 92, 246, 0.2) !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* MENU INTELLIGENCE CARDS */
-.inventory-card, .dish-card-premium {
+.inventory-card,
+.dish-card-premium {
   background: var(--ap-glass-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 24px !important;
   overflow: hidden !important;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
-.inventory-card:hover, .dish-card-premium:hover {
+
+.inventory-card:hover,
+.dish-card-premium:hover {
   transform: translateY(-8px) scale(1.02);
   border-color: rgba(139, 92, 246, 0.3) !important;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 20px rgba(139, 92, 246, 0.15) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.15) !important;
 }
 
 /* FILTER BARS & TABS */
-.filter-section, .view-header-row {
+.filter-section,
+.view-header-row {
   background: transparent !important;
   border: none !important;
 }
-select, input.glass-input {
+
+select,
+input.glass-input {
   background: var(--ap-glass-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   color: var(--ap-text-main) !important;
   border-radius: 12px !important;
 }
-select:focus, input.glass-input:focus {
+
+select:focus,
+input.glass-input:focus {
   border-color: #8b5cf6 !important;
   outline: none !important;
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15) !important;
@@ -2463,13 +2502,16 @@ select:focus, input.glass-input:focus {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.5);
 }
@@ -2480,9 +2522,10 @@ select:focus, input.glass-input:focus {
 .orders-filter-bar {
   background: var(--ap-card-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
   backdrop-filter: blur(20px) !important;
-  border-radius: 100px !important; /* Fully rounded pill shape */
+  border-radius: 100px !important;
+  /* Fully rounded pill shape */
   padding: 10px 14px 10px 24px !important;
   display: flex !important;
   align-items: center !important;
@@ -2495,6 +2538,7 @@ select:focus, input.glass-input:focus {
   flex-direction: column;
   gap: 4px;
 }
+
 .orders-filter-bar .filter-group label {
   font-size: 9px !important;
   text-transform: uppercase;
@@ -2505,7 +2549,9 @@ select:focus, input.glass-input:focus {
   align-items: center;
   gap: 4px;
 }
-.orders-filter-bar input, .orders-filter-bar select {
+
+.orders-filter-bar input,
+.orders-filter-bar select {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -2516,7 +2562,9 @@ select:focus, input.glass-input:focus {
   width: 120px !important;
   border-radius: 0 !important;
 }
-.orders-filter-bar input:focus, .orders-filter-bar select:focus {
+
+.orders-filter-bar input:focus,
+.orders-filter-bar select:focus {
   outline: none !important;
   border-bottom: 1px solid var(--ap-accent-color) !important;
   box-shadow: none !important;
@@ -2551,9 +2599,11 @@ select:focus, input.glass-input:focus {
   gap: 20px !important;
   align-items: center !important;
 }
+
 .filter-group {
   display: flex !important;
-  flex-direction: row !important; /* Force inline */
+  flex-direction: row !important;
+  /* Force inline */
   align-items: center !important;
   gap: 8px !important;
   padding: 6px 12px !important;
@@ -2561,19 +2611,24 @@ select:focus, input.glass-input:focus {
   border-radius: 20px !important;
   border: 1px solid var(--ap-glass-border) !important;
 }
+
 .filter-group label {
   font-size: 11px !important;
   margin-bottom: 0 !important;
   margin-top: 0 !important;
 }
-.orders-filter-bar input, .orders-filter-bar select {
+
+.orders-filter-bar input,
+.orders-filter-bar select {
   width: auto !important;
   min-width: 90px !important;
   font-size: 13px !important;
   border-bottom: none !important;
   padding: 0 !important;
 }
-.orders-filter-bar input:focus, .orders-filter-bar select:focus {
+
+.orders-filter-bar input:focus,
+.orders-filter-bar select:focus {
   border-bottom: none !important;
 }
 
@@ -2582,13 +2637,15 @@ select:focus, input.glass-input:focus {
   gap: 20px !important;
   padding-bottom: 20px !important;
 }
+
 .kanban-column {
   background: var(--ap-glass-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 20px !important;
   padding: 16px !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.02) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
 }
+
 .column-header {
   border-bottom: 1px solid var(--ap-glass-border) !important;
   padding-bottom: 12px !important;
@@ -2597,12 +2654,14 @@ select:focus, input.glass-input:focus {
   justify-content: space-between !important;
   align-items: center !important;
 }
+
 .column-header h2 {
   font-size: 12px !important;
   font-weight: 800 !important;
   letter-spacing: 1px !important;
   margin: 0 !important;
 }
+
 .column-header .count-badge {
   background: var(--ap-sidebar-hover) !important;
   color: var(--ap-accent-color) !important;
@@ -2622,8 +2681,9 @@ select:focus, input.glass-input:focus {
   padding: 12px 20px !important;
   min-width: 350px !important;
   background: var(--ap-glass-bg) !important;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02) !important;
 }
+
 .header-search input {
   font-size: 13px !important;
 }
@@ -2633,7 +2693,9 @@ select:focus, input.glass-input:focus {
    ========================================= */
 
 /* Hide default browser arrow and use custom sleek SVG Arrow */
-.orders-filter-bar select, .glass-input select, select {
+.orders-filter-bar select,
+.glass-input select,
+select {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
