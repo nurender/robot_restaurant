@@ -1690,12 +1690,12 @@ const AdminPanel = () => {
                                 <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
                                 <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                                   <div className="inv-price text-xl">₹{item.price}</div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {/* <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <Package size={14} className={item.stock_quantity <= item.low_stock_threshold ? 'text-error animate-pulse' : 'text-muted'} />
                                     <span style={{ fontSize: '13px', fontWeight: '800', color: item.stock_quantity <= item.low_stock_threshold ? '#ef4444' : 'var(--text-dim)' }}>
                                       {item.stock_quantity} Left
                                     </span>
-                                  </div>
+                                  </div> */}
                                 </div>
                               </div>
                               <div className="inv-actions">
@@ -3447,7 +3447,7 @@ const AdminPanel = () => {
       {/* Menu Modal */}
       {showMenuPopup && (
         <div className="modal-overlay" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)' }}>
-          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '900px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '40px', borderRadius: '28px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '900px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '19px', borderRadius: '28px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid var(--card-border)', paddingBottom: '20px' }}>
               <div>
                 <h2 style={{ fontSize: '28px', fontWeight: '900', background: 'linear-gradient(135deg, #fff 0%, var(--text-muted) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{editingDishId ? '✏️ Edit Menu Item' : '➕ Add New Menu Item'}</h2>

@@ -1809,11 +1809,11 @@
   padding: 6px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  opacity: 0;
-  transform: translateY(-5px);
+  opacity: 1;
+  transform: translateY(0);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  pointer-events: none;
+  pointer-events: all;
 }
 
 /* --- PRINT SYSTEM --- */
@@ -1895,11 +1895,7 @@
   }
 }
 
-.dish-card-premium:hover .inv-actions {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: all;
-}
+
 
 .inv-btn-edit,
 .inv-btn-toggle,
