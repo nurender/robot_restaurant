@@ -282,13 +282,23 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     const subtotal = getCartSubtotal();
     if (activeCoupon.min_order_value && subtotal < activeCoupon.min_order_value) return 0;
     
+    // Calculate eligible subtotal by summing items that don't have allow_coupons === false
+    const eligibleSubtotal = currentCart.reduce((acc, item) => {
+      // If item explicitly disallows coupons, or if it already has an item-level discount and allow_coupons isn't true... wait, the logic is:
+      // apply IF allow_coupons !== false.
+      if (item.allow_coupons === false) return acc;
+      return acc + (item.price * item.qty);
+    }, 0);
+
+    if (eligibleSubtotal === 0) return 0; // No items eligible
+    
     let discount = 0;
     if (activeCoupon.discount_type === 'flat') {
       discount = Number(activeCoupon.discount_value);
     } else {
-      discount = subtotal * (Number(activeCoupon.discount_value) / 100);
+      discount = eligibleSubtotal * (Number(activeCoupon.discount_value) / 100);
     }
-    return Math.min(discount, subtotal);
+    return Math.min(discount, eligibleSubtotal);
   };
 
   const getCartTax = () => {

@@ -1378,15 +1378,35 @@ const AdminPanel = () => {
                           )}
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            {(order.items || []).map((item, idx) => (
-                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
-                                  <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{item.name} {item.selectedVariant && <span style={{ opacity: 0.7, fontSize: '11px', color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '10px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
+                            {(order.items || []).map((item, idx) => {
+                              let hasDiscount = item.discount_value > 0 && item.discount_type && item.discount_type !== 'none';
+                              let dVal = Number(item.discount_value || 0);
+                              let displayDVal = Number.isInteger(dVal) ? dVal : dVal.toFixed(2);
+                              let discountBadgeText = item.discount_type === 'percent' ? `${displayDVal}% OFF` : `₹${displayDVal} OFF`;
+
+                              return (
+                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{item.qty || 1}</span>
+                                      <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>
+                                        {item.name} 
+                                        {item.selectedVariant && <span style={{ opacity: 0.7, fontSize: '11px', color: 'var(--warning)', marginLeft: '4px' }}>({item.selectedVariant.size})</span>} 
+                                        {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '10px', marginLeft: '4px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}
+                                      </span>
+                                    </div>
+                                    <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
+                                  </div>
+                                  {hasDiscount && (
+                                    <div style={{ paddingLeft: '32px', fontSize: '10px' }}>
+                                      <span style={{ color: '#3b82f6', fontWeight: '800', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                        {discountBadgeText}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                                <span style={{ color: 'var(--text-dim)' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
-                              </div>
-                            ))}
+                              );
+                            })}
                             {order.notes && (
                               <div style={{ marginTop: '12px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', borderLeft: '4px solid #ef4444', fontSize: '13px', color: '#fca5a5' }}>
                                 <strong style={{ color: '#ef4444' }}>Notes:</strong> {order.notes}
@@ -3521,6 +3541,17 @@ const AdminPanel = () => {
                   </div>
                 </div>
 
+                <div style={{ padding: '20px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px' }}>Eligible for Global Coupons?</strong>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Can cart level coupons (like Neural Promotions) be applied on top of this item?</span>
+                  </div>
+                  <label className="switch">
+                    <input type="checkbox" checked={newDish.allow_coupons !== false} onChange={(e) => setNewDish({...newDish, allow_coupons: e.target.checked})} />
+                    <span className="slider round"></span>
+                  </label>
+                </div>
+
                 <div>
                   <label style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'block' }}>Food Classification</label>
                   <div style={{ display: 'flex', gap: '12px' }}>
@@ -4689,31 +4720,61 @@ const AdminPanel = () => {
                   const matchesSearch = item.name.toLowerCase().includes(manualOrderSearch.toLowerCase());
                   const matchesCat = manualOrderCategory === 'All' || item.category === manualOrderCategory;
                   return matchesSearch && matchesCat;
-                }).map(item => (
-                  <div
-                    key={item.id}
-                    onClick={() => addToManualOrder(item)}
-                    style={{
-                      padding: '16px',
-                      borderRadius: '20px',
-                      background: 'var(--card-bg)',
-                      border: '1.5px solid var(--card-border)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
-                  >
-                    <div style={{ width: '100%', height: '100px', borderRadius: '12px', overflow: 'hidden', background: '#222' }}>
-                      <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                }).map(item => {
+                  let discountedPrice = Number(item.price || 0);
+                  let hasDiscount = false;
+                  let discountBadge = '';
+                  let dVal = Number(item.discount_value || 0);
+                  let displayDVal = Number.isInteger(dVal) ? dVal : dVal.toFixed(2);
+
+                  if (item.discount_type === 'percent' && dVal > 0) {
+                      hasDiscount = true;
+                      discountedPrice = item.price - (item.price * (dVal / 100));
+                      discountBadge = `${displayDVal}% OFF`;
+                  } else if (item.discount_type === 'flat' && dVal > 0) {
+                      hasDiscount = true;
+                      discountedPrice = item.price - dVal;
+                      discountBadge = `₹${displayDVal} OFF`;
+                  }
+                  if (discountedPrice < 0) discountedPrice = 0;
+                  discountedPrice = Math.round(discountedPrice);
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => addToManualOrder({...item, price: discountedPrice})}
+                      style={{
+                        padding: '16px',
+                        borderRadius: '20px',
+                        background: 'var(--card-bg)',
+                        border: '1.5px solid var(--card-border)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
+                    >
+                      <div style={{ width: '100%', height: '100px', borderRadius: '12px', overflow: 'hidden', background: '#222' }}>
+                        <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</strong>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>₹{discountedPrice}</span>
+                            {hasDiscount && (
+                                <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{Math.round(item.price)}</span>
+                            )}
+                        </div>
+                        {hasDiscount && (
+                            <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '800', letterSpacing: '0.5px' }}>{discountBadge}</span>
+                        )}
+                      </div>
                     </div>
-                    <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</strong>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)' }}>₹{item.price}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -4773,19 +4834,33 @@ const AdminPanel = () => {
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {manualOrderData.items.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-deep)', padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '700', fontSize: '14px' }}>{item.name} {item.selectedVariant && <span style={{ opacity: 0.7, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '12px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--accent-primary)' }}>₹{item.price}</div>
+                {manualOrderData.items.map(item => {
+                  let hasDiscount = item.discount_value > 0 && item.discount_type && item.discount_type !== 'none';
+                  let dVal = Number(item.discount_value || 0);
+                  let displayDVal = Number.isInteger(dVal) ? dVal : dVal.toFixed(2);
+                  let discountBadgeText = item.discount_type === 'percent' ? `${displayDVal}% OFF` : `₹${displayDVal} OFF`;
+
+                  return (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-deep)', padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '700', fontSize: '14px' }}>{item.name} {item.selectedVariant && <span style={{ opacity: 0.7, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '12px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: '800' }}>₹{item.price}</div>
+                          {hasDiscount && (
+                            <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '800', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {discountBadgeText}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-primary)', padding: '4px 12px', borderRadius: '10px' }}>
+                        <button onClick={() => updateManualQty(item.id, -1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                        <span style={{ fontWeight: '900', fontSize: '15px' }}>{item.qty}</span>
+                        <button onClick={() => updateManualQty(item.id, 1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-primary)', padding: '4px 12px', borderRadius: '10px' }}>
-                      <button onClick={() => updateManualQty(item.id, -1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                      <span style={{ fontWeight: '900', fontSize: '15px' }}>{item.qty}</span>
-                      <button onClick={() => updateManualQty(item.id, 1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {manualOrderData.items.length === 0 && (
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>
                     <UtensilsCrossed size={48} />

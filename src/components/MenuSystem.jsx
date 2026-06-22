@@ -334,14 +334,17 @@ const MenuSystem = ({
                                                 let discountedPrice = baseVariantPrice;
                                                 let hasDiscount = false;
                                                 let discountBadge = '';
-                                                if (item.discount_type === 'percent' && item.discount_value > 0) {
+                                                let dVal = Number(item.discount_value || 0);
+                                                let displayDVal = Number.isInteger(dVal) ? dVal : dVal.toFixed(2);
+
+                                                if (item.discount_type === 'percent' && dVal > 0) {
                                                     hasDiscount = true;
-                                                    discountedPrice = baseVariantPrice - (baseVariantPrice * (item.discount_value / 100));
-                                                    discountBadge = `${item.discount_value}% OFF`;
-                                                } else if (item.discount_type === 'flat' && item.discount_value > 0) {
+                                                    discountedPrice = baseVariantPrice - (baseVariantPrice * (dVal / 100));
+                                                    discountBadge = `${displayDVal}% OFF`;
+                                                } else if (item.discount_type === 'flat' && dVal > 0) {
                                                     hasDiscount = true;
-                                                    discountedPrice = baseVariantPrice - item.discount_value;
-                                                    discountBadge = `₹${item.discount_value} OFF`;
+                                                    discountedPrice = baseVariantPrice - dVal;
+                                                    discountBadge = `₹${displayDVal} OFF`;
                                                 }
                                                 if (discountedPrice < 0) discountedPrice = 0;
 
@@ -367,11 +370,6 @@ const MenuSystem = ({
                                                             )}
                                                             {isUnavailable && <div className="unavailable-overlay">SOLD OUT</div>}
                                                             {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
-                                                            {hasDiscount && (
-                                                                <div style={{ position: 'absolute', top: '4px', right: '4px', background: 'linear-gradient(90deg, #ff0f7b, #f89b29)', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', letterSpacing: '0.5px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                                                    {discountBadge}
-                                                                </div>
-                                                            )}
                                                         </div>
 
                                                         <div className="item-details">
@@ -384,11 +382,16 @@ const MenuSystem = ({
                                                                         </span>
                                                                     )}
                                                                 </h6>
-                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                        <span className="item-price" style={{ color: 'var(--text-main)', fontSize: '15px' }}>₹{currentPrice}</span>
+                                                                        {hasDiscount && (
+                                                                            <span style={{ fontSize: '12px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{Math.round(originalDisplayPrice)}</span>
+                                                                        )}
+                                                                    </div>
                                                                     {hasDiscount && (
-                                                                        <span style={{ fontSize: '12px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{originalDisplayPrice}</span>
+                                                                        <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '800', letterSpacing: '0.5px' }}>{discountBadge}</span>
                                                                     )}
-                                                                    <span className="item-price">₹{currentPrice}</span>
                                                                 </div>
                                                             </div>
                                                             <p className="item-description">{item.description || "Delicately crafted for your tech palate."}</p>
@@ -399,6 +402,12 @@ const MenuSystem = ({
                                                                         <span style={{ color: 'var(--accent-primary)' }}>Includes:</span> {item.combo_components.map(c => `${c.qty}x ${c.name}`).join(' + ')}
                                                                     </p>
                                                                 </div>
+                                                            )}
+
+                                                            {item.allow_coupons === false && (
+                                                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '6px' }}>
+                                                                    🚫 Not eligible for coupons
+                                                                </p>
                                                             )}
 
                                                             {(hasVariants || hasAddons) && !item.is_combo && (
