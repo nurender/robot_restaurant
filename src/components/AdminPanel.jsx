@@ -1333,7 +1333,7 @@ const AdminPanel = () => {
                           </div>
 
                           {(order.customerName || order.customer_name || order.customerPhone || order.customer_phone) && (
-                            <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)', position: 'relative' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '0px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)', position: 'relative' }}>
                               {editingOrderId === order.id ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   <input
@@ -1379,7 +1379,7 @@ const AdminPanel = () => {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             {(order.items || []).map((item, idx) => {
                               let hasDiscount = item.discount_value > 0 && item.discount_type && item.discount_type !== 'none';
                               let dVal = Number(item.discount_value || 0);
@@ -1501,14 +1501,14 @@ const AdminPanel = () => {
                                 </button>
                               )}
                               {order.status !== 'completed' && order.status !== 'cancelled' && (
-                                <button onClick={() => updateOrderStatus(order.id, 'cancelled')} style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--error)', color: 'var(--error)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
+                                <button onClick={() => updateOrderStatus(order.id, 'cancelled')} style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', border: '1px solid var(--error)', color: 'var(--error)', background: '#fd9898', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} disabled={loadingStates[order.id]}>
                                   {loadingStates[order.id] ? <div className="spinner-small" /> : 'Cancel'}
                                 </button>
                               )}
                             </div>
                           </div>
                           {(order.customerPhone || order.customer_phone) && (
-                            <a href={`tel:${order.customerPhone || order.customer_phone}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', marginTop: '10px' }}>
+                            <a href={`tel:${order.customerPhone || order.customer_phone}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', }}>
                               <Phone size={14} /> Call Customer
                             </a>
                           )}
