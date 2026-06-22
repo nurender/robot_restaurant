@@ -1209,9 +1209,9 @@ const AdminPanel = () => {
 
           {activeTab === 'orders' && (
             <div className="view-container animate-slide-up">
-              <div className="view-header-row">
+              <div >
                 {/* <div className="header-left"> */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                   <div> <h1 className="view-title">Orders Hub</h1>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -1237,7 +1237,7 @@ const AdminPanel = () => {
                     >
                       <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                     </button>
-                    <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', height: '40px' }}>
+                    <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', height: '34px' }}>
                       <Plus size={18} /> New Order
                     </button>
                   </div>
