@@ -56,7 +56,7 @@ export default function RoleEditorModal({
             <label  className="ext-cls-4602bfef">ACCESS MATRIX</label>
             <div  className="ext-cls-f64ce9bf">
               {[
-                'dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order',
+                'dashboard', 'orders', 'kitchen', 'marketing', 'menu',
                 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes',
                 'feedback', 'settings', 'staff', 'restaurants', 'roles'
               ].map(mod => {

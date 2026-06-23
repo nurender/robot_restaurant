@@ -24,13 +24,13 @@ import TeamHierarchyView from './admin/views/TeamHierarchyView';
 import RestaurantNetworkView from './admin/views/RestaurantNetworkView';
 
 import MarketingHubView from './admin/views/MarketingHubView';
-import CustomerDirectoryView from './admin/views/CustomerDirectoryView';
+
 import KitchenSystemView from './admin/views/KitchenSystemView';
 import CouponsView from './admin/views/CouponsView';
 import RiderFleetView from './admin/views/RiderFleetView';
 import ReportsView from './admin/views/ReportsView';
 import QrCodesView from './admin/views/QrCodesView';
-import MenuOrderView from './admin/views/MenuOrderView';
+
 import SidebarConfiguratorView from './admin/views/SidebarConfiguratorView';
 import RolesManagementView from './admin/views/RolesManagementView';
 import FeedbackView from './admin/views/FeedbackView';
@@ -678,8 +678,8 @@ const AdminPanel = () => {
 
     // Priority 2: Hardcoded Defaults (Fallback)
     const permissions = {
-      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order', 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles', 'combos'],
-      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'combos'],
+      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'sidebar_order', 'coupons', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles', 'combos'],
+      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'coupons', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'combos'],
       staff: ['orders'],
       chef: ['kitchen', 'orders']
     };
@@ -909,7 +909,6 @@ const AdminPanel = () => {
           )}
 
           {activeTab === 'marketing' && <MarketingHubView coupons={coupons} customers={customers} />}
-          {activeTab === 'customers' && <CustomerDirectoryView customers={customers} />}
 
           {activeTab === 'kitchen' && (
             <KitchenSystemView
@@ -979,15 +978,7 @@ const AdminPanel = () => {
               printTableQR={printTableQR}
             />
           )}
-          {activeTab === 'menu_order' && (
-            <MenuOrderView
-              orderedMenu={orderedMenu}
-              setOrderedMenu={setOrderedMenu}
-              dragItemIndex={dragItemIndex}
-              setDragItemIndex={setDragItemIndex}
-              fetchData={fetchData}
-            />
-          )}
+
 
           {activeTab === 'roles' && (
             <RolesManagementView

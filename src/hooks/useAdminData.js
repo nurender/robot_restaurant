@@ -167,7 +167,8 @@ export const useAdminData = (adminUser, activeTab) => {
       }
       if (tab === 'sidebar_order') {
         const sideRes = await axios.get(`${API_URL}/api/mgmt/sidebar`).catch(() => ({ data: { data: [] } }));
-        setOrderedSidebar(sideRes.data.data || []);
+        const list = sideRes.data.data || [];
+        setOrderedSidebar(list.filter(item => item && item.id !== 'customers' && item.id !== 'menu_order'));
       }
     } catch(e) {}
   };
