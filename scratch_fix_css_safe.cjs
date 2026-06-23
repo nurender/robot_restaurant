@@ -1,78 +1,82 @@
 const fs = require('fs');
-const path = require('path');
 
-const cssPath = path.join(__dirname, 'src', 'components', 'AdminPanel.css');
-let css = fs.readFileSync(cssPath, 'utf8');
-
-// Replace the variable mappings with Hardcoded Premium SaaS Colors
-css = css.replace(
-    /:root,[\s\S]*?--premium-shadow:\s*var\(--shadow-premium\);\s*\}/,
-    `:root,
-[data-theme="light"],
-[data-theme="dark"] {
-  /* AI RESTO Premium SaaS Dark Mode Overrides */
-  --ap-sidebar-bg: #09090b; /* Matte Black */
-  --ap-sidebar-hover: rgba(124, 58, 237, 0.15);
-  --ap-header-bg: rgba(9, 9, 11, 0.8);
-  --ap-main-bg: #050508; /* Deepest Matte Black */
-  --ap-accent-color: #8b5cf6; /* Electric Purple */
-  --ap-accent-glow: rgba(139, 92, 246, 0.5);
-  --ap-success: #10b981; /* Emerald */
-  --ap-text-main: #ffffff;
-  --ap-text-dim: #a1a1aa; /* Zinc 400 */
-  --ap-text-muted: #71717a; /* Zinc 500 */
-  --ap-glass-bg: rgba(24, 24, 27, 0.6); /* Zinc 900 */
-  --ap-glass-border: rgba(255, 255, 255, 0.08);
-
-  --accent-color: #8b5cf6;
-  --glass-bg: rgba(24, 24, 27, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --premium-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  
-  --card-bg: #09090b;
-  --card-border: rgba(255, 255, 255, 0.08);
-}`
-);
-
-// Inject futuristic Font mapping
-css = css.replace(
-    /\/\* AI RESTO.*? \*\//,
-    `/* AI RESTO - Admin Panel Design System */
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&f[]=general-sans@600,500,400&display=swap');`
-);
-
-css = css.replace(/font-family:\s*'Outfit'.*?;/g, "font-family: 'Satoshi', 'General Sans', system-ui, sans-serif;");
-
-// Update .admin-layout to ensure dark background
-css = css.replace(
-    /\.admin-layout\s*\{[\s\S]*?\}/,
-    `.admin-layout {
-  display: flex !important;
-  position: fixed;
-  inset: 0;
-  background: var(--ap-main-bg) !important;
-  color: var(--ap-text-main) !important;
-  font-family: 'Satoshi', 'General Sans', system-ui, sans-serif;
+const css = `
+/* === MANUAL ORDER MODAL === */
+.manual-order-modal {
+  max-width: 1200px !important;
+  width: 98% !important;
+  padding: 0 !important;
+  border-radius: 28px !important;
   overflow: hidden;
-  z-index: 9999;
-}`
-);
+  display: flex !important;
+  flex-direction: row !important;
+  height: 92vh;
+  background: var(--bg-deep) !important;
+}
 
-// Upgrade Button Gradients
-css = css.replace(
-    /\.btn-primary\s*\{[\s\S]*?\}/,
-    `.btn-primary {
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
-  color: #fff !important;
-  border: none;
-  font-weight: 600;
-  border-radius: 12px;
-  padding: 12px 24px;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
-  transition: all 0.3s ease;
+.manual-order-left {
+  flex: 1.5;
+  padding: 32px;
+  border-right: 1px solid var(--card-border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: hidden;
+}
+
+.manual-order-search {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border-radius: 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--card-border);
+  color: white;
+}
+
+.manual-order-card {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
   cursor: pointer;
-}`
-);
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.manual-order-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-primary);
+}
 
-fs.writeFileSync(cssPath, css);
-console.log('Restored and upgraded AdminPanel.css variables safely');
+.manual-order-right {
+  flex: 1;
+  padding: 32px;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.manual-order-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--bg-deep);
+  border: 1px solid var(--card-border);
+  color: white;
+  margin-top: 4px;
+}
+
+.manual-order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-deep);
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+}
+`;
+
+fs.appendFileSync('src/components/AdminPanel.css', css);
