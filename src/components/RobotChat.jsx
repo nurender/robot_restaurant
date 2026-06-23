@@ -600,14 +600,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       <div className="top-call-gradient"></div>
       <div className="avatar-header">
         <div className="header-badge">
-          <span style={{ opacity: 0.7 }}>Table</span> {tableNumber}
+          <span  className="ext-cls-b72ed605">Table</span> {tableNumber}
           {customerSeat && (
-            <span style={{ marginLeft: '6px', background: 'rgba(255, 255, 255, 0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '800' }}>{customerSeat}</span>
+            <span  className="ext-cls-6f678e19">{customerSeat}</span>
           )}
-          <span style={{ opacity: 0.3, margin: '0 4px' }}>|</span>
-          <span style={{ color: '#00e676' }}>₹{getCartTotal()}</span>
+          <span  className="ext-cls-484b29e1">|</span>
+          <span  className="ext-cls-524b4cd3">₹{getCartTotal()}</span>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div  className="ext-cls-021fa4e0">
           <ThemeToggle />
           {isCustomerLoggedIn && activeOrders.length > 0 && (
             <button
@@ -617,13 +617,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <Clock size={14} color="#a78bfa" />
               <span className="hide-on-mobile">Tracking</span>
               {activeOrders.length > 0 && (
-                <span style={{
-                  position: 'absolute', top: '-5px', right: '-5px',
-                  background: '#ef4444', color: 'white', fontSize: '9px',
-                  fontWeight: '900', padding: '1px 4px', borderRadius: '6px',
-                  boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)',
-                  border: '1.5px solid #000'
-                }}>
+                <span  className="ext-cls-1ce196f4">
                   {activeOrders.length}
                 </span>
               )}
@@ -633,7 +627,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             onClick={() => setShowFeedbackPopup(true)}
             className="robot-header-btn"
           >
-            <span style={{ color: '#f1c40f' }}>★</span>
+            <span  className="ext-cls-ae3b32ee">★</span>
             <span className="hide-on-mobile">Feedback</span>
           </button>
 
@@ -647,8 +641,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 setActiveOrders([]);
                 setShowOrderTracking(false);
               }}
-              className="robot-header-btn"
-              style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', padding: '6px 10px' }}
+              className="robot-header-btn st-cls-c767cd7c"
+              
               title="Logout"
             >
               <LogOut size={16} />
@@ -656,10 +650,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           ) : (
             <button
               onClick={() => setShowCustomerForm(true)}
-              className="robot-header-btn"
-              style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+              className="robot-header-btn st-cls-c4843ad3"
+              
             >
-              <UserCircle size={16} style={{ marginRight: '4px' }} />
+              <UserCircle size={16}  className="ext-cls-5da48443" />
               <span className="hide-on-mobile">Login</span>
             </button>
           )}
@@ -728,9 +722,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         )}
 
 
-        {/* <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* <div  className="ext-cls-880eedeb">
           {voiceInputString && (
-            <div className="animate-fade-in" style={{ background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0, maxWidth: '280px', wordBreak: 'break-word', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+            <div className="animate-fade-in ext-cls-a9d3c133" >
               {voiceInputString}
             </div>
           )}
@@ -794,17 +788,17 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       )}
 
       {showSeatSelection && (
-        <div className="modal-overlay" style={{ zIndex: 10005 }} onClick={() => setShowSeatSelection(false)}>
+        <div className="modal-overlay ext-cls-02b1ca14"  onClick={() => setShowSeatSelection(false)}>
           <div className="booking-modal animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <h3 className="view-title" style={{ fontSize: '1.6rem', marginBottom: '8px' }}>Shared Table 🪑</h3>
-              <button className="close-modal-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)' }} onClick={() => setShowSeatSelection(false)}><X size={24} /></button>
+            <div  className="ext-cls-91d58929">
+              <h3 className="view-title ext-cls-e7deb31c" >Shared Table 🪑</h3>
+              <button className="close-modal-btn ext-cls-1cc350ab"  onClick={() => setShowSeatSelection(false)}><X size={24} /></button>
             </div>
-            <p className="text-muted" style={{ marginBottom: '20px' }}>
+            <p className="text-muted ext-cls-02be399f" >
               There are other active orders on this table. Please specify your <strong>Seat Number</strong> or <strong>Name</strong> so the waiter knows who ordered this!
             </p>
             <div className="booking-form">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+              <div  className="ext-cls-038ac31c">
                 {['Seat A', 'Seat B', 'Seat C', 'Seat D', 'Seat E', 'Seat F'].map(seat => (
                   <button
                     key={seat}
@@ -833,10 +827,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
-                <span style={{ height: '1px', flex: 1, background: 'var(--border-default)' }} />
-                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>OR TYPE CUSTOM</span>
-                <span style={{ height: '1px', flex: 1, background: 'var(--border-default)' }} />
+              <div  className="ext-cls-d3115725">
+                <span  className="ext-cls-279028dd" />
+                <span  className="ext-cls-34ccc8e3">OR TYPE CUSTOM</span>
+                <span  className="ext-cls-279028dd" />
               </div>
 
               <input
@@ -846,8 +840,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 onChange={(e) => setCustomerSeat(e.target.value)}
               />
               <button
-                className="btn-primary"
-                style={{ width: '100%', marginTop: '16px' }}
+                className="btn-primary ext-cls-7bc384a3"
+                
                 onClick={() => {
                   if (!customerSeat) { alert('Please select or specify your seat details.'); return; }
                   setShowSeatSelection(false);
@@ -909,10 +903,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
               {otpSent && (
                 <div className="form-group">
-                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label  className="ext-cls-1bdb758b">
                     <span>{'OTP Code'}</span>
                     {mockOtpToast && (
-                      <span style={{ color: 'var(--success)', fontWeight: '800', background: 'rgba(0,230,118,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '13px' }}>
+                      <span  className="ext-cls-6fdc2e24">
                         Test OTP: {mockOtpToast}
                       </span>
                     )}
@@ -932,7 +926,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 </div>
               )}
 
-              <div id="recaptcha-container" style={{ display: 'none' }}></div>
+              <div id="recaptcha-container"  className="ext-cls-e032a669"></div>
 
               <div className="modal-actions-row">
                 <button type="button" className="btn-secondary flex-1" onClick={() => {
@@ -1017,8 +1011,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               </div>
               <button
                 type="submit"
-                className="btn-primary full-width"
-                style={{ background: 'linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)', color: '#000' }}
+                className="btn-primary full-width ext-cls-12eba061"
+                
               >
                 {'Submit Feedback'}
               </button>
@@ -1029,7 +1023,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
       {/* Tracking Modal - Redesigned for Multiple Orders */}
       {showOrderTracking && activeOrders.length > 0 && (
-        <div className="modal-overlay" style={{ zIndex: 10003 }}>
+        <div className="modal-overlay ext-cls-b2d763c9" >
           <div className="tracking-modal animate-slide-up">
             <div className="tracking-header">
               <div className="tracking-header-info">
@@ -1048,9 +1042,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     <div className="order-id-meta">
                       <span className="order-id-badge">
                         #ORDER-{order.id}
-                        <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>🍽️ Table {order.tableNumber}</span>
-                        {order.customerSeat && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>🪑 {order.customerSeat}</span>}
-                        {order.customerName && <span style={{ color: 'inherit', marginLeft: '6px', borderLeft: '1px solid currentColor', paddingLeft: '6px' }}>👤 {order.customerName}</span>}
+                        <span  className="ext-cls-2c474884">🍽️ Table {order.tableNumber}</span>
+                        {order.customerSeat && <span  className="ext-cls-2c474884">🪑 {order.customerSeat}</span>}
+                        {order.customerName && <span  className="ext-cls-2c474884">👤 {order.customerName}</span>}
                       </span>
                       <span className="order-amount-text">₹{order.total}</span>
                     </div>
@@ -1062,7 +1056,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     <div className="items-list-tiny">
                       {order.items.map((item, i) => (
                         <div key={i} className="tiny-item-row">
-                          <span className="item-name-qty">{item.qty}x {item.name} {item.selectedVariant && <span style={{ opacity: 0.8, fontSize: '0.8em', color: '#f1c40f' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '0.75em' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
+                          <span className="item-name-qty">{item.qty}x {item.name} {item.selectedVariant && <span  className="ext-cls-7428a996">({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span  className="ext-cls-240e9bcd">[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                           <span className="item-price-sum">₹{item.price * item.qty}</span>
                         </div>
                       ))}

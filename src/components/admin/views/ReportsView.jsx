@@ -6,17 +6,17 @@ export default function ReportsView({ analyticsData, fetchData }) {
     <div className="view-container animate-slide-up view-container-deep">
       <div className="view-header-row mb-8">
         <div className="header-left">
-          <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Intelligence Center</h1>
-          <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Neural insights and business performance analytics.</p>
+          <h1 className="view-title ext-cls-46d76c78" >Intelligence Center</h1>
+          <p className="text-muted ext-cls-a6a615ae" >Neural insights and business performance analytics.</p>
         </div>
         <button className="btn-global-outline" onClick={fetchData} >
           <Clock size={18} /> Refresh Intelligence
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '32px' }}>
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', minHeight: '400px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div  className="ext-cls-f61b4d7d">
+        <div className="glass-panel ext-cls-3bc6194b" >
+          <h3  className="ext-cls-ecc991f0">
             <DollarSign size={20} className="text-success" /> Revenue Trend (Last 7 Days)
           </h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -36,8 +36,8 @@ export default function ReportsView({ analyticsData, fetchData }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', minHeight: '400px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-panel ext-cls-3bc6194b" >
+          <h3  className="ext-cls-ecc991f0">
             <UtensilsCrossed size={20} className="text-warning" /> Top Performers
           </h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -50,8 +50,8 @@ export default function ReportsView({ analyticsData, fetchData }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', gridColumn: 'span 2' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-panel ext-cls-7b8e5467" >
+          <h3  className="ext-cls-ecc991f0">
             <Clock size={20} className="text-info" /> Order Heatmap
           </h3>
           <ResponsiveContainer width="100%" height={150}>
@@ -63,24 +63,24 @@ export default function ReportsView({ analyticsData, fetchData }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px', gridColumn: 'span 2' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Staff Performance Leaderboard</h3>
+        <div className="glass-panel ext-cls-7b8e5467" >
+          <h3  className="ext-cls-6aa6de90">Staff Performance Leaderboard</h3>
           <table className="inv-table">
             <thead>
               <tr>
                 <th>STAFF</th>
                 <th>TOTAL SALES</th>
                 <th>ORDERS</th>
-                <th style={{ textAlign: 'right' }}>EFFICIENCY</th>
+                <th  className="ext-cls-d6099de9">EFFICIENCY</th>
               </tr>
             </thead>
             <tbody>
               {analyticsData.staffSales.map((s, i) => (
                 <tr key={i}>
-                  <td style={{ fontWeight: '700' }}>{s.name}</td>
-                  <td style={{ color: 'var(--success)', fontWeight: '800' }}>₹{s.sales.toLocaleString()}</td>
+                  <td  className="ext-cls-d71cfe4a">{s.name}</td>
+                  <td  className="ext-cls-e3f0f43f">₹{s.sales.toLocaleString()}</td>
                   <td>{s.count}</td>
-                  <td style={{ textAlign: 'right' }}>{Math.min(100, Math.round((s.sales / 10000) * 100))}%</td>
+                  <td  className="ext-cls-d6099de9">{Math.min(100, Math.round((s.sales / 10000) * 100))}%</td>
                 </tr>
               ))}
             </tbody>

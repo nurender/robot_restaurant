@@ -33,13 +33,13 @@ export default function OrdersHubView({
   return (
     <div className="view-container animate-slide-up">
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div  className="ext-cls-9b34172b">
           <div>
             <h1 className="view-title">Orders Hub</h1>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <div className="filter-stats" style={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', padding: '6px 12px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
-              Matches: <strong style={{ color: 'var(--text-main)' }}>{orders.filter(o => {
+          <div  className="ext-cls-9b34172b">
+            <div className="filter-stats ext-cls-80f7a9d6" >
+              Matches: <strong  className="ext-cls-dfa9aad7">{orders.filter(o => {
                 const matchDate = safeGetISODate(o) === selectedDate;
                 const matchTable = tableSearch ? (o.table_number || o.tableNumber || '').toString() === tableSearch.toString() : true;
                 const matchPhone = phoneSearch ? (o.customer_phone || '').includes(phoneSearch) : true;
@@ -49,41 +49,37 @@ export default function OrdersHubView({
             </div>
             <button
               onClick={fetchData}
-              className="btn-icon"
+              className="btn-icon ext-cls-875dc67d"
               disabled={isLoading}
               title="Manual Refresh"
-              style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)',
-                padding: '8px', borderRadius: '10px', color: 'var(--text-muted)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
+              
             >
               <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
             </button>
-            <button className="btn-primary" onClick={() => setShowManualOrderPopup(true)} style={{ padding: '8px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', height: '34px', border: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: '800' }}>
+            <button className="btn-primary st-cls-58e71f89" onClick={() => setShowManualOrderPopup(true)} >
               <Plus size={18} /> New Order
             </button>
           </div>
         </div>
       </div>
-      <div className="orders-filter-bar " style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', margin: '24px 0' }}>
-        <div className="filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> Filter Date</label>
+      <div className="orders-filter-bar  ext-cls-51907fc0" >
+        <div className="filter-group ext-cls-290ff1ad" >
+          <label  className="ext-cls-8540da69"><Calendar size={14} /> Filter Date</label>
           <input
             type="date"
-            className="filter-input"
+            className="filter-input st-cls-5ce7a7e8"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '13px' }}
+            
           />
         </div>
-        <div className="filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Search size={14} /> Table #</label>
+        <div className="filter-group ext-cls-290ff1ad" >
+          <label  className="ext-cls-8540da69"><Search size={14} /> Table #</label>
           <select
-            className="filter-input"
+            className="filter-input st-cls-e88547a5"
             value={tableSearch}
             onChange={(e) => setTableSearch(e.target.value)}
-            style={{ width: '130px', padding: '8px 12px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '13px' }}
+            
           >
             <option value="">All Tables</option>
             {restaurantTables.map((t, idx) => (
@@ -93,39 +89,39 @@ export default function OrdersHubView({
             ))}
           </select>
         </div>
-        <div className="filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={14} /> Phone</label>
+        <div className="filter-group ext-cls-290ff1ad" >
+          <label  className="ext-cls-8540da69"><Phone size={14} /> Phone</label>
           <input
             type="text"
             placeholder="9876..."
-            className="filter-input"
+            className="filter-input st-cls-766b101b"
             value={phoneSearch}
             onChange={(e) => setPhoneSearch(e.target.value)}
-            style={{ width: '120px', padding: '8px 12px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '13px' }}
+            
           />
         </div>
-        <div className="filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> Name</label>
+        <div className="filter-group ext-cls-290ff1ad" >
+          <label  className="ext-cls-8540da69"><Users size={14} /> Name</label>
           <input
             type="text"
             placeholder="Customer Name..."
-            className="filter-input"
+            className="filter-input st-cls-5ce7a7e8"
             value={nameSearch}
             onChange={(e) => setNameSearch(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '10px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '13px' }}
+            
           />
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'start', overflowX: 'auto', paddingBottom: '20px' }}>
+      <div  className="ext-cls-438074a2">
         {['pending', 'accepted', 'preparing', 'out_for_delivery', 'completed', 'cancelled'].map(columnStatus => (
-          <div key={columnStatus} style={{ minWidth: '320px', width: '320px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '20px', minHeight: '600px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div key={columnStatus}  className="ext-cls-d698504b">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '2px solid var(--card-border)' }}>
-              <h3 style={{ textTransform: 'uppercase', fontSize: '13px', fontWeight: '800', color: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'completed' ? 'var(--success)' : columnStatus === 'cancelled' ? 'var(--error)' : 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'completed' ? 'var(--success)' : columnStatus === 'cancelled' ? 'var(--error)' : 'var(--accent-primary)' }} />
+              <h3 className="orders-hub-column-header" style={{ color: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'completed' ? 'var(--success)' : columnStatus === 'cancelled' ? 'var(--error)' : 'var(--accent-primary)' }}>
+                <div className="orders-hub-status-dot" style={{ background: columnStatus === 'pending' ? 'var(--warning)' : columnStatus === 'completed' ? 'var(--success)' : columnStatus === 'cancelled' ? 'var(--error)' : 'var(--accent-primary)' }} />
                 {columnStatus.replace(/_/g, ' ')}
               </h3>
-              <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '10px', color: 'var(--text-dim)', fontWeight: '700' }}>
+              <span  className="ext-cls-5014c5f8">
                 {orders.filter(o => {
                   const matchStatus = o.status === columnStatus;
                   const matchDate = safeGetISODate(o) === selectedDate;
@@ -136,7 +132,7 @@ export default function OrdersHubView({
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }} className="scrollbar-hidden">
+            <div  className="scrollbar-hidden ext-cls-5e00ecff">
               {orders.filter(o => {
                 const matchStatus = o.status === columnStatus;
                 const matchDate = safeGetISODate(o) === selectedDate;
@@ -145,35 +141,35 @@ export default function OrdersHubView({
                 const matchName = nameSearch ? (o.customer_name || '').toLowerCase().includes(nameSearch.toLowerCase()) : true;
                 return matchStatus && matchDate && matchTable && matchPhone && matchName;
               }).map(order => (
-                <div key={order.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '16px', padding: '16px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '13px', fontWeight: '800', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '8px', color: 'var(--text-main)' }}>
+                <div key={order.id}  className="ext-cls-27ab32b9">
+                  <div  className="ext-cls-1bdb758b">
+                    <div  className="ext-cls-01cf5469">
                       Table {order.table_number || order.tableNumber}
                     </div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', border: '1px solid var(--card-border)', padding: '4px 8px', fontSize: '12px', borderRadius: '8px', fontWeight: '700' }}>#{order.id}</span>
+                    <span  className="ext-cls-df0b0965">
+                      <span  className="ext-cls-887cbc20">#{order.id}</span>
                     </span>
                   </div>
 
                   {(order.customerName || order.customer_name || order.customerPhone || order.customer_phone) && (
-                    <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', gap: '4px', padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)', position: 'relative' }}>
+                    <div  className="ext-cls-eba3a085">
                       {editingOrderId === order.id ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <input
-                            style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '11px' }}
+                        <div  className="ext-cls-290ff1ad">
+                          <input className="ext-cls-11be9d5b" 
+                            
                             value={editFormData.name}
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                             placeholder="Name"
                           />
-                          <input
-                            style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '11px' }}
+                          <input className="ext-cls-11be9d5b" 
+                            
                             value={editFormData.phone}
                             onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
                             placeholder="Phone"
                           />
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                            <button onClick={() => handleOrderUpdate(order.id)} style={{ padding: '4px 8px', background: 'var(--success)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '10px', fontWeight: '700' }}>Save</button>
-                            <button onClick={() => setEditingOrderId(null)} style={{ padding: '4px 8px', background: 'var(--danger)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '10px', fontWeight: '700' }}>Cancel</button>
+                          <div  className="ext-cls-3c2e4bad">
+                            <button onClick={() => handleOrderUpdate(order.id)} className="st-cls-1a343fb9">Save</button>
+                            <button onClick={() => setEditingOrderId(null)} className="st-cls-835f8d89">Cancel</button>
                           </div>
                         </div>
                       ) : (
@@ -186,21 +182,21 @@ export default function OrdersHubView({
                                 phone: order.customerPhone || order.customer_phone || ''
                               });
                             }}
-                            style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.5 }}
+                            className="st-cls-67ec94c7"
                           >
                             <Edit2 size={11} />
                           </button>
-                          {(order.customerName || order.customer_name) && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ color: 'var(--text-muted)' }}>Customer:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerName || order.customer_name}</strong>
-                            {order.customerSeat && <span style={{ marginLeft: '4px', background: 'rgba(124, 58, 237, 0.2)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '800' }}>🪑 {order.customerSeat}</span>}
+                          {(order.customerName || order.customer_name) && <div  className="ext-cls-cd210fb4"><span  className="ext-cls-d77dc274">Customer:</span> <strong  className="ext-cls-dfa9aad7">{order.customerName || order.customer_name}</strong>
+                            {order.customerSeat && <span  className="ext-cls-745c913a">🪑 {order.customerSeat}</span>}
                           </div>}
-                          {!order.customerName && !order.customer_name && order.customerSeat && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ color: 'var(--text-muted)' }}>Seat:</span> <strong style={{ background: 'rgba(124, 58, 237, 0.2)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '800' }}>🪑 {order.customerSeat}</strong></div>}
-                          {(order.customerPhone || order.customer_phone) && <div><span style={{ color: 'var(--text-muted)' }}>Phone:</span> <strong style={{ color: 'var(--text-main)' }}>{order.customerPhone || order.customer_phone}</strong></div>}
+                          {!order.customerName && !order.customer_name && order.customerSeat && <div  className="ext-cls-cd210fb4"><span  className="ext-cls-d77dc274">Seat:</span> <strong  className="ext-cls-be7e70ee">🪑 {order.customerSeat}</strong></div>}
+                          {(order.customerPhone || order.customer_phone) && <div><span  className="ext-cls-d77dc274">Phone:</span> <strong  className="ext-cls-dfa9aad7">{order.customerPhone || order.customer_phone}</strong></div>}
                         </>
                       )}
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--card-border)', borderBottom: '1px solid var(--card-border)', padding: '12px 0' }}>
+                  <div  className="ext-cls-ae9ad221">
                     {(order.items || []).map((item, idx) => {
                       let hasDiscount = item.discount_value > 0 && item.discount_type && item.discount_type !== 'none';
                       let dVal = Number(item.discount_value || 0);
@@ -208,21 +204,21 @@ export default function OrdersHubView({
                       let discountBadgeText = item.discount_type === 'percent' ? `${displayDVal}% OFF` : `₹${displayDVal} OFF`;
 
                       return (
-                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '13px' }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1 }}>
-                              <span style={{ fontWeight: '800', color: 'var(--accent-primary)', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 6px', borderRadius: '4px', marginTop: '2px' }}>{item.qty || 1}</span>
-                              <span style={{ color: 'var(--text-main)', fontWeight: '600', lineHeight: '1.4' }}>
+                        <div key={idx}  className="ext-cls-b7ba349f">
+                          <div  className="ext-cls-aa73a98b">
+                            <div  className="ext-cls-a65acd87">
+                              <span  className="ext-cls-18ce1f44">{item.qty || 1}</span>
+                              <span  className="ext-cls-86d05979">
                                 {item.name}
-                                {item.selectedVariant && <span style={{ opacity: 0.7, fontSize: '11px', color: 'var(--warning)', marginLeft: '4px' }}>({item.selectedVariant.size})</span>}
-                                {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '10px', marginLeft: '4px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}
+                                {item.selectedVariant && <span  className="ext-cls-f19b7dea">({item.selectedVariant.size})</span>}
+                                {item.selectedAddons && item.selectedAddons.length > 0 && <span  className="ext-cls-e3917211">[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}
                               </span>
                             </div>
-                            <span style={{ color: 'var(--text-dim)', fontWeight: '700', marginTop: '2px' }}>₹{(item.price || 0) * (item.qty || 1)}</span>
+                            <span  className="ext-cls-9aaba2e0">₹{(item.price || 0) * (item.qty || 1)}</span>
                           </div>
                           {hasDiscount && (
-                            <div style={{ paddingLeft: '32px', fontSize: '10px' }}>
-                              <span style={{ color: '#3b82f6', fontWeight: '800', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                            <div  className="ext-cls-ff5efbc4">
+                              <span  className="ext-cls-1c369535">
                                 {discountBadgeText}
                               </span>
                             </div>
@@ -231,8 +227,8 @@ export default function OrdersHubView({
                       );
                     })}
                     {order.notes && (
-                      <div style={{ marginTop: '4px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', borderLeft: '4px solid #ef4444', fontSize: '12px', color: '#fca5a5' }}>
-                        <strong style={{ color: '#ef4444' }}>Notes:</strong> {order.notes}
+                      <div  className="ext-cls-8204d57c">
+                        <strong  className="ext-cls-ec836744">Notes:</strong> {order.notes}
                       </div>
                     )}
                     <button
@@ -255,22 +251,22 @@ export default function OrdersHubView({
                         });
                         setShowManualOrderPopup(true);
                       }}
-                      style={{ marginTop: '8px', background: 'rgba(124, 58, 237, 0.05)', border: '1px dashed var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '8px', padding: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      className="st-cls-b0f3f10d"
                     >
                       <Edit size={12} /> Edit Items
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div  className="ext-cls-12fe41b4">
+                    <div  className="ext-cls-1c9ad180">
                       {order.applied_coupon && order.discount_amount > 0 && (
-                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '800' }}>
+                        <span  className="ext-cls-f5e1b95d">
                           {order.applied_coupon} (-₹{order.discount_amount})
                         </span>
                       )}
-                      <span style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '800' }}>Total: ₹{order.total}</span>
+                      <span  className="ext-cls-7b1935a4">Total: ₹{order.total}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div  className="ext-cls-73a2bc67">
                       <button
                         onClick={() => handlePrintBill(order)}
                         className="btn-global-icon-sm"
@@ -290,9 +286,9 @@ export default function OrdersHubView({
                         </button>
                       )}
                       {order.status === 'preparing' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div  className="ext-cls-290ff1ad">
                           <select
-                            className="rider-select"
+                            className="rider-select st-cls-c25152fd"
                             disabled={loadingStates[order.id]}
                             onChange={async (e) => {
                               const rId = e.target.value;
@@ -304,7 +300,7 @@ export default function OrdersHubView({
                               } catch (e) { alert("Assignment failed"); }
                               finally { setActionLoading(order.id, false); }
                             }}
-                            style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '11px', outline: 'none' }}
+                            
                           >
                             <option value="">Assign Rider</option>
                             {riders.filter(r => r.status !== 'offline').map(r => (
@@ -329,7 +325,7 @@ export default function OrdersHubView({
                     </div>
                   </div>
                   {(order.customerPhone || order.customer_phone) && (
-                    <a href={`tel:${order.customerPhone || order.customer_phone}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', marginTop: '4px' }}>
+                    <a href={`tel:${order.customerPhone || order.customer_phone}`}  className="ext-cls-84ccd3f0">
                       <Phone size={14} /> Call Customer
                     </a>
                   )}

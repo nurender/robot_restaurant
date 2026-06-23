@@ -7,13 +7,13 @@ export default function SidebarConfiguratorView({ orderedSidebar, setOrderedSide
     <div className="view-container animate-slide-up view-container-deep">
       <div className="view-header-row mb-8">
         <div className="header-left">
-          <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'white' }}>Sidebar Configurator</h1>
-          <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Drag to reorder your navigation menu or toggle module visibility.</p>
+          <h1 className="view-title ext-cls-c718dc75" >Sidebar Configurator</h1>
+          <p className="text-muted ext-cls-a6a615ae" >Drag to reorder your navigation menu or toggle module visibility.</p>
         </div>
       </div>
 
-      <div className="glass-panel" style={{ maxWidth: '700px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--card-border)', borderRadius: '28px', padding: '10px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="glass-panel ext-cls-25ce5297" >
+        <div  className="ext-cls-48fd353c">
           {orderedSidebar.map((item, index) => (
             <div
               key={item.id}
@@ -42,16 +42,16 @@ export default function SidebarConfiguratorView({ orderedSidebar, setOrderedSide
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ color: 'rgba(255,255,255,0.2)' }}><ListTodo size={18} /></div>
+              <div  className="ext-cls-45ebfcb4">
+                <div  className="ext-cls-bbbf41f5"><ListTodo size={18} /></div>
                 <div>
-                  <p style={{ fontWeight: '800', color: 'white', fontSize: '15px', textTransform: 'capitalize' }}>{item.label}</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Module: {item.module_name}</p>
+                  <p  className="ext-cls-e35ad15b">{item.label}</p>
+                  <p  className="ext-cls-b98663d3">Module: {item.module_name}</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <div  className="ext-cls-9eaf11e7">
+                <div  className="ext-cls-22fbab1e">
                   <span style={{ fontSize: '10px', fontWeight: '900', color: item.is_active ? 'var(--accent-primary)' : '#666', letterSpacing: '1px' }}>{item.is_active ? 'VISIBLE' : 'HIDDEN'}</span>
                   <button
                     onClick={async (e) => {

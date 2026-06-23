@@ -101,10 +101,10 @@ const SmartInventory = () => {
   );
 
   return (
-    <div className="smart-inventory-system animate-slide-up" style={{ color: 'var(--text-main)', paddingBottom: '40px' }}>
+    <div className="smart-inventory-system animate-slide-up ext-cls-4641fd20" >
       
       {/* Dynamic Sub-tab Selector */}
-      <div style={{ display: 'flex', gap: '16px', background: 'var(--bg-deep)', padding: '6px', borderRadius: '14px', marginBottom: '32px', width: 'fit-content', border: '1px solid var(--card-border)' }}>
+      <div  className="ext-cls-50890ebe">
         {[
           { id: 'dashboard', label: 'Overview', icon: BarChart2 },
           { id: 'stock', label: 'Stock Operations', icon: Package },
@@ -130,15 +130,15 @@ const SmartInventory = () => {
 
       {/* SEARCH BAR / GLOBAL CONTROLS */}
       {subTab !== 'dashboard' && subTab !== 'ai' && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
-            <Search size={18} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
+        <div  className="ext-cls-83fb2977">
+          <div  className="ext-cls-0f3a7d94">
+            <Search size={18}  className="ext-cls-66a18e0f" />
             <input 
               type="text" 
               placeholder="Search assets..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: '100%', height: '46px', padding: '12px 16px 12px 42px', borderRadius: '12px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+              className="st-cls-11ac24cb"
             />
           </div>
           <button 
@@ -146,8 +146,8 @@ const SmartInventory = () => {
               setStockActionType('in');
               setShowStockModal(true);
             }}
-            className="btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '800' }}
+            className="btn-primary st-cls-e400e54d" 
+            
           >
             <Plus size={18} /> Action Stock
           </button>
@@ -156,68 +156,68 @@ const SmartInventory = () => {
 
       {/* DASHBOARD TAB */}
       {subTab === 'dashboard' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div  className="ext-cls-e6f83a76">
           {/* KPI Matrix */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px' }}>
-            <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <Package size={24} style={{ color: 'var(--accent-primary)' }} />
-                <span style={{ fontSize: '12px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '10px', fontWeight: '700' }}>Active</span>
+          <div  className="ext-cls-7e47db3c">
+            <div className="glass-panel ext-cls-2fde9030" >
+              <div  className="ext-cls-f657fb1e">
+                <Package size={24}  className="ext-cls-507943c3" />
+                <span  className="ext-cls-9c09c08b">Active</span>
               </div>
-              <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>Total tracked items</span>
-              <h3 style={{ fontSize: '32px', fontWeight: '800', marginTop: '6px' }}>{inventory.length} Items</h3>
+              <span  className="ext-cls-56c3801c">Total tracked items</span>
+              <h3  className="ext-cls-33a0f1ad">{inventory.length} Items</h3>
             </div>
 
-            <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <AlertTriangle size={24} style={{ color: 'var(--warning)' }} />
-                <span style={{ fontSize: '12px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)', padding: '4px 10px', borderRadius: '10px', fontWeight: '700' }}>Restock</span>
+            <div className="glass-panel ext-cls-2fde9030" >
+              <div  className="ext-cls-f657fb1e">
+                <AlertTriangle size={24}  className="ext-cls-bd23f3d1" />
+                <span  className="ext-cls-97a53a2a">Restock</span>
               </div>
-              <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>Low Stock triggers</span>
-              <h3 style={{ fontSize: '32px', fontWeight: '800', marginTop: '6px' }}>{inventory.filter(i => i.status === 'Low Stock' || i.status === 'Reorder').length} Items</h3>
+              <span  className="ext-cls-56c3801c">Low Stock triggers</span>
+              <h3  className="ext-cls-33a0f1ad">{inventory.filter(i => i.status === 'Low Stock' || i.status === 'Reorder').length} Items</h3>
             </div>
 
-            <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <ArrowDownRight size={24} style={{ color: 'var(--danger)' }} />
-                <span style={{ fontSize: '12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '4px 10px', borderRadius: '10px', fontWeight: '700' }}>Today</span>
+            <div className="glass-panel ext-cls-2fde9030" >
+              <div  className="ext-cls-f657fb1e">
+                <ArrowDownRight size={24}  className="ext-cls-f8bccb28" />
+                <span  className="ext-cls-e9c53ece">Today</span>
               </div>
-              <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>Wastage Value</span>
-              <h3 style={{ fontSize: '32px', fontWeight: '800', marginTop: '6px' }}>₹{wastageLogs.reduce((acc, curr) => acc + curr.value, 0)}</h3>
+              <span  className="ext-cls-56c3801c">Wastage Value</span>
+              <h3  className="ext-cls-33a0f1ad">₹{wastageLogs.reduce((acc, curr) => acc + curr.value, 0)}</h3>
             </div>
 
-            <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <ShoppingBag size={24} style={{ color: 'var(--success)' }} />
-                <span style={{ fontSize: '12px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', padding: '4px 10px', borderRadius: '10px', fontWeight: '700' }}>Orders</span>
+            <div className="glass-panel ext-cls-2fde9030" >
+              <div  className="ext-cls-f657fb1e">
+                <ShoppingBag size={24}  className="ext-cls-59c717cb" />
+                <span  className="ext-cls-8965b5fc">Orders</span>
               </div>
-              <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>Pending Supplier POs</span>
-              <h3 style={{ fontSize: '32px', fontWeight: '800', marginTop: '6px' }}>{purchaseOrders.filter(p => p.status === 'Pending').length} POs</h3>
+              <span  className="ext-cls-56c3801c">Pending Supplier POs</span>
+              <h3  className="ext-cls-33a0f1ad">{purchaseOrders.filter(p => p.status === 'Pending').length} POs</h3>
             </div>
           </div>
 
           {/* Quick Critical Stock Warning */}
-          <div className="glass-panel" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', padding: '24px', borderRadius: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <ShieldAlert style={{ color: 'var(--danger)' }} />
-              <h4 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--danger)' }}>Critical Shortage Alerts</h4>
+          <div className="glass-panel ext-cls-8fe8223b" >
+            <div  className="ext-cls-a14ff57a">
+              <ShieldAlert  className="ext-cls-f8bccb28" />
+              <h4  className="ext-cls-416eebbc">Critical Shortage Alerts</h4>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div  className="ext-cls-6ccca837">
               {inventory.filter(i => i.status === 'Low Stock' || i.status === 'Reorder').map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card-bg)', padding: '14px 20px', borderRadius: '12px', border: '1px solid var(--card-border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: getStatusColor(item.status) }}></div>
-                    <span style={{ fontWeight: '700', fontSize: '14px' }}>{item.name}</span>
+                <div key={idx}  className="ext-cls-8ff40019">
+                  <div  className="ext-cls-b68c5feb">
+                    <div  className="ext-cls-a2dd11ad"></div>
+                    <span  className="ext-cls-9f42a204">{item.name}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Current: <strong>{item.qty} {item.unit}</strong> (Min: {item.minQty})</span>
+                  <div  className="ext-cls-45ebfcb4">
+                    <span  className="ext-cls-fe26727a">Current: <strong>{item.qty} {item.unit}</strong> (Min: {item.minQty})</span>
                     <button 
                       onClick={() => {
                         setSelectedItem(item);
                         setStockActionType('in');
                         setShowStockModal(true);
                       }}
-                      style={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', padding: '6px 14px', borderRadius: '8px', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                      className="st-cls-b580d5f7"
                     >
                       Refill
                     </button>
@@ -231,49 +231,49 @@ const SmartInventory = () => {
 
       {/* STOCK OPERATIONS TAB */}
       {subTab === 'stock' && (
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Material Stock Registry</h4>
+        <div className="glass-panel ext-cls-2d69be5d" >
+          <h4  className="ext-cls-6aa6de90">Material Stock Registry</h4>
           <div className="overflow-x-auto">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table  className="ext-cls-bb44e019">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  <th style={{ padding: '16px 12px', textAlign: 'left' }}>Item Info</th>
-                  <th style={{ padding: '16px 12px', textAlign: 'left' }}>Category</th>
-                  <th style={{ padding: '16px 12px', textAlign: 'left' }}>Inventory Level</th>
-                  <th style={{ padding: '16px 12px', textAlign: 'left' }}>Status</th>
-                  <th style={{ padding: '16px 12px', textAlign: 'center' }}>Logistics</th>
+                <tr  className="ext-cls-df7f00d1">
+                  <th  className="ext-cls-97664a11">Item Info</th>
+                  <th  className="ext-cls-97664a11">Category</th>
+                  <th  className="ext-cls-97664a11">Inventory Level</th>
+                  <th  className="ext-cls-97664a11">Status</th>
+                  <th  className="ext-cls-1bab3446">Logistics</th>
                 </tr>
               </thead>
-              <tbody style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>
+              <tbody  className="ext-cls-4c8bbc32">
                 {filteredInventory.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <td style={{ padding: '18px 12px' }}>
-                      <div style={{ fontWeight: '700' }}>{item.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Batch: {item.batch} | Exp: {item.expiry}</div>
+                  <tr key={idx}  className="ext-cls-061d9bac">
+                    <td  className="ext-cls-2b40f511">
+                      <div  className="ext-cls-d71cfe4a">{item.name}</div>
+                      <div  className="ext-cls-66e174d2">Batch: {item.batch} | Exp: {item.expiry}</div>
                     </td>
-                    <td style={{ padding: '18px 12px', color: 'var(--text-dim)' }}>{item.category}</td>
-                    <td style={{ padding: '18px 12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ minWidth: '60px' }}>{item.qty} {item.unit}</span>
-                        <div style={{ width: '100px', height: '6px', background: 'var(--bg-deep)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <td  className="ext-cls-2cd31c28">{item.category}</td>
+                    <td  className="ext-cls-2b40f511">
+                      <div  className="ext-cls-fe82601c">
+                        <span  className="ext-cls-0ff4d3c2">{item.qty} {item.unit}</span>
+                        <div  className="ext-cls-5ae3f4b2">
                           <div style={{ width: `${Math.min(100, (item.qty / (item.minQty * 2)) * 100)}%`, height: '100%', background: getStatusColor(item.status), borderRadius: '10px' }}></div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '18px 12px' }}>
+                    <td  className="ext-cls-2b40f511">
                       <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '10px', background: `${getStatusColor(item.status)}20`, color: getStatusColor(item.status), border: `1px solid ${getStatusColor(item.status)}40`, fontWeight: '700' }}>
                         {item.status}
                       </span>
                     </td>
-                    <td style={{ padding: '18px 12px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                    <td  className="ext-cls-ea0b5850">
+                      <div  className="ext-cls-c940980c">
                         <button 
                           onClick={() => {
                             setSelectedItem(item);
                             setStockActionType('in');
                             setShowStockModal(true);
                           }}
-                          style={{ background: 'var(--success)15', border: '1px solid var(--success)40', color: 'var(--success)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: '800' }}
+                          className="st-cls-e257142c"
                         >
                           Stock In
                         </button>
@@ -283,7 +283,7 @@ const SmartInventory = () => {
                             setStockActionType('out');
                             setShowStockModal(true);
                           }}
-                          style={{ background: 'var(--warning)15', border: '1px solid var(--warning)40', color: 'var(--warning)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: '800' }}
+                          className="st-cls-d1b58ff8"
                         >
                           Usage
                         </button>
@@ -299,33 +299,33 @@ const SmartInventory = () => {
 
       {/* SUPPLIERS TAB */}
       {subTab === 'suppliers' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px' }}>
-            <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Vendor & Supplier Directory</h4>
+        <div  className="ext-cls-e6f83a76">
+          <div className="glass-panel ext-cls-2d69be5d" >
+            <h4  className="ext-cls-6aa6de90">Vendor & Supplier Directory</h4>
             <div className="overflow-x-auto">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table  className="ext-cls-bb44e019">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '13px' }}>
-                    <th style={{ padding: '16px 12px', textAlign: 'left' }}>Supplier Name</th>
-                    <th style={{ padding: '16px 12px', textAlign: 'left' }}>Contact</th>
-                    <th style={{ padding: '16px 12px', textAlign: 'left' }}>Pending Ledger</th>
-                    <th style={{ padding: '16px 12px', textAlign: 'left' }}>Last Contract Price</th>
-                    <th style={{ padding: '16px 12px', textAlign: 'center' }}>Actions</th>
+                  <tr  className="ext-cls-df7f00d1">
+                    <th  className="ext-cls-97664a11">Supplier Name</th>
+                    <th  className="ext-cls-97664a11">Contact</th>
+                    <th  className="ext-cls-97664a11">Pending Ledger</th>
+                    <th  className="ext-cls-97664a11">Last Contract Price</th>
+                    <th  className="ext-cls-1bab3446">Actions</th>
                   </tr>
                 </thead>
-                <tbody style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>
+                <tbody  className="ext-cls-4c8bbc32">
                   {suppliers.map((sup, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                      <td style={{ padding: '18px 12px', fontWeight: '700' }}>{sup.name}</td>
-                      <td style={{ padding: '18px 12px', color: 'var(--text-muted)' }}>{sup.contact}</td>
+                    <tr key={idx}  className="ext-cls-061d9bac">
+                      <td  className="ext-cls-70ce42a1">{sup.name}</td>
+                      <td  className="ext-cls-cbeb2f69">{sup.contact}</td>
                       <td style={{ padding: '18px 12px', color: sup.pendingPayment > 0 ? 'var(--warning)' : 'var(--success)' }}>
                         ₹{sup.pendingPayment}
                       </td>
-                      <td style={{ padding: '18px 12px' }}>{sup.lastPrice}</td>
-                      <td style={{ padding: '18px 12px', textAlign: 'center' }}>
+                      <td  className="ext-cls-2b40f511">{sup.lastPrice}</td>
+                      <td  className="ext-cls-ea0b5850">
                         <button 
                           onClick={() => alert(`Creating Purchase Order for ${sup.name}...`)}
-                          style={{ background: 'var(--accent-primary)15', border: '1px solid var(--accent-primary)40', color: 'var(--accent-primary)', padding: '6px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                          className="st-cls-33dd27c8"
                         >
                           Issue PO
                         </button>
@@ -337,17 +337,17 @@ const SmartInventory = () => {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px' }}>
-            <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Purchase Order Logs</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="glass-panel ext-cls-2d69be5d" >
+            <h4  className="ext-cls-6aa6de90">Purchase Order Logs</h4>
+            <div  className="ext-cls-6ccca837">
               {purchaseOrders.map((po, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-deep)', padding: '16px 20px', borderRadius: '14px', border: '1px solid var(--card-border)' }}>
+                <div key={idx}  className="ext-cls-654c95c5">
                   <div>
-                    <span style={{ fontWeight: '800', fontSize: '14px' }}>{po.id}</span>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Vendor: {po.vendor} | Issued: {po.date}</div>
+                    <span  className="ext-cls-64a1327f">{po.id}</span>
+                    <div  className="ext-cls-0d161c89">Vendor: {po.vendor} | Issued: {po.date}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>₹{po.amount}</span>
+                  <div  className="ext-cls-45ebfcb4">
+                    <span  className="ext-cls-22e4bbaf">₹{po.amount}</span>
                     <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '10px', background: po.status === 'Received' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: po.status === 'Received' ? 'var(--success)' : 'var(--warning)', fontWeight: '700' }}>
                       {po.status}
                     </span>
@@ -361,19 +361,19 @@ const SmartInventory = () => {
 
       {/* RECIPES MAPPING TAB */}
       {subTab === 'recipes' && (
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '28px', borderRadius: '24px' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '12px' }}>Recipe-Based Auto Deductions</h4>
-          <p className="text-muted" style={{ fontSize: '14px', marginBottom: '32px' }}>Define exact parameters to deduct component items when orders clear kitchen hubs.</p>
+        <div className="glass-panel ext-cls-2d69be5d" >
+          <h4  className="ext-cls-aae72edf">Recipe-Based Auto Deductions</h4>
+          <p className="text-muted ext-cls-f5c20741" >Define exact parameters to deduct component items when orders clear kitchen hubs.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+          <div  className="ext-cls-9db28ba8">
             {recipes.map((rec, idx) => (
-              <div key={idx} style={{ background: 'var(--bg-deep)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '18px' }}>
-                <h5 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--accent-primary)', marginBottom: '16px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>{rec.dish}</h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div key={idx}  className="ext-cls-4053a01b">
+                <h5  className="ext-cls-f760a220">{rec.dish}</h5>
+                <div  className="ext-cls-6ccca837">
                   {rec.ingredients.map((ing, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600' }}>
-                      <span style={{ color: 'var(--text-main)' }}>{ing.item}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{ing.usage}</span>
+                    <div key={i}  className="ext-cls-03d57d55">
+                      <span  className="ext-cls-dfa9aad7">{ing.item}</span>
+                      <span  className="ext-cls-d77dc274">{ing.usage}</span>
                     </div>
                   ))}
                 </div>
@@ -385,30 +385,30 @@ const SmartInventory = () => {
 
       {/* AI FORECASTING TAB */}
       {subTab === 'ai' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '32px', borderRadius: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+        <div  className="ext-cls-e6f83a76">
+          <div className="glass-panel ext-cls-68c13109" >
+            <div  className="ext-cls-f7aba57e">
               <Sparkles size={28} className="text-warning" />
-              <h4 style={{ fontSize: '22px', fontWeight: '800' }}>Neural Demand Forecasting</h4>
+              <h4  className="ext-cls-26fce346">Neural Demand Forecasting</h4>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flexWrap: 'wrap' }}>
-              <div style={{ background: 'var(--bg-deep)', padding: '24px', borderRadius: '18px', borderLeft: '4px solid #f59e0b' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <TrendingUp size={20} style={{ color: '#f59e0b' }} />
-                  <span style={{ fontWeight: '800', fontSize: '15px' }}>Optimal Reorder Time (AI)</span>
+            <div  className="ext-cls-e8005ec3">
+              <div  className="ext-cls-f8cba76f">
+                <div  className="ext-cls-cf98ab57">
+                  <TrendingUp size={20}  className="ext-cls-1b7f527e" />
+                  <span  className="ext-cls-ba204747">Optimal Reorder Time (AI)</span>
                 </div>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                <p  className="ext-cls-c70d70fc">
                   Based on transactional histories, place order for <strong>Paneer Cubes</strong> by <strong>Wednesday morning</strong> to offset supply delays.
                 </p>
               </div>
 
-              <div style={{ background: 'var(--bg-deep)', padding: '24px', borderRadius: '18px', borderLeft: '4px solid var(--accent-primary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <Zap size={20} style={{ color: 'var(--accent-primary)' }} />
-                  <span style={{ fontWeight: '800', fontSize: '15px' }}>High Velocity Assets</span>
+              <div  className="ext-cls-3b8b1711">
+                <div  className="ext-cls-cf98ab57">
+                  <Zap size={20}  className="ext-cls-507943c3" />
+                  <span  className="ext-cls-ba204747">High Velocity Assets</span>
                 </div>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                <p  className="ext-cls-c70d70fc">
                   <strong>Fresh Vegetables</strong> usage velocity increased by 15% over standard baselines this week. Consider bulk adjustment.
                 </p>
               </div>
@@ -419,21 +419,21 @@ const SmartInventory = () => {
 
       {/* STOCK ACTION MODAL */}
       {showStockModal && (
-        <div className="modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '450px', width: '90%', padding: '32px', borderRadius: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+        <div className="modal-overlay ext-cls-dd6e81bf" >
+          <div className="modal-content glass-panel animate-slide-up ext-cls-64b444d9" >
+            <h3  className="ext-cls-4f8693ef">
               {stockActionType === 'in' ? 'Stock In (Purchase)' : stockActionType === 'wastage' ? 'Report Wastage' : 'Usage Reduction'}
             </h3>
-            <p className="text-muted" style={{ fontSize: '13px', marginBottom: '24px' }}>Perform explicit logistics updates instantly.</p>
+            <p className="text-muted ext-cls-4e062fb4" >Perform explicit logistics updates instantly.</p>
 
-            <form onSubmit={handleStockUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form onSubmit={handleStockUpdate}  className="ext-cls-21558a0c">
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>SELECT ITEM</label>
+                <label  className="ext-cls-66365d2b">SELECT ITEM</label>
                 <select 
                   value={selectedItem ? selectedItem.id : ''} 
                   onChange={(e) => setSelectedItem(inventory.find(i => i.id === parseInt(e.target.value)))}
                   required
-                  style={{ width: '100%', height: '46px', padding: '10px 16px', borderRadius: '10px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', cursor: 'pointer' }}
+                  className="st-cls-c00c2d10"
                 >
                   <option value="">-- Choose Ingredient --</option>
                   {inventory.map(item => (
@@ -443,7 +443,7 @@ const SmartInventory = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>
+                <label  className="ext-cls-66365d2b">
                   QUANTITY {selectedItem ? `(${selectedItem.unit})` : ''}
                 </label>
                 <input 
@@ -453,17 +453,17 @@ const SmartInventory = () => {
                   value={actionQty} 
                   onChange={(e) => setActionQty(e.target.value)} 
                   required 
-                  style={{ width: '100%', height: '46px', padding: '12px 16px', borderRadius: '10px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                  className="st-cls-7bb6244a"
                 />
               </div>
 
               {stockActionType !== 'in' && (
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>REASON / PURPOSE</label>
+                  <label  className="ext-cls-66365d2b">REASON / PURPOSE</label>
                   <select 
                     value={actionReason} 
                     onChange={(e) => setActionReason(e.target.value)}
-                    style={{ width: '100%', height: '46px', padding: '10px 16px', borderRadius: '10px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px' }}
+                    className="st-cls-2792e06b"
                   >
                     <option value="Daily Usage">Daily Operational Usage</option>
                     <option value="Spoilage">Spoilage / Rotten</option>
@@ -473,21 +473,21 @@ const SmartInventory = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+              <div  className="ext-cls-219254d1">
                 <button 
                   type="button" 
                   onClick={() => {
                     setShowStockModal(false);
                     setSelectedItem(null);
                   }}
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontWeight: '700', cursor: 'pointer' }}
+                  className="st-cls-b046eea6"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(124, 58, 237, 0.3)' }}
-                >
+                  
+                 className="ext-cls-511c674b">
                   Submit
                 </button>
               </div>

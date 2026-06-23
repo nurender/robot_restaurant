@@ -6,10 +6,10 @@ import { API_URL } from '../../../config';
 export default function QrCodesView({ restaurantTables, adminUser, fetchData, printTableQR }) {
   return (
     <div className="view-container animate-slide-up view-container-deep">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+      <div  className="ext-cls-bb123862">
         <div>
-          <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Tables & QR Codes</h1>
-          <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Dine-in Customer ordering entry endpoints.</p>
+          <h1 className="view-title ext-cls-46d76c78" >Tables & QR Codes</h1>
+          <p className="text-muted ext-cls-a6a615ae" >Dine-in Customer ordering entry endpoints.</p>
         </div>
         <button
           onClick={async () => {
@@ -35,20 +35,20 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+      <div  className="ext-cls-d9fddbb2">
         {restaurantTables.map((t, idx) => {
           const tokenVal = t.secret_token || t.token;
           const liveUrl = `${window.location.origin}/?s=${tokenVal}`;
           return (
-            <div key={idx} className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: '20px', boxShadow: 'var(--shadow-md)', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ padding: '16px', background: 'white', borderRadius: '16px', width: '160px', height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div key={idx} className="glass-panel ext-cls-22dec2a2" >
+              <div  className="ext-cls-f64a1d92">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(liveUrl)}`}
                   alt="Scannable QR Code"
-                  style={{ width: '130px', height: '130px', objectFit: 'contain' }}
-                />
+                  
+                className="ext-cls-6010c780" />
               </div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3  className="ext-cls-c26cd7f5">
                 {t.name || t.table || `Table ${t.table_number}`}
                 <button
                   onClick={() => {
@@ -58,13 +58,13 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                         .then(() => fetchData('Table Updated'));
                     }
                   }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }}
+                  className="st-cls-8798020a"
                 >
                   <Edit2 size={14} />
                 </button>
               </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-deep)', padding: '6px 12px', borderRadius: '8px', width: '100%', justifyContent: 'center' }}>
-                <div style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: '700', wordBreak: 'break-all' }}>{tokenVal}</div>
+              <div  className="ext-cls-2b909440">
+                <div  className="ext-cls-de20d623">{tokenVal}</div>
                 <button
                   onClick={() => {
                     const newKey = prompt("Edit Secret Key (Token):", tokenVal);
@@ -73,13 +73,13 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                         .then(() => fetchData('Key Updated'));
                     }
                   }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                  className="st-cls-7670380b"
                 >
                   <Edit2 size={12} />
                 </button>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <div  className="ext-cls-159f41f8">
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(liveUrl);
@@ -92,7 +92,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                 </button>
                 <button
                   onClick={() => printTableQR(liveUrl, t.name || t.table || `Table ${t.table_number}`)}
-                  style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '800', fontSize: '13px', flex: 1, border: 'none', cursor: 'pointer', background: 'var(--success)', color: 'white' }}
+                  className="st-cls-a8dc57e6"
                 >
                   Print QR
                 </button>
@@ -105,7 +105,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                       } catch (err) { alert("Delete failed"); }
                     }
                   }}
-                  style={{ padding: '10px', borderRadius: '12px', border: '1px solid var(--danger)', color: 'var(--danger)', background: 'transparent', cursor: 'pointer' }}
+                  className="st-cls-9265d60b"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -127,7 +127,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                     })
                     .catch(() => alert("Download failed"));
                 }}
-                style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '700', fontSize: '13px', width: '100%', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', marginTop: '-8px' }}
+                className="st-cls-e930308b"
               >
                 Download QR
               </button>
@@ -136,31 +136,31 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
         })}
       </div>
 
-      <div className="glass-panel" style={{ marginTop: '48px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+      <div className="glass-panel ext-cls-75c7ac2e" >
+        <div  className="ext-cls-f7aba57e">
           <ListTodo size={24} className="text-accent" />
-          <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Dine-In Hub: Master Table List</h2>
+          <h2  className="ext-cls-460d2182">Dine-In Hub: Master Table List</h2>
         </div>
         <div className="overflow-x-auto">
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+          <table  className="ext-cls-577f2ddf">
             <thead>
-              <tr style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'left' }}>
-                <th style={{ padding: '12px 20px' }}>Table #</th>
-                <th style={{ padding: '12px 20px' }}>Name/Label</th>
-                <th style={{ padding: '12px 20px' }}>Secret Token</th>
-                <th style={{ padding: '12px 20px', textAlign: 'right' }}>Actions</th>
+              <tr  className="ext-cls-72549c7a">
+                <th  className="ext-cls-678ab1a6">Table #</th>
+                <th  className="ext-cls-678ab1a6">Name/Label</th>
+                <th  className="ext-cls-678ab1a6">Secret Token</th>
+                <th  className="ext-cls-edc5c104">Actions</th>
               </tr>
             </thead>
             <tbody>
               {restaurantTables.map((t, idx) => (
-                <tr key={idx} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                  <td style={{ padding: '16px 20px', fontWeight: '800', color: 'var(--accent-primary)', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
+                <tr key={idx}  className="ext-cls-937b953c">
+                  <td  className="ext-cls-813414b4">
                     #{t.table_number || (idx + 1)}
                   </td>
-                  <td style={{ padding: '16px 20px', fontWeight: '700' }}>{t.name || t.table}</td>
-                  <td style={{ padding: '16px 20px', fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-dim)' }}>{t.token}</td>
-                  <td style={{ padding: '16px 20px', textAlign: 'right', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
-                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); alert("Copied!"); }} style={{ background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-main)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>Copy URL</button>
+                  <td  className="ext-cls-3b376603">{t.name || t.table}</td>
+                  <td  className="ext-cls-5feee2a5">{t.token}</td>
+                  <td  className="ext-cls-2590b86a">
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); alert("Copied!"); }} className="st-cls-228e32a7">Copy URL</button>
                   </td>
                 </tr>
               ))}

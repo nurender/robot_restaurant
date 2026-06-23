@@ -7,19 +7,19 @@ export default function DashboardView({ orders, menuItems, formatDate }) {
     <div className="view-container animate-slide-up view-container-deep">
       <div className="view-header-row mb-8 flex justify-between items-center">
         <div className="header-left">
-          <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-1px' }}>AI RESTO Command</h1>
-          <p className="text-muted" style={{ fontSize: '15px', marginTop: '4px' }}>Executive SaaS Intelligence & Network Synchronization</p>
+          <h1 className="view-title ext-cls-8e87210c" >AI RESTO Command</h1>
+          <p className="text-muted ext-cls-10e9b125" >Executive SaaS Intelligence & Network Synchronization</p>
         </div>
-        <div className="header-date flex items-center gap-2" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '10px 18px', borderRadius: '14px', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="header-date flex items-center gap-2 ext-cls-611d5d8e" >
           <Calendar size={18} className="text-accent" />
-          <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>
+          <span  className="ext-cls-4c8bbc32">
             {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </span>
         </div>
       </div>
 
       {/* 1. KPI Cards Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+      <div  className="ext-cls-95b5f1d2">
         {[
           { title: 'Total Revenue', value: `₹${orders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0).toLocaleString()}`, growth: '+14.2%', icon: DollarSign, color: 'purple' },
           { title: 'Total Orders', value: orders.length, growth: '+8.5%', icon: ListTodo, color: 'blue' },
@@ -28,12 +28,12 @@ export default function DashboardView({ orders, menuItems, formatDate }) {
           { title: 'Avg Order Val', value: `₹${orders.length ? Math.round(orders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0) / orders.length) : 0}`, growth: '+5.2%', icon: ChefHat, color: 'purple' },
           { title: 'Network Rating', value: '4.85 ★', growth: 'Elite standard', icon: Sparkles, color: 'orange' }
         ].map((stat, i) => (
-          <div key={i} className="stat-card-modern" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: 'var(--shadow-sm)', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>{stat.title}</span>
+          <div key={i} className="stat-card-modern ext-cls-5de800be" >
+            <div  className="ext-cls-1bdb758b">
+              <span  className="ext-cls-b488a854">{stat.title}</span>
               <stat.icon size={20} className={stat.color === 'purple' ? 'text-accent' : stat.color === 'orange' ? 'text-warning' : 'text-success'} />
             </div>
-            <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', margin: '4px 0 0 0' }}>{stat.value}</h3>
+            <h3  className="ext-cls-d586a20f">{stat.value}</h3>
             <span style={{ fontSize: '11px', fontWeight: '700', color: stat.growth.startsWith('+') ? 'var(--success)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               {stat.growth}
             </span>
@@ -42,10 +42,10 @@ export default function DashboardView({ orders, menuItems, formatDate }) {
       </div>
 
       {/* 2. Analytics Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}><TrendingUp className="text-accent" /> Revenue Velocity</h4>
-          <div style={{ height: '180px', position: 'relative' }}>
+      <div  className="ext-cls-1308f549">
+        <div className="glass-panel ext-cls-096b2a3a" >
+          <h4  className="ext-cls-3089fc45"><TrendingUp className="text-accent" /> Revenue Velocity</h4>
+          <div  className="ext-cls-37649d0e">
             <svg className="w-full h-full" viewBox="0 0 500 200" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
@@ -59,46 +59,46 @@ export default function DashboardView({ orders, menuItems, formatDate }) {
           </div>
         </div>
 
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}><ListTodo className="text-accent" /> Orders Trend</h4>
-          <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', gap: '12px', padding: '10px' }}>
+        <div className="glass-panel ext-cls-096b2a3a" >
+          <h4  className="ext-cls-3089fc45"><ListTodo className="text-accent" /> Orders Trend</h4>
+          <div  className="ext-cls-077693f5">
             {[20, 45, 30, 65, 85, 40, 55].map((val, idx) => (
               <div key={idx} style={{ flex: 1, height: `${val}%`, background: 'var(--accent-primary)', borderRadius: '6px 6px 2px 2px' }} />
             ))}
           </div>
         </div>
 
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}><Sparkles className="text-accent" /> Growth Allocation</h4>
-          <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '120px', height: '120px', borderRadius: '50%', border: '16px solid var(--accent-primary)', borderRightColor: 'var(--bg-deep)', transform: 'rotate(45deg)' }} />
+        <div className="glass-panel ext-cls-096b2a3a" >
+          <h4  className="ext-cls-3089fc45"><Sparkles className="text-accent" /> Growth Allocation</h4>
+          <div  className="ext-cls-ac9c79c4">
+            <div  className="ext-cls-aeba8ec7" />
           </div>
         </div>
       </div>
 
       {/* Recent Orders & Top Selling */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '32px' }}>
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)', gridColumn: 'span 2' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', color: 'var(--text-main)' }}>Live Order Matrix</h4>
-          <div style={{ overflowX: 'auto' }}>
+      <div  className="ext-cls-85fa111e">
+        <div className="glass-panel ext-cls-497b5214" >
+          <h4  className="ext-cls-85881f09">Live Order Matrix</h4>
+          <div  className="ext-cls-21315f47">
             <table className="table-styled">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>Order ID</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>Amount</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>Status</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>Timestamp</th>
+                <tr  className="ext-cls-df7f00d1">
+                  <th  className="ext-cls-a0da11e7">Order ID</th>
+                  <th  className="ext-cls-a0da11e7">Amount</th>
+                  <th  className="ext-cls-a0da11e7">Status</th>
+                  <th  className="ext-cls-a0da11e7">Timestamp</th>
                 </tr>
               </thead>
-              <tbody style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>
+              <tbody  className="ext-cls-4c8bbc32">
                 {orders.slice(0, 5).map(o => (
-                  <tr key={o.id} style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <td style={{ padding: '16px 12px' }}>#{o.id}</td>
-                    <td style={{ padding: '16px 12px' }}>₹{o.total}</td>
-                    <td style={{ padding: '16px 12px' }}>
+                  <tr key={o.id}  className="ext-cls-061d9bac">
+                    <td  className="ext-cls-ca11bf0a">#{o.id}</td>
+                    <td  className="ext-cls-ca11bf0a">₹{o.total}</td>
+                    <td  className="ext-cls-ca11bf0a">
                       <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '11px', background: o.status === 'completed' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: o.status === 'completed' ? 'var(--success)' : 'var(--warning)' }}>{o.status}</span>
                     </td>
-                    <td style={{ padding: '16px 12px', color: 'var(--text-muted)' }}>{formatDate(o.created_at || o.timestamp)}</td>
+                    <td  className="ext-cls-b54e4417">{formatDate(o.created_at || o.timestamp)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -106,17 +106,17 @@ export default function DashboardView({ orders, menuItems, formatDate }) {
           </div>
         </div>
 
-        <div className="glass-panel" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '24px', padding: '28px', boxShadow: 'var(--shadow-md)', gridColumn: 'span 1' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px', color: 'var(--text-main)' }}>Core High-Affinity Menu</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="glass-panel ext-cls-ecb69971" >
+          <h4  className="ext-cls-85881f09">Core High-Affinity Menu</h4>
+          <div  className="ext-cls-73683d33">
             {menuItems.slice(0, 4).map(dish => (
-              <div key={dish.id} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src={dish.image_url ? (dish.image_url.startsWith('http') ? dish.image_url : `${API_URL}${dish.image_url}`) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=100&q=80'} style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} alt={dish.name} />
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>{dish.name}</span>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{dish.category}</p>
+              <div key={dish.id}  className="ext-cls-b68c5feb">
+                <img src={dish.image_url ? (dish.image_url.startsWith('http') ? dish.image_url : `${API_URL}${dish.image_url}`) : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=100&q=80'}  alt={dish.name} className="ext-cls-83ea47d6" />
+                <div  className="ext-cls-04a898f1">
+                  <span  className="ext-cls-22e4bbaf">{dish.name}</span>
+                  <p  className="ext-cls-b98663d3">{dish.category}</p>
                 </div>
-                <span style={{ fontWeight: '800', color: 'var(--accent-primary)' }}>₹{dish.price}</span>
+                <span  className="ext-cls-5163cb1f">₹{dish.price}</span>
               </div>
             ))}
           </div>

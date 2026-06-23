@@ -16,21 +16,21 @@ export default function CategoryManagerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 10000 }}>
-      <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '600px', width: '95%', padding: '40px', borderRadius: '32px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-2xl)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+    <div className="modal-overlay ext-cls-e0b4af75" >
+      <div className="modal-content glass-panel animate-slide-up ext-cls-b675278c" >
+        <div  className="ext-cls-6902f166">
           <div>
-            <h3 style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)', letterSpacing: '-0.5px' }}>Neural Categories</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>Manage your menu clusters and taxonomies.</p>
+            <h3  className="ext-cls-58cd1799">Neural Categories</h3>
+            <p  className="ext-cls-90cb03c4">Manage your menu clusters and taxonomies.</p>
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '40px', height: '40px', borderRadius: '50%', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose}  className="ext-cls-7e7a1f7e">✕</button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <div style={{ display: 'flex', gap: '12px', background: 'var(--bg-deep)', padding: '8px', borderRadius: '20px', border: '1px solid var(--card-border)' }}>
-            <input
+        <div  className="ext-cls-450d6700">
+          <div  className="ext-cls-e5c85b98">
+            <input className="ext-cls-94735f6f" 
               type="text"
-              style={{ flex: 1, background: 'transparent', border: 'none', padding: '12px 16px', color: 'var(--text-main)', fontSize: '15px', fontWeight: '600', outline: 'none' }}
+              
               placeholder="Enter new cluster name..."
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
@@ -45,29 +45,16 @@ export default function CategoryManagerModal({
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '350px', overflowY: 'auto', paddingRight: '8px' }} className="custom-scrollbar">
+          <div  className="custom-scrollbar ext-cls-c9d685a2">
             {categories.length === 0 ? (
-              <div style={{ width: '100%', textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed var(--card-border)' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No categories defined yet.</p>
+              <div  className="ext-cls-7be8af63">
+                <p  className="ext-cls-6afb1311">No categories defined yet.</p>
               </div>
             ) : (
               categories.map(cat => (
-                <div
+                <div className="ext-cls-9d5e1c9b" 
                   key={cat.id}
-                  style={{
-                    background: 'rgba(124, 58, 237, 0.08)',
-                    color: 'var(--accent-primary)',
-                    padding: '10px 18px',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    border: '1px solid rgba(124, 58, 237, 0.15)',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    cursor: 'default'
-                  }}
+                  
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(124, 58, 237, 0.15)';
                     e.currentTarget.style.transform = 'translateY(-2px)';
@@ -90,20 +77,7 @@ export default function CategoryManagerModal({
                         }
                       }
                     }}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      border: 'none',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      color: '#ef4444',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      transition: 'all 0.2s'
-                    }}
+                    className="st-cls-3a00955a"
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
                   >
@@ -113,7 +87,7 @@ export default function CategoryManagerModal({
               ))
             )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+          <div  className="ext-cls-0ec538d6">
             <button
               className="btn-global-outline"
               onClick={onClose}

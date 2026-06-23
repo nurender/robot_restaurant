@@ -688,16 +688,16 @@ const AdminPanel = () => {
 
   if (!getPermittedTabs(adminUser.role).includes(activeTab)) {
     return (
-      <div className="admin-layout" style={{ background: 'var(--bg-deep)', color: 'white', display: 'flex', minHeight: '100vh' }}>
+      <div className="admin-layout ext-cls-42d9d60a" >
         <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} adminUser={adminUser} onLogout={handleLogout} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-          <div className="glass-panel text-center animate-slide-up" style={{ maxWidth: '440px', padding: '60px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '32px' }}>
-            <div style={{ background: 'rgba(239, 68, 68, 0.1)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-              <AlertCircle size={40} style={{ color: '#ef4444' }} />
+        <div  className="ext-cls-f9cd9043">
+          <div className="glass-panel text-center animate-slide-up ext-cls-df783c22" >
+            <div  className="ext-cls-05ae1608">
+              <AlertCircle size={40}  className="ext-cls-ec836744" />
             </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '12px', color: 'white' }}>ACCESS RESTRICTED</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '15px', lineHeight: '1.6' }}>Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong style={{ color: 'var(--accent-primary)' }}>{activeTab}</strong> module.</p>
-            <button className="btn-primary" onClick={() => handleTabChange('orders')} style={{ width: '100%', padding: '14px', borderRadius: '14px' }}>Return to Safety</button>
+            <h2  className="ext-cls-b9b33734">ACCESS RESTRICTED</h2>
+            <p  className="ext-cls-b061dfa4">Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong  className="ext-cls-507943c3">{activeTab}</strong> module.</p>
+            <button className="btn-primary st-cls-ff40caf4" onClick={() => handleTabChange('orders')} >Return to Safety</button>
           </div>
         </div>
       </div>
@@ -707,18 +707,9 @@ const AdminPanel = () => {
   return (
     <div className="admin-layout animate-fade-in">
       {isLoading && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          background: 'rgba(10, 10, 11, 0.8)', backdropFilter: 'blur(8px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          zIndex: 10000, color: 'white', fontFamily: 'Inter, sans-serif'
-        }}>
-          <div className="premium-loader" style={{
-            width: '60px', height: '60px', border: '3px solid rgba(124, 58, 237, 0.1)',
-            borderTop: '3px solid #7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite',
-            boxShadow: '0 0 20px rgba(124, 58, 237, 0.3)'
-          }}></div>
-          <h2 style={{ marginTop: '24px', fontWeight: '300', letterSpacing: '4px', fontSize: '14px', animation: 'pulse 2s infinite' }}>
+        <div  className="ext-cls-0fabc89b">
+          <div className="premium-loader ext-cls-82a1a47f" ></div>
+          <h2  className="ext-cls-a47fb471">
             NEURAL HUB SYNCHRONIZING
           </h2>
         </div>
@@ -792,25 +783,25 @@ const AdminPanel = () => {
             <input type="text" placeholder="Neural Search Engine..." />
           </div>
           <div className="header-profile-premium">
-            <div style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => {
+            <div className="ext-cls-e63b8a15"   onClick={() => {
               if (activeWaiterCalls.length > 0) setActiveWaiterCalls([]); // temp clear all
             }}>
               <Bell size={22} color={activeWaiterCalls.length > 0 ? '#ef4444' : 'var(--text-muted)'} className={activeWaiterCalls.length > 0 ? 'pulse' : ''} />
               {activeWaiterCalls.length > 0 && (
-                <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 6px', borderRadius: '10px', border: '2px solid var(--bg-deep)' }}>
+                <span  className="ext-cls-b5652ddf">
                   {activeWaiterCalls.length}
                 </span>
               )}
               {activeWaiterCalls.length > 0 && (
-                <div className="animate-fade-in" style={{ position: 'absolute', top: '35px', right: '-10px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '12px', width: '220px', boxShadow: 'rgba(0, 0, 0, 0.4) 0px 10px 20px', zIndex: 100 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-muted)' }}>SERVICE ALERTS</div>
+                <div className="animate-fade-in ext-cls-624612c0" >
+                  <div  className="ext-cls-ca2f2f26">SERVICE ALERTS</div>
                   {activeWaiterCalls.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>Table {c.table_number}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div key={i}  className="ext-cls-2eed4490">
+                      <span  className="ext-cls-c5e63a58">Table {c.table_number}</span>
+                      <span  className="ext-cls-2388e344">{new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   ))}
-                  <div style={{ fontSize: '11px', textAlign: 'center', marginTop: '8px', color: '#ef4444' }}>Click bell to dismiss all</div>
+                  <div  className="ext-cls-f0f48cb7">Click bell to dismiss all</div>
                 </div>
               )}
             </div>
@@ -949,11 +940,11 @@ const AdminPanel = () => {
 
 
           {activeTab === 'inventory' && (
-            <div className="view-container animate-slide-up" style={{ padding: '32px', background: 'var(--bg-deep)', minHeight: '100vh' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+            <div className="view-container animate-slide-up ext-cls-40bdd684" >
+              <div  className="ext-cls-bb123862">
                 <div>
-                  <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Smart Inventory Hub</h1>
-                  <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Automated restaurant stock operations.</p>
+                  <h1 className="view-title ext-cls-46d76c78" >Smart Inventory Hub</h1>
+                  <p className="text-muted ext-cls-a6a615ae" >Automated restaurant stock operations.</p>
                 </div>
               </div>
               <SmartInventoryView />

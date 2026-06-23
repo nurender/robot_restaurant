@@ -21,15 +21,15 @@ export default function ManualOrderModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 10000 }}>
+    <div className="modal-overlay ext-cls-e0b4af75" >
       <div className="modal-content glass-panel animate-slide-up manual-order-modal">
         {/* Left Side: Menu Search */}
         <div className="manual-order-left">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>Select Items</h3>
-              <div style={{ position: 'relative', flex: 0.8 }}>
-                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <div  className="ext-cls-73683d33">
+            <div  className="ext-cls-1bdb758b">
+              <h3  className="ext-cls-313b8eae">Select Items</h3>
+              <div  className="ext-cls-822372e8">
+                <Search size={18}  className="ext-cls-7fcf830c" />
                 <input
                   type="text"
                   placeholder="Search menu items..."
@@ -41,11 +41,11 @@ export default function ManualOrderModal({
             </div>
 
             {/* Category Pills */}
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px' }}>
+            <div  className="ext-cls-ad4fac02">
               <button
                 onClick={() => setManualOrderCategory('All')}
-                className={`status-pill ${manualOrderCategory === 'All' ? 'active' : 'inactive'}`}
-                style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                className="status-pill ${manualOrderCategory === 'All' ? 'active' : 'inactive'} st-cls-2a1d4313"
+                
               >
                 All Items
               </button>
@@ -53,8 +53,8 @@ export default function ManualOrderModal({
                 <button
                   key={cat.id}
                   onClick={() => setManualOrderCategory(cat.name)}
-                  className={`status-pill ${manualOrderCategory === cat.name ? 'active' : 'inactive'}`}
-                  style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  className="status-pill ${manualOrderCategory === cat.name ? 'active' : 'inactive'} st-cls-2a1d4313"
+                  
                 >
                   {cat.name}
                 </button>
@@ -62,7 +62,7 @@ export default function ManualOrderModal({
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px', paddingRight: '8px' }}>
+          <div  className="ext-cls-5e828653">
             {menuItems.filter(item => {
               const matchesSearch = item.name.toLowerCase().includes(manualOrderSearch.toLowerCase());
               const matchesCat = manualOrderCategory === 'All' || item.category === manualOrderCategory;
@@ -92,36 +92,36 @@ export default function ManualOrderModal({
                   onClick={() => addToManualOrder({ ...item, price: discountedPrice })}
                   className="manual-order-card"
                 >
-                  <div style={{ width: '100%', height: '100px', borderRadius: '12px', overflow: 'hidden', background: '#222' }}>
-                    <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div  className="ext-cls-944ef08c">
+                    <img src={item.image_url} alt={item.name}  className="ext-cls-80fb12aa" />
                   </div>
-                  <strong style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong  className="ext-cls-be00bd65">
                     {item.veg_type === 'veg' && (
-                      <div style={{ width: '10px', height: '10px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#22c55e' }}></div>
+                      <div  className="ext-cls-2dee9030">
+                        <div  className="ext-cls-bbc11080"></div>
                       </div>
                     )}
                     {item.veg_type === 'nonveg' && (
-                      <div style={{ width: '10px', height: '10px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                        <div style={{ width: '0', height: '0', borderLeft: '2px solid transparent', borderRight: '2px solid transparent', borderBottom: '4px solid #ef4444' }}></div>
+                      <div  className="ext-cls-a6504993">
+                        <div  className="ext-cls-456a33ee"></div>
                       </div>
                     )}
                     {item.veg_type === 'egg' && (
-                      <div style={{ width: '10px', height: '10px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#eab308' }}></div>
+                      <div  className="ext-cls-744f3000">
+                        <div  className="ext-cls-05db53a8"></div>
                       </div>
                     )}
                     {item.name}
                   </strong>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>₹{discountedPrice}</span>
+                  <div  className="ext-cls-e59acaf8">
+                    <div  className="ext-cls-cd210fb4">
+                      <span  className="ext-cls-44977362">₹{discountedPrice}</span>
                       {hasDiscount && (
-                        <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{Math.round(item.price)}</span>
+                        <span  className="ext-cls-e0735ae4">₹{Math.round(item.price)}</span>
                       )}
                     </div>
                     {hasDiscount && (
-                      <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '800', letterSpacing: '0.5px' }}>{discountBadge}</span>
+                      <span  className="ext-cls-80ecf3a5">{discountBadge}</span>
                     )}
                   </div>
                 </div>
@@ -132,8 +132,8 @@ export default function ManualOrderModal({
 
         {/* Right Side: Order Summary */}
         <div className="manual-order-right">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>Order Summary</h3>
+          <div  className="ext-cls-1bdb758b">
+            <h3  className="ext-cls-313b8eae">Order Summary</h3>
             <button
               onClick={() => {
                 if (isEditingOrder) {
@@ -142,15 +142,15 @@ export default function ManualOrderModal({
                 }
                 onClose();
               }}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              className="st-cls-411ef6fd"
             >
               <X size={24} />
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr 1fr', gap: '10px' }}>
+          <div  className="ext-cls-23458d97">
             <div>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>TABLE</label>
+              <label  className="ext-cls-9ceb2f47">TABLE</label>
               <select
                 value={manualOrderData.tableNumber}
                 onChange={(e) => setManualOrderData({ ...manualOrderData, tableNumber: e.target.value })}
@@ -164,7 +164,7 @@ export default function ManualOrderModal({
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>CUSTOMER NAME</label>
+              <label  className="ext-cls-9ceb2f47">CUSTOMER NAME</label>
               <input
                 type="text"
                 placeholder="Name"
@@ -174,7 +174,7 @@ export default function ManualOrderModal({
               />
             </div>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)' }}>PHONE NUMBER</label>
+              <label  className="ext-cls-9ceb2f47">PHONE NUMBER</label>
               <input
                 type="text"
                 placeholder="+91..."
@@ -185,7 +185,7 @@ export default function ManualOrderModal({
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div  className="ext-cls-a1500451">
             {manualOrderData.items.map(item => {
               let hasDiscount = item.discount_value > 0 && item.discount_type && item.discount_type !== 'none';
               let dVal = Number(item.discount_value || 0);
@@ -194,37 +194,37 @@ export default function ManualOrderModal({
 
               return (
                 <div key={item.id} className="manual-order-item">
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', fontSize: '14px' }}>{item.name} {item.selectedVariant && <span style={{ opacity: 0.7, color: 'var(--warning)' }}>({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span style={{ opacity: 0.6, fontSize: '12px' }}>[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                      <div style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: '800' }}>₹{item.price}</div>
+                  <div  className="ext-cls-04a898f1">
+                    <div  className="ext-cls-9f42a204">{item.name} {item.selectedVariant && <span  className="ext-cls-8a5d9ead">({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span  className="ext-cls-f8826bb7">[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</div>
+                    <div  className="ext-cls-371aafc7">
+                      <div  className="ext-cls-76ed6512">₹{item.price}</div>
                       {hasDiscount && (
-                        <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '800', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                        <span  className="ext-cls-e0c019b0">
                           {discountBadgeText}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-primary)', padding: '4px 12px', borderRadius: '10px' }}>
-                    <button onClick={() => updateManualQty(item.id, -1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                    <span style={{ fontWeight: '900', fontSize: '15px' }}>{item.qty}</span>
-                    <button onClick={() => updateManualQty(item.id, 1)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                  <div  className="ext-cls-8f2b6101">
+                    <button onClick={() => updateManualQty(item.id, -1)} className="st-cls-38e5fe4f">-</button>
+                    <span  className="ext-cls-03d68524">{item.qty}</span>
+                    <button onClick={() => updateManualQty(item.id, 1)} className="st-cls-38e5fe4f">+</button>
                   </div>
                 </div>
               )
             })}
             {manualOrderData.items.length === 0 && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>
+              <div  className="ext-cls-d91f80f5">
                 <UtensilsCrossed size={48} />
-                <p style={{ fontWeight: '700' }}>Your basket is empty</p>
+                <p  className="ext-cls-d71cfe4a">Your basket is empty</p>
               </div>
             )}
           </div>
 
-          <div style={{ borderTop: '2px solid var(--card-border)', paddingTop: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>Grand Total</span>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: 'var(--success)' }}>₹{manualOrderData.total}</span>
+          <div  className="ext-cls-91f0bbfd">
+            <div  className="ext-cls-84d72deb">
+              <span  className="ext-cls-4dbf288f">Grand Total</span>
+              <span  className="ext-cls-ea846f22">₹{manualOrderData.total}</span>
             </div>
             <button
               onClick={submitManualOrder}

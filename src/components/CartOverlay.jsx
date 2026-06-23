@@ -32,14 +32,14 @@ const CartOverlay = ({
         <div className="cart-summary-overlay animate-fade-in" onClick={() => setShowCartSummary(false)}>
             <div className="cart-summary-modal slide-up" onClick={e => e.stopPropagation()}>
                 <div className="cart-summary-header">
-                    <h3 style={{ fontSize: '20px', margin: 0, letterSpacing: '-0.5px' }}>Review Your Order</h3>
+                    <h3  className="ext-cls-847f26d6">Review Your Order</h3>
                     <button className="close-cart-btn" onClick={() => setShowCartSummary(false)}>×</button>
                 </div>
 
                 <div className="cart-summary-items custom-scrollbar">
                     {currentCart.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>
-                            <ChefHat size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                        <div  className="ext-cls-6395e718">
+                            <ChefHat size={48}  className="ext-cls-b70a18fb" />
                             <p>Your cart is empty</p>
                         </div>
                     ) : (
@@ -49,21 +49,21 @@ const CartOverlay = ({
                                     {item.image_url ? (
                                         <img src={getMediaUrl(item.image_url)} alt={item.name} />
                                     ) : (
-                                        <div className="cart-item-placeholder" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)' }}>
+                                        <div className="cart-item-placeholder ext-cls-2cdddd2c" >
                                             <ChefHat size={24} color="var(--text-dim)" />
                                         </div>
                                     )}
                                 </div>
                                 <div className="cart-item-info">
-                                    <span className="cart-item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span className="cart-item-name ext-cls-afade7f3" >
                                         {item.name}
                                         {item.selectedVariant && (
-                                            <span style={{ fontSize: '11px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-default)' }}>
+                                            <span  className="ext-cls-763e0ad5">
                                                 {item.selectedVariant.size}
                                             </span>
                                         )}
                                         {item.selectedAddons && item.selectedAddons.length > 0 && (
-                                            <span style={{ fontSize: '10px', color: '#f1c40f', background: 'rgba(241, 196, 15, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                            <span  className="ext-cls-e874b837">
                                                 + {item.selectedAddons.map(a => a.name).join(', ')}
                                             </span>
                                         )}
@@ -83,17 +83,17 @@ const CartOverlay = ({
                     )}
                 </div>
 
-                {/* <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-default)', borderBottom: '1px solid var(--border-default)' }}>
+                {/* <div  className="ext-cls-cb03bfb8">
                     <textarea
                         value={orderNote || ''}
                         onChange={(e) => setOrderNote(e.target.value)}
                         placeholder="Any special cooking instructions? (e.g. Less spicy, Extra cheese)"
-                        style={{ width: '100%', height: '64px', borderRadius: '12px', padding: '12px', border: '1px solid var(--border-default)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', resize: 'none', outline: 'none' }}
+                        className="st-cls-61d09163"
                     ></textarea>
                 </div> */}
 
-                <div className="cart-summary-footer" style={{ gap: '12px' }}>
-                    <div style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
+                <div className="cart-summary-footer ext-cls-beb1d5f4" >
+                    <div  className="ext-cls-a230f5c5">
                         {!activeCoupon ? (
                             <form 
                                 onSubmit={(e) => {
@@ -115,61 +115,61 @@ const CartOverlay = ({
                                         alert("Invalid or expired coupon code.");
                                     }
                                 }} 
-                                style={{ display: 'flex', gap: '8px' }}
+                                className="st-cls-441e8d8e"
                             >
-                                <input name="couponCode" type="text" placeholder="Got a Neural Promotion Code?" style={{ flex: 1, padding: '8px', background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '13px' }} />
-                                <button type="submit" style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(124, 58, 237, 0.2)', color: '#a78bfa', fontWeight: '800', fontSize: '12px', cursor: 'pointer', border: 'none' }}>Apply</button>
+                                <input name="couponCode" type="text" placeholder="Got a Neural Promotion Code?"  className="ext-cls-3ebffb37" />
+                                <button type="submit"  className="ext-cls-ae2a67f1">Apply</button>
                             </form>
                         ) : (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px' }}>
-                                <span style={{ color: '#10b981', fontSize: '13px', fontWeight: '800' }}>✓ {activeCoupon.code} Applied</span>
-                                <button onClick={() => setActiveCoupon(null)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontWeight: '800' }}>Remove</button>
+                            <div  className="ext-cls-f0fb0a20">
+                                <span  className="ext-cls-b634164c">✓ {activeCoupon.code} Applied</span>
+                                <button onClick={() => setActiveCoupon(null)} className="st-cls-0be79454">Remove</button>
                             </div>
                         )}
                     </div>
 
                     {/* Space reserved for bill details to be moved down */}
-                    <div style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border-default)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <div  className="ext-cls-a62da7ea">
+                        <div  className="ext-cls-b95895ae">
                             <Users size={16} /> Split the Bill?
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <button onClick={() => setSplitCount(Math.max(1, splitCount - 1))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', color: 'var(--text-main)', cursor: 'pointer' }}>-</button>
-                            <span style={{ fontWeight: '800', width: '12px', textAlign: 'center' }}>{splitCount}</span>
-                            <button onClick={() => setSplitCount(Math.min(10, splitCount + 1))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', color: 'var(--text-main)', cursor: 'pointer' }}>+</button>
+                        <div  className="ext-cls-cc0ebbd6">
+                            <button onClick={() => setSplitCount(Math.max(1, splitCount - 1))} className="st-cls-b60b47af">-</button>
+                            <span  className="ext-cls-b2d9cfd1">{splitCount}</span>
+                            <button onClick={() => setSplitCount(Math.min(10, splitCount + 1))} className="st-cls-b60b47af">+</button>
                         </div>
                     </div>
 
                     <div className="cart-final-total" style={{ cursor: 'pointer', padding: '8px 4px', borderRadius: '12px', transition: 'all 0.2s', borderBottom: showBillDetails ? '1px dashed var(--border-default)' : 'none', marginBottom: showBillDetails ? '8px' : '0' }} onClick={() => setShowBillDetails(!showBillDetails)}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-main)', userSelect: 'none' }}>
+                        <div  className="ext-cls-dc3bece4">
+                            <span  className="ext-cls-1d97b50c">
                                 {splitCount > 1 ? `Grand Total (₹${splitAmount} x ${splitCount})` : 'Grand Total'}
                             </span>
-                            {restaurantData?.is_round_off && <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: '700', marginTop: '2px' }}>Rounded Off</span>}
+                            {restaurantData?.is_round_off && <span  className="ext-cls-c5b5a8ab">Rounded Off</span>}
                         </div>
-                        <strong style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <strong  className="ext-cls-3656d0f4">
                             ₹{finalTotal}
                             {showBillDetails ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </strong>
                     </div>
 
                     {showBillDetails && (
-                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
+                        <div className="animate-fade-in ext-cls-14aec927" >
+                            <div  className="ext-cls-f71f3a0f">
                                 <span>Item Total</span>
                                 <span>₹{subtotal.toFixed(2)}</span>
                             </div>
                             {activeCoupon && getDiscountAmount() > 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#10b981', fontWeight: '800' }}>
+                                <div  className="ext-cls-2a7a3077">
                                     <span>Discount ({activeCoupon.code})</span>
                                     <span>-₹{getDiscountAmount().toFixed(2)}</span>
                                 </div>
                             )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
+                            <div  className="ext-cls-f71f3a0f">
                                 <span>Taxes (CGST {restaurantData?.cgst || 0}%)</span>
                                 <span>₹{cgst.toFixed(2)}</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
+                            <div  className="ext-cls-f71f3a0f">
                                 <span>Taxes (SGST {restaurantData?.sgst || 0}%)</span>
                                 <span>₹{sgst.toFixed(2)}</span>
                             </div>

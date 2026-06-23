@@ -117,49 +117,49 @@ const CombosManager = ({ adminUser, restaurantId }) => {
         }
     };
 
-    if (isLoading) return <div style={{ color: 'white', padding: '40px' }}>Loading Combos...</div>;
+    if (isLoading) return <div  className="ext-cls-f88d773e">Loading Combos...</div>;
 
     return (
-        <div className="view-container animate-slide-up" style={{ padding: '24px', color: 'white' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div className="view-container animate-slide-up ext-cls-fe93bf26" >
+            <div  className="ext-cls-72e6eb14">
                 <div>
-                    <h1 style={{ fontSize: '24px', fontWeight: '800' }}>Combos & Offers</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Bundle items together to create special offers.</p>
+                    <h1  className="ext-cls-97744935">Combos & Offers</h1>
+                    <p  className="ext-cls-d77dc274">Bundle items together to create special offers.</p>
                 </div>
                 <button 
                     onClick={() => handleOpenModal()} 
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer' }}
+                    className="st-cls-d8a08940"
                 >
                     <Plus size={18} /> Create Combo
                 </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+            <div  className="ext-cls-728b3c05">
                 {combos.map(combo => (
-                    <div key={combo.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '16px', overflow: 'hidden' }}>
+                    <div key={combo.id}  className="ext-cls-d1e477a7">
                         {combo.image_url ? (
-                            <div style={{ height: '140px', background: '#333' }}>
-                                <img src={combo.image_url.startsWith('http') ? combo.image_url : `${API_URL}${combo.image_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={combo.name} />
+                            <div  className="ext-cls-549ef297">
+                                <img src={combo.image_url.startsWith('http') ? combo.image_url : `${API_URL}${combo.image_url}`}  alt={combo.name} className="ext-cls-80fb12aa" />
                             </div>
                         ) : (
-                            <div style={{ height: '140px', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div  className="ext-cls-e71f46d5">
                                 <ChefHat size={40} color="#666" />
                             </div>
                         )}
-                        <div style={{ padding: '16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>{combo.name}</h3>
-                                <span style={{ background: 'rgba(33, 150, 83, 0.2)', color: '#219653', padding: '4px 8px', borderRadius: '8px', fontWeight: '800', fontSize: '14px' }}>₹{combo.price}</span>
+                        <div  className="ext-cls-17925079">
+                            <div  className="ext-cls-32810f37">
+                                <h3  className="ext-cls-15bb3d47">{combo.name}</h3>
+                                <span  className="ext-cls-43929545">₹{combo.price}</span>
                             </div>
-                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                            <p  className="ext-cls-27a53697">
                                 Includes: {Array.isArray(combo.combo_components) ? combo.combo_components.map(c => `${c.qty}x ${c.name}`).join(', ') : 'No items'}
                             </p>
                             
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button onClick={() => handleOpenModal(combo)} style={{ flex: 1, padding: '8px', background: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
+                            <div  className="ext-cls-ea859b14">
+                                <button onClick={() => handleOpenModal(combo)} className="st-cls-1e2a4110">
                                     <Edit2 size={14} /> Edit
                                 </button>
-                                <button onClick={() => deleteCombo(combo.id)} style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                <button onClick={() => deleteCombo(combo.id)} className="st-cls-f824fd0c">
                                     <Trash2 size={14} />
                                 </button>
                             </div>
@@ -167,42 +167,40 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                     </div>
                 ))}
                 {combos.length === 0 && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                        <Package size={48} color="rgba(255,255,255,0.2)" style={{ margin: '0 auto 16px auto' }} />
-                        <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>No combos found</h3>
-                        <p style={{ color: 'var(--text-muted)' }}>Create your first value meal or combo offer.</p>
+                    <div  className="ext-cls-d0620f00">
+                        <Package size={48} color="rgba(255,255,255,0.2)"  className="ext-cls-eb1757c2" />
+                        <h3  className="ext-cls-0177ccd9">No combos found</h3>
+                        <p  className="ext-cls-d77dc274">Create your first value meal or combo offer.</p>
                     </div>
                 )}
             </div>
 
             {/* Modal */}
             {isModalOpen && createPortal(
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999 }}>
-                    <div style={{ width: '600px', maxWidth: '90%', maxHeight: '90vh', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '800' }}>{editingComboId ? 'Edit Combo' : 'Create Combo'}</h2>
-                            <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                <div  className="ext-cls-20f1fb8b">
+                    <div  className="ext-cls-30b8bdd6">
+                        <div  className="ext-cls-0e145179">
+                            <h2  className="ext-cls-6cf58d56">{editingComboId ? 'Edit Combo' : 'Create Combo'}</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="st-cls-509f6b92">&times;</button>
                         </div>
                         
-                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div  className="ext-cls-73afe189">
+                            <div  className="ext-cls-5842419a">
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>Combo Name *</label>
-                                    <input className="glass-input" type="text" value={comboForm.name} onChange={e => setComboForm({...comboForm, name: e.target.value})} style={{ width: '100%', padding: '12px', outline: 'none' }} placeholder="e.g. Chai Maska Bun Combo" />
+                                    <label  className="ext-cls-10495414">Combo Name *</label>
+                                    <input className="glass-input st-cls-02f9cc33" type="text" value={comboForm.name} onChange={e => setComboForm({...comboForm, name: e.target.value})}  placeholder="e.g. Chai Maska Bun Combo" />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>Combo Final Price (₹) *</label>
-                                    <input className="glass-input" type="number" value={comboForm.price} onChange={e => setComboForm({...comboForm, price: e.target.value})} style={{ width: '100%', padding: '12px', outline: 'none' }} placeholder="e.g. 150" />
+                                    <label  className="ext-cls-10495414">Combo Final Price (₹) *</label>
+                                    <input className="glass-input st-cls-02f9cc33" type="number" value={comboForm.price} onChange={e => setComboForm({...comboForm, price: e.target.value})}  placeholder="e.g. 150" />
                                 </div>
                             </div>
                             
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>Image Upload or URL (Optional)</label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <label 
-                                        style={{
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px dashed var(--card-border)', transition: 'all 0.2s', color: 'var(--text-muted)'
-                                        }}
+                                <label  className="ext-cls-10495414">Image Upload or URL (Optional)</label>
+                                <div  className="ext-cls-6ccca837">
+                                    <label className="ext-cls-0fbbad5e"  
+                                        
                                         onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
                                         onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--card-border)'; }}
                                         onDrop={async (e) => {
@@ -220,14 +218,14 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                                         }}
                                     >
                                         {uploading ? (
-                                            <div className="animate-spin" style={{ width: '24px', height: '24px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+                                            <div className="animate-spin ext-cls-74b34412" ></div>
                                         ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                                <span style={{ fontWeight: '700', fontSize: '14px', color: 'white' }}>Drag & drop or Click to Browse</span>
-                                                <span style={{ fontSize: '12px' }}>Upload a picture for this combo</span>
+                                            <div  className="ext-cls-7542232d">
+                                                <span  className="ext-cls-dc6c2d13">Drag & drop or Click to Browse</span>
+                                                <span  className="ext-cls-8eb8384d">Upload a picture for this combo</span>
                                             </div>
                                         )}
-                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                        <input className="ext-cls-e032a669"  type="file" accept="image/*"  onChange={async (e) => {
                                             const file = e.target.files[0];
                                             if (file) {
                                                 const formData = new FormData();
@@ -241,54 +239,54 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                                         }} />
                                     </label>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ flex: 1, height: '1px', background: 'var(--card-border)' }}></div>
-                                        <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)' }}>OR</span>
-                                        <div style={{ flex: 1, height: '1px', background: 'var(--card-border)' }}></div>
+                                    <div  className="ext-cls-cc0ebbd6">
+                                        <div  className="ext-cls-83932eff"></div>
+                                        <span  className="ext-cls-0c40bbfd">OR</span>
+                                        <div  className="ext-cls-83932eff"></div>
                                     </div>
 
-                                    <input className="glass-input" type="text" value={comboForm.image_url} onChange={e => setComboForm({...comboForm, image_url: e.target.value})} style={{ width: '100%', padding: '12px', outline: 'none' }} placeholder="Paste external image URL here (https://...)" />
+                                    <input className="glass-input st-cls-02f9cc33" type="text" value={comboForm.image_url} onChange={e => setComboForm({...comboForm, image_url: e.target.value})}  placeholder="Paste external image URL here (https://...)" />
 
                                     {comboForm.image_url && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '16px', border: '1px solid var(--card-border)', marginTop: '4px' }}>
-                                            <img src={comboForm.image_url.startsWith('http') ? comboForm.image_url : `${API_URL}${comboForm.image_url}`} alt="Preview" style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} />
-                                            <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: '600', flex: 1, wordBreak: 'break-all' }}>{comboForm.image_url}</span>
-                                            <button type="button" onClick={() => setComboForm({ ...comboForm, image_url: '' })} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: '700', cursor: 'pointer' }}>Remove</button>
+                                        <div  className="ext-cls-86e0e3f9">
+                                            <img src={comboForm.image_url.startsWith('http') ? comboForm.image_url : `${API_URL}${comboForm.image_url}`} alt="Preview"  className="ext-cls-20ee7116" />
+                                            <span  className="ext-cls-7802e11a">{comboForm.image_url}</span>
+                                            <button type="button" onClick={() => setComboForm({ ...comboForm, image_url: '' })} className="st-cls-d7ac878f">Remove</button>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '15px', fontWeight: '900', color: 'white' }}>Select Items for Combo</label>
+                                <label  className="ext-cls-35ffac0d">Select Items for Combo</label>
                                 
-                                <div style={{ position: 'relative', marginBottom: '12px' }}>
-                                    <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                <div  className="ext-cls-4e88c209">
+                                    <Search size={16} color="var(--text-muted)"  className="ext-cls-41b4c9db" />
                                     <input 
-                                        className="glass-input"
+                                        className="glass-input st-cls-aa92f1d0"
                                         type="text" 
                                         placeholder="Search menu items..." 
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{ width: '100%', padding: '12px 12px 12px 36px', outline: 'none' }}
+                                        
                                     />
                                 </div>
 
-                                <div style={{ background: 'var(--badge-bg)', border: '1px solid var(--card-border)', borderRadius: '16px', padding: '16px', maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div  className="ext-cls-6c2b2170">
                                     {menuItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => {
                                         const comp = comboForm.combo_components.find(c => c.itemId === item.id);
                                         const qty = comp ? comp.qty : 0;
                                         
                                         return (
-                                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>{item.name}</h4>
-                                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>₹{item.price}</span>
+                                            <div key={item.id}  className="ext-cls-86399b7e">
+                                                <div  className="ext-cls-04a898f1">
+                                                    <h4  className="ext-cls-21cd296a">{item.name}</h4>
+                                                    <span  className="ext-cls-b98663d3">₹{item.price}</span>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '8px' }}>
-                                                    <button onClick={() => handleComponentChange(item.id, qty - 1)} style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', cursor: 'pointer' }}>-</button>
-                                                    <span style={{ width: '20px', textAlign: 'center', fontWeight: '800' }}>{qty}</span>
-                                                    <button onClick={() => handleComponentChange(item.id, qty + 1)} style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: 'pointer' }}>+</button>
+                                                <div  className="ext-cls-c3428cdd">
+                                                    <button onClick={() => handleComponentChange(item.id, qty - 1)} className="st-cls-5258f22d">-</button>
+                                                    <span  className="ext-cls-308caaaa">{qty}</span>
+                                                    <button onClick={() => handleComponentChange(item.id, qty + 1)} className="st-cls-08bc0005">+</button>
                                                 </div>
                                             </div>
                                         );
@@ -297,9 +295,9 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                             </div>
                         </div>
 
-                        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--card-border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <button onClick={() => setIsModalOpen(false)} style={{ padding: '12px 24px', borderRadius: '12px', background: 'transparent', color: 'white', border: '1px solid var(--card-border)', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
-                            <button onClick={handleSaveCombo} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                        <div  className="ext-cls-482dfb3a">
+                            <button onClick={() => setIsModalOpen(false)} className="st-cls-94b45b1a">Cancel</button>
+                            <button onClick={handleSaveCombo}  className="ext-cls-56fe5152">
                                 <Save size={16} /> Save Combo
                             </button>
                         </div>

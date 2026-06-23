@@ -16,51 +16,51 @@ export default function StaffMemberModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999, position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '500px', width: '90%', padding: '32px', borderRadius: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
-        <h3 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{editingStaffId ? 'Edit Neural Member' : 'Recruit New Member'}</h3>
-        <p className="text-muted" style={{ fontSize: '14px', marginBottom: '24px' }}>Onboard elite operators to manage branch endpoints.</p>
+    <div className="modal-overlay ext-cls-ba6f5ec3" >
+      <div className="modal-content glass-panel animate-slide-up ext-cls-24f6a0b2" >
+        <h3  className="ext-cls-46acfb85">{editingStaffId ? 'Edit Neural Member' : 'Recruit New Member'}</h3>
+        <p className="text-muted ext-cls-09ad805c" >Onboard elite operators to manage branch endpoints.</p>
 
-        <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleAddStaff}  className="ext-cls-21558a0c">
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Full Name *</label>
+            <label  className="ext-cls-0d619f48">Full Name *</label>
             <input
               type="text"
               placeholder="e.g. John Doe"
               value={newStaff.name}
               onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
               required
-              style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+              className="st-cls-c20866b5"
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Email Address *</label>
+            <label  className="ext-cls-0d619f48">Email Address *</label>
             <input
               type="email"
               placeholder="e.g. john@swiggy.com"
               value={newStaff.email}
               onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
               required
-              style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+              className="st-cls-c20866b5"
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Secure Password *</label>
-            <div style={{ position: 'relative' }}>
+            <label  className="ext-cls-0d619f48">Secure Password *</label>
+            <div  className="ext-cls-c46a5b00">
               <input
                 type={showStaffPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={newStaff.password}
                 onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
                 required
-                style={{ width: '100%', height: '48px', padding: '12px 48px 12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none' }}
+                className="st-cls-801ab5af"
               />
               <button
                 type="button"
                 onClick={() => setShowStaffPassword(!showStaffPassword)}
-                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                className="st-cls-35b457c8"
               >
                 {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -68,11 +68,11 @@ export default function StaffMemberModal({
           </div>
 
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Operational Role *</label>
+            <label  className="ext-cls-0d619f48">Operational Role *</label>
             <select
               value={newStaff.role}
               onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
-              style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+              className="st-cls-ec9e7265"
             >
               <option value="admin">Branch Admin</option>
               <option value="super_admin">Master Admin</option>
@@ -80,11 +80,11 @@ export default function StaffMemberModal({
           </div>
 
           <div>
-            <label style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', textTransform: 'uppercase' }}>Assign to Restaurant *</label>
+            <label  className="ext-cls-0d619f48">Assign to Restaurant *</label>
             <select
               value={newStaff.restaurant_id || ''}
               onChange={(e) => setNewStaff({ ...newStaff, restaurant_id: e.target.value || null })}
-              style={{ width: '100%', height: '48px', padding: '12px 16px', borderRadius: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--card-border)', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+              className="st-cls-ec9e7265"
             >
               <option value="">No Specific Restaurant (Global)</option>
               {restaurantsList.map(r => (
@@ -93,7 +93,7 @@ export default function StaffMemberModal({
             </select>
           </div>
 
-          <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+          <div  className="ext-cls-11faf9b7">
             <button
               type="button"
               className="btn-global-outline"

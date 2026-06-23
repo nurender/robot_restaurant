@@ -7,12 +7,12 @@ export default function MenuOrderView({ orderedMenu, setOrderedMenu, dragItemInd
     <div className="view-container animate-slide-up view-container-deep">
       <div className="view-header-row mb-8">
         <div className="header-left">
-          <h1 className="view-title" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)' }}>Menu Ordering</h1>
-          <p className="text-muted" style={{ marginTop: '4px', fontSize: '15px' }}>Arrange the sequence of dishes in your digital menu.</p>
+          <h1 className="view-title ext-cls-46d76c78" >Menu Ordering</h1>
+          <p className="text-muted ext-cls-a6a615ae" >Arrange the sequence of dishes in your digital menu.</p>
         </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div  className="ext-cls-78e7532f">
           <button
-            className="btn-primary"
+            className="btn-primary st-cls-855f6b9d"
             onClick={async () => {
               try {
                 const payload = orderedMenu.map((item, index) => ({ id: item.id, sort_order: index }));
@@ -21,7 +21,7 @@ export default function MenuOrderView({ orderedMenu, setOrderedMenu, dragItemInd
                 fetchData('Menu Reordered');
               } catch (e) { alert("Save failed"); }
             }}
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', padding: '12px 24px', borderRadius: '14px', fontWeight: '800' }}
+            
           >
             Save Sequence
           </button>
@@ -30,12 +30,12 @@ export default function MenuOrderView({ orderedMenu, setOrderedMenu, dragItemInd
 
       <div className="glass-panel glass-panel-styled">
         <table className="table-styled">
-          <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '13px' }}>
-              <th style={{ padding: '20px' }}>ORDER</th>
-              <th style={{ padding: '20px' }}>DISH NAME</th>
-              <th style={{ padding: '20px' }}>CATEGORY</th>
-              <th style={{ padding: '20px', textAlign: 'right' }}>CONTROLS</th>
+          <thead  className="ext-cls-df65cc38">
+            <tr  className="ext-cls-cd95e8a0">
+              <th  className="ext-cls-fddc565a">ORDER</th>
+              <th  className="ext-cls-fddc565a">DISH NAME</th>
+              <th  className="ext-cls-fddc565a">CATEGORY</th>
+              <th  className="ext-cls-5d7d2d8c">CONTROLS</th>
             </tr>
           </thead>
           <tbody>
@@ -52,29 +52,28 @@ export default function MenuOrderView({ orderedMenu, setOrderedMenu, dragItemInd
                   setOrderedMenu(newArr);
                   setDragItemIndex(null);
                 }}
+                className="menu-order-row"
                 style={{
-                  borderBottom: '1px solid var(--card-border)',
-                  background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                  cursor: 'grab'
+                  background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'
                 }}
               >
-                <td style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ color: 'var(--text-muted)', cursor: 'grab' }}>⠿</span>
-                    <span style={{ background: 'var(--bg-deep)', padding: '4px 12px', borderRadius: '8px', fontWeight: '800', color: 'var(--accent-primary)' }}>{idx + 1}</span>
+                <td  className="ext-cls-fddc565a">
+                  <div  className="ext-cls-cc0ebbd6">
+                    <span  className="ext-cls-6e57e604">⠿</span>
+                    <span  className="ext-cls-0707aabd">{idx + 1}</span>
                   </div>
                 </td>
-                <td style={{ padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {item.image_url && <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />}
-                    <span style={{ fontWeight: '700' }}>{item.name}</span>
+                <td  className="ext-cls-fddc565a">
+                  <div  className="ext-cls-cc0ebbd6">
+                    {item.image_url && <img src={item.image_url} alt=""  className="ext-cls-88747601" />}
+                    <span  className="ext-cls-d71cfe4a">{item.name}</span>
                   </div>
                 </td>
-                <td style={{ padding: '20px' }}>
-                  <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>{item.category}</span>
+                <td  className="ext-cls-fddc565a">
+                  <span  className="ext-cls-80abd924">{item.category}</span>
                 </td>
-                <td style={{ padding: '20px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <td  className="ext-cls-5d7d2d8c">
+                  <div  className="ext-cls-013653c3">
                     <button
                       disabled={idx === 0}
                       onClick={() => {
@@ -82,7 +81,7 @@ export default function MenuOrderView({ orderedMenu, setOrderedMenu, dragItemInd
                         [newArr[idx - 1], newArr[idx]] = [newArr[idx], newArr[idx - 1]];
                         setOrderedMenu(newArr);
                       }}
-                      style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--bg-deep)', color: 'var(--text-main)', cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.2 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      className={`menu-order-control-btn ${idx === 0 ? 'disabled' : ''}`}
                     >
                       <ChevronUp size={16} />
                     </button>
@@ -93,7 +92,7 @@ export default function MenuOrderView({ orderedMenu, setOrderedMenu, dragItemInd
                         [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
                         setOrderedMenu(newArr);
                       }}
-                      style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--bg-deep)', color: 'var(--text-main)', cursor: idx === orderedMenu.length - 1 ? 'not-allowed' : 'pointer', opacity: idx === orderedMenu.length - 1 ? 0.2 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      className={`menu-order-control-btn ${idx === orderedMenu.length - 1 ? 'disabled' : ''}`}
                     >
                       <ChevronDown size={16} />
                     </button>

@@ -25,36 +25,36 @@ export default function RoleEditorModal({
   };
 
   return (
-    <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: '20px' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'hidden', background: 'var(--card-bg)', borderRadius: '32px', border: '1px solid var(--card-border)', boxShadow: '0 40px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '40px 40px 20px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="modal-overlay ext-cls-adf4c2ed" >
+      <div className="glass-panel ext-cls-fa1b0ca0" >
+        <div  className="ext-cls-30a8614c">
           <div>
-            <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)' }}>{currentRoleData.id ? 'Edit Access Role' : 'Initialize New Role'}</h2>
-            <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Modify the security parameters and permitted system modules.</p>
+            <h2  className="ext-cls-d2df4e7d">{currentRoleData.id ? 'Edit Access Role' : 'Initialize New Role'}</h2>
+            <p  className="ext-cls-6abaddeb">Modify the security parameters and permitted system modules.</p>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'var(--bg-deep)', border: 'none', color: 'var(--text-main)', width: '40px', height: '40px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Plus size={20} style={{ transform: 'rotate(45deg)' }} />
+            
+           className="ext-cls-5e24061f">
+            <Plus size={20}  className="ext-cls-6fd853ff" />
           </button>
         </div>
 
-        <div style={{ padding: '30px 40px', overflowY: 'auto', flex: 1 }}>
-          <div style={{ marginBottom: '32px' }}>
-            <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '10px', fontWeight: '800', letterSpacing: '1px' }}>ROLE IDENTIFIER</label>
+        <div  className="ext-cls-09618076">
+          <div  className="ext-cls-c88a4204">
+            <label  className="ext-cls-ac894140">ROLE IDENTIFIER</label>
             <input
               type="text"
               value={currentRoleData.name}
               onChange={(e) => setCurrentRoleData({ ...currentRoleData, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
               placeholder="e.g. store_manager"
-              style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', background: 'var(--bg-deep)', border: '1px solid var(--card-border)', color: 'var(--text-main)', outline: 'none', fontSize: '16px', fontWeight: '600' }}
+              className="st-cls-28bd0097"
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '12px', marginBottom: '15px', fontWeight: '800', letterSpacing: '1px' }}>ACCESS MATRIX</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px' }}>
+          <div  className="ext-cls-02be399f">
+            <label  className="ext-cls-4602bfef">ACCESS MATRIX</label>
+            <div  className="ext-cls-f64ce9bf">
               {[
                 'dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'menu_order',
                 'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes',
@@ -89,7 +89,7 @@ export default function RoleEditorModal({
           </div>
         </div>
 
-        <div style={{ padding: '30px 40px', borderTop: '1px solid var(--border-default)', display: 'flex', gap: '16px', background: 'var(--bg-secondary)' }}>
+        <div  className="ext-cls-931e0dd2">
           <button
             className="btn-global-outline"
             onClick={onClose}

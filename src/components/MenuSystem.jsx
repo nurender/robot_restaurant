@@ -145,8 +145,8 @@ const MenuSystem = ({
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', whiteSpace: 'nowrap' }} className="scrollbar-hidden">
-                    <div className="menu-search-wrapper" style={{ flex: 1, minWidth: '150px', margin: 0 }}>
+                <div  className="scrollbar-hidden ext-cls-c4246a82">
+                    <div className="menu-search-wrapper ext-cls-59edb03f" >
                         <Search size={18} className="search-icon" />
                         <input
                             type="text"
@@ -160,8 +160,8 @@ const MenuSystem = ({
                         )}
                     </div>
 
-                    <div
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: '0 8px' }}
+                    <div className="ext-cls-aaab078c" 
+                        
                         onClick={() => {
                             if (vegFilter === 'veg') {
                                 setShowVegOffConfirm(true);
@@ -198,7 +198,7 @@ const MenuSystem = ({
                         className={`category-chip ${activeCategory === 'All' ? 'active' : ''}`}
                         onClick={() => setActiveCategory('All')}
                     >
-                        All <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '4px' }}>({extendedMenuCategories.reduce((acc, cat) => cat.isVirtual ? acc : acc + cat.items.length, 0)})</span>
+                        All <span  className="ext-cls-cddc1c99">({extendedMenuCategories.reduce((acc, cat) => cat.isVirtual ? acc : acc + cat.items.length, 0)})</span>
                     </button>
                     {extendedMenuCategories.map((cat) => (
                         <button
@@ -206,7 +206,7 @@ const MenuSystem = ({
                             className={`category-chip ${activeCategory === cat.category ? 'active' : ''}`}
                             onClick={() => setActiveCategory(cat.category)}
                         >
-                            {cat.category} <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '4px' }}>({cat.items.length})</span>
+                            {cat.category} <span  className="ext-cls-cddc1c99">({cat.items.length})</span>
                         </button>
                     ))}
                 </div>
@@ -232,11 +232,11 @@ const MenuSystem = ({
                 ) : (
                     <>
                         {activeCategory === 'All' && menuSearchTerm === '' && featuredItems.length > 0 && (
-                            <div style={{ marginBottom: '24px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '900', margin: '0 16px 12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div  className="ext-cls-16d93ac1">
+                                <h3  className="ext-cls-57765f60">
                                     ✨ Chef's Signatures
                                 </h3>
-                                <div className="featured-slider scrollbar-hidden" style={{ display: 'flex', gap: '16px', overflowX: 'auto', padding: '0 16px 16px 16px', scrollSnapType: 'x mandatory' }}>
+                                <div className="featured-slider scrollbar-hidden ext-cls-07e83c7e" >
                                     {featuredItems.map((fItem, idx) => {
                                         const hasDiscount = fItem.discount_type !== 'none' && fItem.discount_value > 0;
                                         const basePrice = Number(fItem.price);
@@ -253,30 +253,30 @@ const MenuSystem = ({
                                         const fQty = getItemQty(fItem, null, []);
 
                                         return (
-                                            <div key={idx} style={{ minWidth: '160px', width: '160px', flexShrink: 0, scrollSnapAlign: 'start', background: 'var(--card-bg)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', border: '1px solid var(--card-border)', position: 'relative' }}>
+                                            <div key={idx}  className="ext-cls-6ac2b390">
                                                 {hasDiscount && (
-                                                    <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'linear-gradient(90deg, #ff0f7b, #f89b29)', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '8px', zIndex: 10 }}>{discountBadge}</div>
+                                                    <div  className="ext-cls-76cfc67f">{discountBadge}</div>
                                                 )}
-                                                <div style={{ width: '100%', height: '120px', background: 'var(--bg-secondary)', overflow: 'hidden' }} onClick={() => fItem.image_url && setZoomedImage(getMediaUrl(fItem.image_url))}>
+                                                <div className="ext-cls-8035aa17"   onClick={() => fItem.image_url && setZoomedImage(getMediaUrl(fItem.image_url))}>
                                                     {fItem.image_url ? (
-                                                        <img src={getMediaUrl(fItem.image_url)} alt={fItem.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <img src={getMediaUrl(fItem.image_url)} alt={fItem.name}  className="ext-cls-80fb12aa" />
                                                     ) : (
-                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChefHat size={32} opacity={0.2} /></div>
+                                                        <div  className="ext-cls-a3801a46"><ChefHat size={32} opacity={0.2} /></div>
                                                     )}
                                                 </div>
-                                                <div style={{ padding: '12px' }}>
-                                                    <h5 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fItem.name}</h5>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                                                        <span style={{ fontSize: '14px', fontWeight: '900', color: 'var(--accent-primary)' }}>₹{Math.round(currentPrice)}</span>
-                                                        {hasDiscount && <span style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)' }}>₹{basePrice}</span>}
+                                                <div  className="ext-cls-8478a686">
+                                                    <h5  className="ext-cls-864c90f1">{fItem.name}</h5>
+                                                    <div  className="ext-cls-ab4ba23a">
+                                                        <span  className="ext-cls-f26f28a1">₹{Math.round(currentPrice)}</span>
+                                                        {hasDiscount && <span  className="ext-cls-3df6096d">₹{basePrice}</span>}
                                                     </div>
                                                     {fQty === 0 ? (
-                                                        <button onClick={() => handleManualCartUpdate(fItem, 1, null, [])} style={{ width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s' }}><Plus size={14} /> ADD</button>
+                                                        <button onClick={() => handleManualCartUpdate(fItem, 1, null, [])} className="st-cls-a85d508c"><Plus size={14} /> ADD</button>
                                                     ) : (
-                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', padding: '4px', borderRadius: '8px', color: 'white' }}>
-                                                            <button onClick={() => handleManualCartUpdate(fItem, -1, null, [])} style={{ border: 'none', background: 'transparent', color: 'white', padding: '4px', cursor: 'pointer' }}><Minus size={14} /></button>
-                                                            <span style={{ fontWeight: '800', fontSize: '14px' }}>{fQty}</span>
-                                                            <button onClick={() => handleManualCartUpdate(fItem, 1, null, [])} style={{ border: 'none', background: 'transparent', color: 'white', padding: '4px', cursor: 'pointer' }}><Plus size={14} /></button>
+                                                        <div  className="ext-cls-e0f712ee">
+                                                            <button onClick={() => handleManualCartUpdate(fItem, -1, null, [])} className="st-cls-f69098dc"><Minus size={14} /></button>
+                                                            <span  className="ext-cls-64a1327f">{fQty}</span>
+                                                            <button onClick={() => handleManualCartUpdate(fItem, 1, null, [])} className="st-cls-f69098dc"><Plus size={14} /></button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -414,7 +414,7 @@ const MenuSystem = ({
                                                             )}
                                                             {isUnavailable && (
                                                                 <div className="unavailable-overlay" style={timeMsg ? { background: 'rgba(0,0,0,0.8)', color: '#eab308' } : {}}>
-                                                                    {timeMsg ? <span style={{ fontSize: '11px', lineHeight: '1.4', textAlign: 'center', padding: '0 4px' }}>{timeMsg}</span> : 'SOLD OUT'}
+                                                                    {timeMsg ? <span  className="ext-cls-93b55857">{timeMsg}</span> : 'SOLD OUT'}
                                                                 </div>
                                                             )}
                                                             {item.video_url && <div className="video-dot-indicator"><Play size={8} fill="white" /></div>}
@@ -422,70 +422,70 @@ const MenuSystem = ({
 
                                                         <div className="item-details">
                                                             <div className="item-header">
-                                                                <h6 className="item-name" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                                <h6 className="item-name ext-cls-afade7f3" >
                                                                     {item.veg_type === 'veg' && (
-                                                                        <div style={{ width: '12px', height: '12px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
+                                                                        <div  className="ext-cls-ae45e9ff">
+                                                                            <div  className="ext-cls-43522f59"></div>
                                                                         </div>
                                                                     )}
                                                                     {item.veg_type === 'nonveg' && (
-                                                                        <div style={{ width: '12px', height: '12px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                                                            <div style={{ width: '0', height: '0', borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderBottom: '6px solid #ef4444' }}></div>
+                                                                        <div  className="ext-cls-8bce84d5">
+                                                                            <div  className="ext-cls-1d88b8d6"></div>
                                                                         </div>
                                                                     )}
                                                                     {item.veg_type === 'egg' && (
-                                                                        <div style={{ width: '12px', height: '12px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
+                                                                        <div  className="ext-cls-68d4df2e">
+                                                                            <div  className="ext-cls-8882b236"></div>
                                                                         </div>
                                                                     )}
                                                                     {item.name}
                                                                     {item.spice_level > 0 && (
-                                                                        <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '1px 4px', borderRadius: '4px', letterSpacing: '1px' }}>
+                                                                        <span  className="ext-cls-90e26b58">
                                                                             {'🌶️'.repeat(Math.min(item.spice_level, 5))}
                                                                         </span>
                                                                     )}
                                                                 </h6>
-                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                        <span className="item-price" style={{ color: 'var(--text-main)', fontSize: '15px' }}>₹{currentPrice}</span>
+                                                                <div  className="ext-cls-7dd8456c">
+                                                                    <div  className="ext-cls-cd210fb4">
+                                                                        <span className="item-price ext-cls-5e0c7af4" >₹{currentPrice}</span>
                                                                         {hasDiscount && (
-                                                                            <span style={{ fontSize: '12px', textDecoration: 'line-through', color: 'var(--text-muted)', fontWeight: '500' }}>₹{Math.round(originalDisplayPrice)}</span>
+                                                                            <span  className="ext-cls-9cd9d24f">₹{Math.round(originalDisplayPrice)}</span>
                                                                         )}
                                                                     </div>
                                                                     {hasDiscount && (
-                                                                        <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '800', letterSpacing: '0.5px' }}>{discountBadge}</span>
+                                                                        <span  className="ext-cls-483d84ed">{discountBadge}</span>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                            <div  className="ext-cls-9c3ab494">
                                                                 {item.is_best_seller && (
-                                                                    <span style={{ fontSize: '10px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', letterSpacing: '0.5px' }}>🔥 BEST SELLER</span>
+                                                                    <span  className="ext-cls-2df3e3a1">🔥 BEST SELLER</span>
                                                                 )}
                                                                 {item.is_today_special && (
-                                                                    <span style={{ fontSize: '10px', background: 'rgba(124, 58, 237, 0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', letterSpacing: '0.5px' }}>✨ TODAY'S SPECIAL</span>
+                                                                    <span  className="ext-cls-bf76c169">✨ TODAY'S SPECIAL</span>
                                                                 )}
                                                                 {item.is_chef_special && (
-                                                                    <span style={{ fontSize: '10px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', letterSpacing: '0.5px' }}>👨‍🍳 CHEF'S SPECIAL</span>
+                                                                    <span  className="ext-cls-3b3a0ae6">👨‍🍳 CHEF'S SPECIAL</span>
                                                                 )}
                                                             </div>
-                                                            <p className="item-description" style={{ marginTop: '4px' }}>{item.description || "Delicately crafted for your tech palate."}</p>
+                                                            <p className="item-description ext-cls-8221376a" >{item.description || "Delicately crafted for your tech palate."}</p>
 
                                                             {item.is_combo && Array.isArray(item.combo_components) && item.combo_components.length > 0 && (
-                                                                <div style={{ marginTop: '6px', padding: '6px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontWeight: '600' }}>
-                                                                        <span style={{ color: 'var(--accent-primary)' }}>Includes:</span> {item.combo_components.map(c => `${c.qty}x ${c.name}`).join(' + ')}
+                                                                <div  className="ext-cls-eefe7a74">
+                                                                    <p  className="ext-cls-b2705f46">
+                                                                        <span  className="ext-cls-507943c3">Includes:</span> {item.combo_components.map(c => `${c.qty}x ${c.name}`).join(' + ')}
                                                                     </p>
                                                                 </div>
                                                             )}
 
                                                             {item.allow_coupons === false && (
-                                                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '6px' }}>
+                                                                <p  className="ext-cls-3f3408fb">
                                                                     🚫 Not eligible for coupons
                                                                 </p>
                                                             )}
 
                                                             {(hasVariants || hasAddons) && !item.is_combo && (
-                                                                <p style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '600', marginTop: '6px' }}>Customisable</p>
+                                                                <p  className="ext-cls-9a7565e0">Customisable</p>
                                                             )}
 
                                                             <div className="item-actions-row">
@@ -534,37 +534,37 @@ const MenuSystem = ({
                 const isEditing = !!customizingItem.editFromCartItem;
 
                 return (
-                    <div className="cart-summary-overlay animate-fade-in" onClick={() => setCustomizingItem(null)} style={{ zIndex: 99999 }}>
-                        <div className="cart-summary-modal zomato-modal slide-up" onClick={e => e.stopPropagation()} style={{ background: '#1c1c24', padding: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', padding: '16px', background: '#252530', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div className="cart-summary-overlay animate-fade-in st-cls-579dd541" onClick={() => setCustomizingItem(null)} >
+                        <div className="cart-summary-modal zomato-modal slide-up st-cls-2f5f82af" onClick={e => e.stopPropagation()} >
+                            <div  className="ext-cls-6daf4a30">
                                 {customizingItem.image_url ? (
-                                    <img src={getMediaUrl(customizingItem.image_url)} alt="food" style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', marginRight: '16px' }} />
+                                    <img src={getMediaUrl(customizingItem.image_url)} alt="food"  className="ext-cls-91e3328d" />
                                 ) : (
-                                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '16px' }}><ChefHat size={20} color="#fff" /></div>
+                                    <div  className="ext-cls-a9bf037a"><ChefHat size={20} color="#fff" /></div>
                                 )}
                                 <h3 style={{ fontSize: '18px', fontWeight: '800', ...{} }}>{customizingItem.name}</h3>
-                                <button onClick={() => setCustomizingItem(null)} style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                                <button onClick={() => setCustomizingItem(null)} className="st-cls-04465236">×</button>
                             </div>
 
-                            <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div className="custom-scrollbar ext-cls-89472074" >
                                 {customizingItem.options.length > 0 && (
-                                    <div style={{ background: '#252530', borderRadius: '16px', padding: '16px' }}>
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '2px' }}>Quantity / Size</h4>
-                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Required • Select 1 option</p>
+                                    <div  className="ext-cls-45aa22f3">
+                                        <div  className="ext-cls-3664c5f4">
+                                            <h4  className="ext-cls-b10f50c6">Quantity / Size</h4>
+                                            <p  className="ext-cls-76847ffc">Required • Select 1 option</p>
                                         </div>
                                         {customizingItem.options.map((opt, idx) => (
                                             <div key={idx} onClick={() => setTempVariant(opt.size)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: idx !== customizingItem.options.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', cursor: 'pointer' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ width: '12px', height: '12px', border: '1px solid #10b981', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
-                                                        <span style={{ position: 'absolute', top: '15%', left: '15%', width: '70%', height: '70%', background: '#10b981', borderRadius: '50%' }}></span>
+                                                <div  className="ext-cls-9fdd7fb0">
+                                                    <span  className="ext-cls-69f8da27">
+                                                        <span  className="ext-cls-14782637"></span>
                                                     </span>
-                                                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0' }}>{opt.size}</span>
+                                                    <span  className="ext-cls-c72e1af6">{opt.size}</span>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>₹{opt.price}</span>
+                                                <div  className="ext-cls-cc0ebbd6">
+                                                    <span  className="ext-cls-0f578bd7">₹{opt.price}</span>
                                                     <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${tempVariant === opt.size ? '#00e676' : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        {tempVariant === opt.size && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00e676' }}></div>}
+                                                        {tempVariant === opt.size && <div  className="ext-cls-4b752971"></div>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -573,25 +573,25 @@ const MenuSystem = ({
                                 )}
 
                                 {customizingItem.addons.length > 0 && (
-                                    <div style={{ background: '#252530', borderRadius: '16px', padding: '16px' }}>
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '2px' }}>Add Ons</h4>
-                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Choose optional addons</p>
+                                    <div  className="ext-cls-45aa22f3">
+                                        <div  className="ext-cls-3664c5f4">
+                                            <h4  className="ext-cls-b10f50c6">Add Ons</h4>
+                                            <p  className="ext-cls-76847ffc">Choose optional addons</p>
                                         </div>
                                         {customizingItem.addons.map((addon, idx) => {
                                             const isSelected = tempAddons.find(a => a.name === addon.name);
                                             return (
                                                 <div key={idx} onClick={() => handleTempAddonToggle(addon)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: idx !== customizingItem.addons.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', cursor: 'pointer' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span style={{ width: '12px', height: '12px', border: '1px solid #10b981', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
-                                                            <span style={{ position: 'absolute', top: '15%', left: '15%', width: '70%', height: '70%', background: '#10b981', borderRadius: '50%' }}></span>
+                                                    <div  className="ext-cls-9fdd7fb0">
+                                                        <span  className="ext-cls-69f8da27">
+                                                            <span  className="ext-cls-14782637"></span>
                                                         </span>
-                                                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#e2e8f0' }}>{addon.name}</span>
+                                                        <span  className="ext-cls-c72e1af6">{addon.name}</span>
                                                     </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                        <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '700' }}>₹{addon.price}</span>
+                                                    <div  className="ext-cls-cc0ebbd6">
+                                                        <span  className="ext-cls-0f578bd7">₹{addon.price}</span>
                                                         <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${isSelected ? '#00e676' : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSelected ? '#00e676' : 'transparent' }}>
-                                                            {isSelected && <span style={{ color: '#1a1a20', fontSize: '14px', fontWeight: '900', lineHeight: 1 }}>✓</span>}
+                                                            {isSelected && <span  className="ext-cls-38d4f7cb">✓</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -601,13 +601,13 @@ const MenuSystem = ({
                                 )}
                             </div>
 
-                            <div style={{ padding: '16px', background: '#1c1c24', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px' }}>
-                                    <button onClick={() => setTempQty(Math.max(1, tempQty - 1))} style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e676', border: 'none', background: 'transparent' }}><Minus size={18} /></button>
-                                    <span style={{ width: '20px', textAlign: 'center', fontWeight: '800', color: '#fff' }}>{tempQty}</span>
-                                    <button onClick={() => setTempQty(tempQty + 1)} style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00e676', border: 'none', background: 'transparent' }}><Plus size={18} /></button>
+                            <div  className="ext-cls-0fdf5fd9">
+                                <div  className="ext-cls-3cf8e96a">
+                                    <button onClick={() => setTempQty(Math.max(1, tempQty - 1))} className="st-cls-ea861532"><Minus size={18} /></button>
+                                    <span  className="ext-cls-6add94a1">{tempQty}</span>
+                                    <button onClick={() => setTempQty(tempQty + 1)} className="st-cls-ea861532"><Plus size={18} /></button>
                                 </div>
-                                <button onClick={confirmCustomization} style={{ flex: 1, background: '#00e676', color: '#1a1a20', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '16px', cursor: 'pointer' }}>
+                                <button onClick={confirmCustomization}  className="ext-cls-6d5c6501">
                                     {isEditing ? `Update item - ₹${custTotal}` : `Add item - ₹${custTotal}`}
                                 </button>
                             </div>
@@ -625,14 +625,14 @@ const MenuSystem = ({
                 }
 
                 return (
-                    <div className="cart-summary-overlay animate-fade-in" onClick={() => setPickingCustomizationItem(null)} style={{ zIndex: 99999 }}>
-                        <div className="cart-summary-modal zomato-modal slide-up" onClick={e => e.stopPropagation()} style={{ background: '#1c1c24', padding: '0 0 16px 0' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '800' }}>Choose customisation</h3>
-                                <button onClick={() => setPickingCustomizationItem(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                    <div className="cart-summary-overlay animate-fade-in st-cls-579dd541" onClick={() => setPickingCustomizationItem(null)} >
+                        <div className="cart-summary-modal zomato-modal slide-up st-cls-413bb026" onClick={e => e.stopPropagation()} >
+                            <div  className="ext-cls-4b4d85b2">
+                                <h3  className="ext-cls-4a7d9268">Choose customisation</h3>
+                                <button onClick={() => setPickingCustomizationItem(null)} className="st-cls-1743ee84">×</button>
                             </div>
 
-                            <div className="custom-scrollbar" style={{ maxHeight: '60vh', overflowY: 'auto', padding: '0 16px' }}>
+                            <div className="custom-scrollbar ext-cls-256d43e1" >
                                 {cartInstances.map((cItem, idx) => {
                                     const variantStr = cItem.selectedVariant ? cItem.selectedVariant.size : '';
                                     const addonsStr = cItem.selectedAddons && cItem.selectedAddons.length > 0 ? cItem.selectedAddons.map(a => a.name).join(', ') : '';
@@ -640,35 +640,35 @@ const MenuSystem = ({
 
                                     return (
                                         <div key={cItem.cartId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: idx !== cartInstances.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                                            <div style={{ flex: 1, paddingRight: '12px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                    <span style={{ width: '12px', height: '12px', border: '1px solid #10b981', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
-                                                        <span style={{ position: 'absolute', top: '15%', left: '15%', width: '70%', height: '70%', background: '#10b981', borderRadius: '50%' }}></span>
+                                            <div  className="ext-cls-294e1bbe">
+                                                <div  className="ext-cls-a9d65680">
+                                                    <span  className="ext-cls-69f8da27">
+                                                        <span  className="ext-cls-14782637"></span>
                                                     </span>
-                                                    <span style={{ fontSize: '15px', fontWeight: '700', color: '#e2e8f0' }}>{cItem.name}</span>
+                                                    <span  className="ext-cls-d64fb5fc">{cItem.name}</span>
                                                 </div>
-                                                {subText && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', lineHeight: '1.4' }}>{subText}</p>}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <p style={{ fontSize: '13px', fontWeight: '800', color: '#fff' }}>₹{cItem.price}</p>
-                                                    <button onClick={() => openCustomization(pickingCustomizationItem, pickingCustomizationItem.options, pickingCustomizationItem.addons, cItem)} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                                                        Edit <ChevronRight size={10} style={{ opacity: 0.7 }} />
+                                                {subText && <p  className="ext-cls-369bd971">{subText}</p>}
+                                                <div  className="ext-cls-cc0ebbd6">
+                                                    <p  className="ext-cls-fb310a2d">₹{cItem.price}</p>
+                                                    <button onClick={() => openCustomization(pickingCustomizationItem, pickingCustomizationItem.options, pickingCustomizationItem.addons, cItem)} className="st-cls-2484a034">
+                                                        Edit <ChevronRight size={10}  className="ext-cls-b72ed605" />
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div className="qty-controls-premium" style={{ background: 'rgba(0, 230, 118, 0.1)', border: '1px solid #00e676' }}>
-                                                <button onClick={() => handleManualCartUpdate(cItem, -1, cItem.selectedVariant, cItem.selectedAddons)} style={{ color: '#00e676' }}><Minus size={14} /></button>
-                                                <span className="qty-val" style={{ color: '#fff' }}>{cItem.qty}</span>
-                                                <button onClick={() => handleManualCartUpdate(cItem, 1, cItem.selectedVariant, cItem.selectedAddons)} style={{ color: '#00e676' }}><Plus size={14} /></button>
+                                            <div className="qty-controls-premium ext-cls-b4959e99" >
+                                                <button onClick={() => handleManualCartUpdate(cItem, -1, cItem.selectedVariant, cItem.selectedAddons)} className="st-cls-524b4cd3"><Minus size={14} /></button>
+                                                <span className="qty-val ext-cls-4c4f402a" >{cItem.qty}</span>
+                                                <button onClick={() => handleManualCartUpdate(cItem, 1, cItem.selectedVariant, cItem.selectedAddons)} className="st-cls-524b4cd3"><Plus size={14} /></button>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            <div style={{ padding: '16px 16px 0 16px', display: 'flex', justifyContent: 'center' }}>
+                            <div  className="ext-cls-c56449a7">
                                 <button
                                     onClick={() => openCustomization(pickingCustomizationItem, pickingCustomizationItem.options, pickingCustomizationItem.addons)}
-                                    style={{ background: 'transparent', color: '#00e676', border: 'none', fontWeight: '700', fontSize: '15px', padding: '8px 16px', cursor: 'pointer' }}
+                                    className="st-cls-20bbbbd1"
                                 >
                                     + Add new customisation
                                 </button>
@@ -679,19 +679,19 @@ const MenuSystem = ({
             })()}
 
             {showVegOffConfirm && (
-                <div className="modal-overlay" style={{ zIndex: 10005 }} onClick={() => setShowVegOffConfirm(false)}>
-                    <div className="booking-modal animate-slide-up" style={{ padding: '24px', textAlign: 'center', background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
-                        <div style={{ width: '80px', height: '80px', background: '#3b1c1c', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', border: '4px solid rgba(239, 68, 68, 0.4)' }}>
-                            <span style={{ fontSize: '36px', color: '#fff', fontWeight: '100' }}>!</span>
+                <div className="modal-overlay ext-cls-02b1ca14"  onClick={() => setShowVegOffConfirm(false)}>
+                    <div className="booking-modal animate-slide-up ext-cls-ea70d64e"  onClick={e => e.stopPropagation()}>
+                        <div  className="ext-cls-89dd369b">
+                            <span  className="ext-cls-16d9dd3f">!</span>
                         </div>
-                        <h3 className="view-title" style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#fff', fontWeight: '800' }}>Switch off Veg Mode?</h3>
-                        <p className="text-muted" style={{ marginBottom: '24px', fontSize: '13px', color: '#a1a1aa' }}>
+                        <h3 className="view-title ext-cls-3ddb7e52" >Switch off Veg Mode?</h3>
+                        <p className="text-muted ext-cls-e54a5860" >
                             You'll see all restaurants, including those serving non-veg dishes
                         </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div  className="ext-cls-6ccca837">
                             <button
-                                className="btn-secondary"
-                                style={{ width: '100%', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#ef4444', background: '#2c2c2e', padding: '14px', borderRadius: '14px', fontSize: '15px' }}
+                                className="btn-secondary ext-cls-a5042d5a"
+                                
                                 onClick={() => {
                                     setVegFilter('all');
                                     setShowVegOffConfirm(false);
@@ -700,8 +700,8 @@ const MenuSystem = ({
                                 Switch off
                             </button>
                             <button
-                                className="btn-primary"
-                                style={{ width: '100%', background: '#2c2c2e', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '14px', borderRadius: '14px', fontSize: '15px' }}
+                                className="btn-primary ext-cls-2339886a"
+                                
                                 onClick={() => setShowVegOffConfirm(false)}
                             >
                                 Keep using this mode

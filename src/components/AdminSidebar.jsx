@@ -67,7 +67,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
     });
 
     return (
-        <aside className={`admin-sidebar shadow-premium ${isCollapsed ? 'collapsed' : ''}`} style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <aside className={`admin-sidebar shadow-premium ${isCollapsed ? 'collapsed' : ''} ext-cls-946d012f`} >
             <div className="sidebar-brand">
                 <div className="brand-logo"><ChefHat size={24} color="white" /></div>
                 {!isCollapsed && <h2>AI RESTO</h2>}
@@ -76,7 +76,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
                 </button>
             </div>
 
-            <nav className="sidebar-nav scrollbar-hidden" style={{ flex: 1, overflowY: 'auto' }}>
+            <nav className="sidebar-nav scrollbar-hidden ext-cls-a3dcb368" >
                 {filteredItems.map((item) => (
                     <button
                         key={item.id}

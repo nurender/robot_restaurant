@@ -27,7 +27,7 @@ export default function NeuralInventoryView({
           <h1 className="view-title">Neural Inventory</h1>
           <p className="text-muted">Manage your digital menu items and system parameters.</p>
         </div>
-        <div className="flex gap-4 items-center flex-wrap" style={{ justifyContent: 'flex-end', display: 'flex', gap: '8px' }}>
+        <div className="flex gap-4 items-center flex-wrap ext-cls-1f258d28" >
           <button className="btn-secondary" onClick={fetchData}>
             <Clock size={18} /> Refresh Hub
           </button>
@@ -47,16 +47,16 @@ export default function NeuralInventoryView({
         </div>
       </div>
 
-      <div className="inventory-toolbar-premium shadow-premium" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '20px' }}>
-          <div className="search-box-integrated" style={{ flex: 1 }}>
+      <div className="inventory-toolbar-premium shadow-premium ext-cls-6fb77c85" >
+        <div  className="ext-cls-591c8413">
+          <div className="search-box-integrated ext-cls-04a898f1" >
             <Search size={18} className="search-icon-inner" />
             <input
               type="text"
               placeholder="Filter neural items by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-main)', fontSize: '15px' }}
+              className="st-cls-69764522"
             />
           </div>
           <div className="inventory-meta-badge">
@@ -66,7 +66,7 @@ export default function NeuralInventoryView({
           </div>
         </div>
 
-        <div className="category-quick-filters" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%', paddingTop: '12px', borderTop: '1px solid var(--card-border)' }}>
+        <div className="category-quick-filters ext-cls-8223b1f4" >
           {['All', ...categories.map(c => c.name)].map((cat) => (
             <button
               key={cat}
@@ -90,17 +90,17 @@ export default function NeuralInventoryView({
         </div>
       </div>
 
-      <div className="category-grouped-container" style={{ display: 'flex', flexDirection: 'column', gap: '40px', width: '100%', marginTop: '24px' }}>
+      <div className="category-grouped-container ext-cls-a66d859e" >
         {['All', ...categories.map(c => c.name)].filter(c => selectedCategory === 'All' || c === selectedCategory).map((catName) => {
           if (catName === 'All') return null;
           const catItems = menuItems.filter(item => item.category === catName && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
           if (catItems.length === 0) return null;
           const isCollapsed = collapsedCats.has(catName);
           return (
-            <div key={catName} className="category-group-block" style={{ width: '100%' }}>
+            <div key={catName} className="category-group-block ext-cls-e3f1dc98" >
               <h2
-                className="text-xl font-bold mb-4 flex items-center justify-between text-white"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '12px', borderLeft: '4px solid var(--accent-primary)', cursor: 'pointer', userSelect: 'none' }}
+                className="text-xl font-bold mb-4 flex items-center justify-between text-white ext-cls-1c197b64"
+                
                 onClick={() => {
                   setCollapsedCats(prev => {
                     const next = new Set(prev);
@@ -112,7 +112,7 @@ export default function NeuralInventoryView({
               >
                 <div className="flex items-center gap-2">
                   {catName}
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '20px' }}>{catItems.length} items</span>
+                  <span  className="ext-cls-24613b77">{catItems.length} items</span>
                 </div>
                 {isCollapsed ? <ChevronRight size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
               </h2>
@@ -125,8 +125,8 @@ export default function NeuralInventoryView({
                           <img
                             src={item.image_url.startsWith('http') ? item.image_url : `${API_URL}${item.image_url}`}
                             alt={item.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
+                            
+                          className="ext-cls-80fb12aa" />
                         ) : (
                           <div className="flex flex-col items-center gap-2 opacity-40">
                             <UtensilsCrossed size={36} className="text-accent" />
@@ -137,20 +137,20 @@ export default function NeuralInventoryView({
                       <div className="inv-details">
                         <div className="inv-main">
                           <div className="flex justify-between items-start">
-                            <strong className="text-lg" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong className="text-lg ext-cls-cd210fb4" >
                               {item.veg_type === 'veg' && (
-                                <div style={{ width: '12px', height: '12px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
+                                <div  className="ext-cls-ae45e9ff">
+                                  <div  className="ext-cls-43522f59"></div>
                                 </div>
                               )}
                               {item.veg_type === 'nonveg' && (
-                                <div style={{ width: '12px', height: '12px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                  <div style={{ width: '0', height: '0', borderLeft: '3px solid transparent', borderRight: '3px solid transparent', borderBottom: '6px solid #ef4444' }}></div>
+                                <div  className="ext-cls-8bce84d5">
+                                  <div  className="ext-cls-1d88b8d6"></div>
                                 </div>
                               )}
                               {item.veg_type === 'egg' && (
-                                <div style={{ width: '12px', height: '12px', border: '1px solid #eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', flexShrink: 0 }}>
-                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }}></div>
+                                <div  className="ext-cls-68d4df2e">
+                                  <div  className="ext-cls-8882b236"></div>
                                 </div>
                               )}
                               {item.name}
@@ -158,7 +158,7 @@ export default function NeuralInventoryView({
                           </div>
                         </div>
                         <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
-                        <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                        <div className="inv-meta ext-cls-0399e01d" >
                           <div className="inv-price text-xl">₹{item.price}</div>
                         </div>
                       </div>
@@ -181,7 +181,7 @@ export default function NeuralInventoryView({
                           setShowMenuPopup(true);
                         }}><Edit2 size={16} /></button>
                         <button onClick={() => deleteDish(item.id)} className="inv-btn-delete" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
-                          {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'currentColor' }} /> : <Trash2 size={16} />}
+                          {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small ext-cls-3edb750d"  /> : <Trash2 size={16} />}
                         </button>
                       </div>
                     </div>
@@ -200,10 +200,10 @@ export default function NeuralInventoryView({
           if (unassignedItems.length === 0) return null;
           const isUnassignedCollapsed = collapsedCats.has('Unassigned');
           return (
-            <div className="category-group-block" style={{ width: '100%' }}>
+            <div className="category-group-block ext-cls-e3f1dc98" >
               <h2
-                className="text-xl font-bold mb-4 flex items-center justify-between text-white"
-                style={{ paddingLeft: '12px', borderLeft: '4px solid var(--accent-primary)', cursor: 'pointer', userSelect: 'none' }}
+                className="text-xl font-bold mb-4 flex items-center justify-between text-white ext-cls-b8842304"
+                
                 onClick={() => {
                   setCollapsedCats(prev => {
                     const next = new Set(prev);
@@ -215,7 +215,7 @@ export default function NeuralInventoryView({
               >
                 <div className="flex items-center gap-2">
                   Unassigned Items
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '20px' }}>{unassignedItems.length} items</span>
+                  <span  className="ext-cls-24613b77">{unassignedItems.length} items</span>
                 </div>
                 {isUnassignedCollapsed ? <ChevronRight size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
               </h2>
@@ -228,8 +228,8 @@ export default function NeuralInventoryView({
                           <img
                             src={item.image_url.startsWith('http') ? item.image_url : `${API_URL}${item.image_url}`}
                             alt={item.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
+                            
+                          className="ext-cls-80fb12aa" />
                         ) : (
                           <div className="flex flex-col items-center gap-2 opacity-40">
                             <UtensilsCrossed size={36} className="text-accent" />
@@ -245,13 +245,13 @@ export default function NeuralInventoryView({
                               <div style={{ width: '12px', height: '12px', border: `1px solid ${item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981'}`, padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.veg_type === 'nonveg' ? '#ef4444' : item.veg_type === 'egg' ? '#f59e0b' : '#10b981' }} />
                               </div>
-                              {item.is_featured && <span style={{ fontSize: '10px', fontWeight: '800', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: '4px' }}>BESTSELLER</span>}
+                              {item.is_featured && <span  className="ext-cls-44895d1d">BESTSELLER</span>}
                             </div>
                           </div>
                           <span className="inv-cat-tag shadow-sm">{item.category || 'Unassigned'}</span>
                         </div>
                         <p className="inv-desc text-muted truncate-2-lines mt-2">{item.description}</p>
-                        <div className="inv-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                        <div className="inv-meta ext-cls-0399e01d" >
                           <div className="inv-price text-xl">₹{item.price}</div>
                         </div>
                       </div>
@@ -274,7 +274,7 @@ export default function NeuralInventoryView({
                           setShowMenuPopup(true);
                         }}><Edit2 size={16} /></button>
                         <button onClick={() => deleteDish(item.id)} className="inv-btn-delete" title="Purge Dish" disabled={loadingStates[`delete_dish_${item.id}`]}>
-                          {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small" style={{ borderTopColor: 'currentColor' }} /> : <Trash2 size={16} />}
+                          {loadingStates[`delete_dish_${item.id}`] ? <div className="spinner-small ext-cls-3edb750d"  /> : <Trash2 size={16} />}
                         </button>
                       </div>
                     </div>

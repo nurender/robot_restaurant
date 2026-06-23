@@ -9,28 +9,28 @@ export default function SmartInventoryHubView() {
           <h1 className="view-title">Smart Inventory Hub</h1>
           <p className="text-muted">Real-time resource tracking and replenishment forecasting.</p>
         </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div  className="ext-cls-78e7532f">
           <button className="btn-global-primary" >
             <Plus size={18} /> Add Stock
           </button>
         </div>
       </div>
 
-      <div className="glass-panel mb-8" style={{ padding: '24px', borderRadius: '24px', border: '1.5px solid var(--accent-primary)', background: 'rgba(124, 58, 237, 0.05)' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="glass-panel mb-8 ext-cls-72fc3d67" >
+        <h3  className="ext-cls-c456c5db">
           <Bot size={20} className="text-accent" /> AI Stock Forecast
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+        <div  className="ext-cls-0fa2f318">
           {[
             { item: 'Burger Buns', status: 'CRITICAL', days: '2 Days Left', color: 'var(--error)' },
             { item: 'Chicken Breast', status: 'STABLE', days: '8 Days Left', color: 'var(--success)' },
             { item: 'Coffee Beans', status: 'WARNING', days: '4 Days Left', color: 'var(--warning)' }
           ].map((f, i) => (
-            <div key={i} style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--card-border)' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>{f.item}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: f.color }}>{f.status}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{f.days}</span>
+            <div key={i}  className="ext-cls-4bc33aa8">
+              <div  className="ext-cls-0692cb42">{f.item}</div>
+              <div  className="ext-cls-1bdb758b">
+                <span  className="ext-cls-1406a30b">{f.status}</span>
+                <span  className="ext-cls-76847ffc">{f.days}</span>
               </div>
             </div>
           ))}
