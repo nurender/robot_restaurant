@@ -68,7 +68,6 @@ const processQueue = async () => {
                     WHERE id = $1
                 `, [task.campaign_id]);
             }
-            }
         } catch (e) {
             console.error("[QUEUE ERROR]", e);
         }
