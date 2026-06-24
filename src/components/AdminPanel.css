@@ -4885,7 +4885,6 @@ select option {
 }
 
 .ext-cls-9ba1fd4d {
-  padding: 40px !important;
   text-align: center !important;
   color: var(--text-muted) !important;
   font-size: 14px !important;
@@ -8862,8 +8861,16 @@ select option {
   height: 8px;
   border-radius: 50%;
 }
-.animate-spin { animation: spin 1s linear infinite; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
 
 /* Sidebar Configurator Styles */
@@ -8878,17 +8885,17 @@ select option {
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  background: var(--card-bg, rgba(255,255,255,0.03));
+  background: var(--card-bg, rgba(255, 255, 255, 0.03));
   border-radius: 16px;
-  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
   cursor: grab;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sc-item:hover {
-  background: var(--card-hover, rgba(255,255,255,0.06));
+  background: var(--card-hover, rgba(255, 255, 255, 0.06));
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .sc-item:active {
@@ -8917,7 +8924,7 @@ select option {
 }
 
 .sc-item:hover .sc-drag-handle {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
 }
 
@@ -8950,7 +8957,7 @@ select option {
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-muted);
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 2px 8px;
   border-radius: 4px;
   display: inline-block;
@@ -8966,10 +8973,10 @@ select option {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 8px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sc-status {
@@ -8992,7 +8999,7 @@ select option {
   width: 48px;
   height: 24px;
   border-radius: 12px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   cursor: pointer;
   position: relative;
@@ -9015,7 +9022,7 @@ select option {
   position: absolute;
   left: 3px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .sc-toggle-btn.active .sc-toggle-knob {

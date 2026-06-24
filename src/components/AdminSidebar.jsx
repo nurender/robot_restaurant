@@ -50,6 +50,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
 
     const filteredItems = menuItems.filter(item => {
         if (item.id === 'monitor' || item.id === 'customers' || item.id === 'menu_order') return false;
+        if (item.id === 'combos' && (adminUser.role === 'user' || adminUser.role === 'chef')) return false;
         // Ensure roles is an array (sometimes PG arrays come as strings depending on config)
         let rolesArray = item.roles;
         if (typeof rolesArray === 'string') {

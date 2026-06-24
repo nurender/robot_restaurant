@@ -48,7 +48,8 @@ export default function TeamHierarchyView({
                 </button>
                 <button
                   onClick={() => deleteRestaurant(resto.id)}
-                  className="btn-global-icon danger"
+                  className="st-cls-dcd8fdb7"
+                  style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)' }}
                 >
                   <Trash2 size={12} /> DELETE
                 </button>

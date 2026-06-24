@@ -905,6 +905,8 @@ const AdminPanel = () => {
               setShowNodePopup={setShowNodePopup}
               deleteRestaurant={deleteRestaurant}
               loadingStates={loadingStates}
+              setEditingStaffId={setEditingStaffId}
+              deleteUser={deleteUser}
             />
           )}
 
@@ -1058,6 +1060,7 @@ const AdminPanel = () => {
         editingStaffId={editingStaffId}
         restaurantsList={restaurantsList}
         isLoading={loadingStates['save_staff']}
+        dbRoles={dbRoles}
       />
 
       {/* Node Modal */}

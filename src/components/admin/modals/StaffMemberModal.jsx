@@ -9,7 +9,8 @@ export default function StaffMemberModal({
   handleAddStaff,
   editingStaffId,
   restaurantsList,
-  isLoading
+  isLoading,
+  dbRoles
 }) {
   const [showStaffPassword, setShowStaffPassword] = useState(false);
 
@@ -18,12 +19,12 @@ export default function StaffMemberModal({
   return (
     <div className="modal-overlay ext-cls-ba6f5ec3" >
       <div className="modal-content glass-panel animate-slide-up ext-cls-24f6a0b2" >
-        <h3  className="ext-cls-46acfb85">{editingStaffId ? 'Edit Neural Member' : 'Recruit New Member'}</h3>
+        <h3 className="ext-cls-46acfb85">{editingStaffId ? 'Edit Neural Member' : 'Recruit New Member'}</h3>
         <p className="text-muted ext-cls-09ad805c" >Onboard elite operators to manage branch endpoints.</p>
 
-        <form onSubmit={handleAddStaff}  className="ext-cls-21558a0c">
+        <form onSubmit={handleAddStaff} className="ext-cls-21558a0c">
           <div>
-            <label  className="ext-cls-0d619f48">Full Name *</label>
+            <label className="ext-cls-0d619f48">Full Name *</label>
             <input
               type="text"
               placeholder="e.g. John Doe"
@@ -35,7 +36,7 @@ export default function StaffMemberModal({
           </div>
 
           <div>
-            <label  className="ext-cls-0d619f48">Email Address *</label>
+            <label className="ext-cls-0d619f48">Email Address *</label>
             <input
               type="email"
               placeholder="e.g. john@swiggy.com"
@@ -47,8 +48,8 @@ export default function StaffMemberModal({
           </div>
 
           <div>
-            <label  className="ext-cls-0d619f48">Secure Password *</label>
-            <div  className="ext-cls-c46a5b00">
+            <label className="ext-cls-0d619f48">Secure Password *</label>
+            <div className="ext-cls-c46a5b00">
               <input
                 type={showStaffPassword ? "text" : "password"}
                 placeholder="••••••••"
@@ -68,23 +69,33 @@ export default function StaffMemberModal({
           </div>
 
           <div>
-            <label  className="ext-cls-0d619f48">Operational Role *</label>
+            <label className="ext-cls-0d619f48">Operational Role *</label>
             <select
-              value={newStaff.role}
+              value={newStaff.role || 'user'}
               onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
               className="st-cls-ec9e7265"
             >
-              <option value="admin">Branch Admin</option>
-              <option value="super_admin">Master Admin</option>
+              <option value="user">USER (Default)</option>
+              {dbRoles && dbRoles.length > 0 ? (
+                dbRoles.map(r => (
+                  <option key={r.name} value={r.name}>{r.name.replace('_', ' ').toUpperCase()}</option>
+                ))
+              ) : (
+                <>
+                  <option value="admin">Branch Admin</option>
+                  <option value="super_admin">Master Admin</option>
+                </>
+              )}
             </select>
           </div>
 
           <div>
-            <label  className="ext-cls-0d619f48">Assign to Restaurant *</label>
+            <label className="ext-cls-0d619f48">Assign to Restaurant *</label>
             <select
               value={newStaff.restaurant_id || ''}
               onChange={(e) => setNewStaff({ ...newStaff, restaurant_id: e.target.value || null })}
-              className="st-cls-ec9e7265"
+              className={`st-cls-ec9e7265 opacity-50 cursor-not-allowed`}
+              disabled={true}
             >
               <option value="">No Specific Restaurant (Global)</option>
               {restaurantsList.map(r => (
@@ -93,12 +104,12 @@ export default function StaffMemberModal({
             </select>
           </div>
 
-          <div  className="ext-cls-11faf9b7">
+          <div className="ext-cls-11faf9b7">
             <button
               type="button"
               className="btn-global-outline"
               onClick={onClose}
-              
+
             >
               Cancel
             </button>
@@ -106,7 +117,7 @@ export default function StaffMemberModal({
               type="submit"
               className="btn-global-primary"
               disabled={isLoading}
-              
+
             >
               {isLoading ? <div className="spinner-small" /> : 'Save Member'}
             </button>
