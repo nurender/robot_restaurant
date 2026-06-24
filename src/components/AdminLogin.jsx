@@ -1,4 +1,6 @@
+import apiService from '../services/apiService';
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChefHat, Lock, Mail, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
 import './AdminLogin.css';
@@ -10,6 +12,7 @@ const AdminLogin = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -17,11 +20,14 @@ const AdminLogin = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API_URL}/api/login`, { email, password });
+            const response = await apiService.login({ email, password });
             if (response.data.success) {
                 // Save session
                 localStorage.setItem('admin_token', JSON.stringify(response.data.user));
-                window.location.href = '/admin';
+                if (response.data.token) {
+                    localStorage.setItem('jwt_token', response.data.token);
+                }
+                navigate('/admin');
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Connection failed. Is the server running?');

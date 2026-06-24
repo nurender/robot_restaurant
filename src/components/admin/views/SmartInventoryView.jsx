@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { Search, Plus, Package, AlertTriangle, ArrowDownRight, ShoppingBag, ShieldAlert, Sparkles, TrendingUp, Zap, Truck, BarChart2, Layers } from 'lucide-react';
 import { useState } from 'react';
 const SmartInventoryView = () => {
@@ -318,7 +319,7 @@ const SmartInventoryView = () => {
                       <td  className="ext-cls-2b40f511">{sup.lastPrice}</td>
                       <td  className="ext-cls-ea0b5850">
                         <button 
-                          onClick={() => alert(`Creating Purchase Order for ${sup.name}...`)}
+                          onClick={() => toast(`Creating Purchase Order for ${sup.name}...`)}
                           className="btn-global-outline"
                         >
                           Issue PO

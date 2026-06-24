@@ -1,3 +1,5 @@
+import apiService from '../services/apiService';
+import toast from 'react-hot-toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Bell, Search } from 'lucide-react';
 import axios from 'axios';
@@ -20,7 +22,7 @@ import ManualOrderModal from './admin/modals/ManualOrderModal';
 import DashboardView from './admin/views/DashboardView';
 import OrdersHubView from './admin/views/OrdersHubView';
 import NeuralInventoryView from './admin/views/NeuralInventoryView';
-import TeamHierarchyView from './admin/views/TeamHierarchyView';
+
 import RestaurantNetworkView from './admin/views/RestaurantNetworkView';
 
 import MarketingHubView from './admin/views/MarketingHubView';
@@ -61,18 +63,6 @@ const AdminPanel = () => {
   const tabFromUrl = (pathParts.length > 2 && pathParts[2]) ? pathParts[2] : null;
   const activeTab = tabFromUrl || localStorage.getItem('admin_active_tab') || 'dashboard';
 
-  useEffect(() => {
-    if (!tabFromUrl && location.pathname === '/admin') {
-      navigate(`/admin/${activeTab}`, { replace: true });
-    } else if (tabFromUrl) {
-      localStorage.setItem('admin_active_tab', tabFromUrl);
-    }
-  }, [tabFromUrl, activeTab, navigate, location.pathname]);
-
-  const handleTabChange = (tab) => {
-    localStorage.setItem('admin_active_tab', tab);
-    navigate(`/admin/${tab}`);
-  };
   const {
     orders, setOrders, menuItems, setMenuItems, categories, setCategories,
     staffList, setStaffList, restaurantsList, setRestaurantsList, restaurantTables,
@@ -81,6 +71,52 @@ const AdminPanel = () => {
     setOrderedMenu, orderedSidebar, setOrderedSidebar, analyticsData,
     activeWaiterCalls, setActiveWaiterCalls, safeGetISODate, isConnected, isLoading, fetchData
   } = useAdminData(adminUser, activeTab);
+
+  useEffect(() => {
+    const ensureValidRoute = async () => {
+      let targetTab = activeTab;
+
+      try {
+        const sideRes = await apiService.getSidebar();
+        const validList = sideRes.data?.data || [];
+
+        if (validList.length > 0) {
+          const sorted = [...validList].sort((a, b) => a.sort_order - b.sort_order);
+          setOrderedSidebar(sorted);
+          const validPaths = sorted.map(item => item.path);
+
+          // Force base route mapping
+          if (!tabFromUrl || !validPaths.includes(targetTab)) {
+            targetTab = sorted[0].path;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to verify active routing", err);
+      }
+
+      if (!tabFromUrl || tabFromUrl !== targetTab) {
+        navigate(`/admin/${targetTab}`, { replace: true });
+      } else {
+        localStorage.setItem('admin_active_tab', targetTab);
+      }
+    };
+
+    // Only intercept when explicitly visiting root or if no ordered sidebar exists yet
+    if (!tabFromUrl || !orderedSidebar || orderedSidebar.length === 0) {
+      ensureValidRoute();
+    } else {
+      // Fast bypass using fetched hook data
+      const validPaths = orderedSidebar.map(i => i.path);
+      if (!validPaths.includes(activeTab)) {
+        ensureValidRoute();
+      }
+    }
+  }, [tabFromUrl, activeTab, navigate, location.pathname, orderedSidebar]);
+
+  const handleTabChange = (tab) => {
+    localStorage.setItem('admin_active_tab', tab);
+    navigate(`/admin/${tab}`);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -252,10 +288,10 @@ const AdminPanel = () => {
   };
 
   const submitManualOrder = async () => {
-    if (manualOrderData.items.length === 0) return alert("Please add at least one item");
+    if (manualOrderData.items.length === 0) return toast("Please add at least one item");
     try {
       if (isEditingOrder) {
-        await axios.put(`${API_URL}/api/orders/${manualOrderData.id}`, {
+        await apiService.updateOrder(manualOrderData.id, {
           customer_name: manualOrderData.customerName,
           customer_phone: manualOrderData.customerPhone,
           items: manualOrderData.items,
@@ -263,7 +299,7 @@ const AdminPanel = () => {
           total: manualOrderData.total
         });
       } else {
-        await axios.post(`${API_URL}/api/orders`, {
+        await apiService.createOrder({
           ...manualOrderData,
           restaurant_id: adminUser.restaurant_id,
           status: 'pending'
@@ -273,7 +309,7 @@ const AdminPanel = () => {
       setIsEditingOrder(false);
       setManualOrderData({ tableNumber: '1', items: [], customerName: '', customerPhone: '', total: 0 });
       fetchData();
-    } catch (e) { alert(isEditingOrder ? "Failed to update order" : "Failed to place order"); }
+    } catch (e) { toast(isEditingOrder ? "Failed to update order" : "Failed to place order"); }
   };
 
   const generateCouponCode = () => {
@@ -286,9 +322,9 @@ const AdminPanel = () => {
 
   const toggleCouponStatus = async (coupon) => {
     try {
-      await axios.put(`${API_URL}/api/mgmt/coupons/${coupon.id}`, { ...coupon, is_active: !coupon.is_active });
+      await apiService.updateCoupon(coupon.id, { ...coupon, is_active: !coupon.is_active });
       fetchData();
-    } catch (e) { alert("Failed to toggle status"); }
+    } catch (e) { toast.error("Failed to toggle status"); }
   };
 
   const handleEditCoupon = (coupon) => {
@@ -315,11 +351,11 @@ const AdminPanel = () => {
   const updateOrderStatus = async (id, status) => {
     setActionLoading(id, true);
     try {
-      await axios.put(`${API_URL}/api/orders/${id}/status`, { status });
+      await apiService.updateOrderStatus(id, status);
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
     } catch (e) {
       console.error(e);
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     } finally {
       setActionLoading(id, false);
     }
@@ -327,7 +363,7 @@ const AdminPanel = () => {
 
   const handleOrderUpdate = async (orderId) => {
     try {
-      await axios.put(`${API_URL}/api/orders/${orderId}`, {
+      await apiService.updateOrder(orderId, {
         customer_name: editFormData.name,
         customer_phone: editFormData.phone,
         items: editFormData.items
@@ -336,14 +372,14 @@ const AdminPanel = () => {
       setEditingOrderId(null);
     } catch (err) {
       console.error("Update failed:", err);
-      alert("Failed to update order");
+      toast.error("Failed to update order");
     }
   };
   const handlePrintBill = (order) => {
     try {
       const printWindow = window.open('', '_blank', 'width=800,height=600');
       if (!printWindow) {
-        alert("🚨 Popup Blocked! Please allow popups for this site to print bills.");
+        toast("🚨 Popup Blocked! Please allow popups for this site to print bills.");
         return;
       }
 
@@ -413,7 +449,7 @@ const AdminPanel = () => {
       printWindow.document.close();
     } catch (e) {
       console.error("Print Error:", e);
-      alert("Failed to initiate print process: " + e.message);
+      toast("Failed to initiate print process: " + e.message);
     }
   };
 
@@ -452,7 +488,7 @@ const AdminPanel = () => {
       printWindow.document.write(html);
       printWindow.document.close();
     } catch (e) {
-      alert("Print failed: " + e.message);
+      toast("Print failed: " + e.message);
     }
   };
 
@@ -475,29 +511,29 @@ const AdminPanel = () => {
     setActionLoading('save_dish', true);
     try {
       if (editingDishId) {
-        await axios.put(`${API_URL}/api/menu/${editingDishId}`, newDish);
+        await apiService.updateDish(editingDishId, newDish);
       } else {
-        await axios.post(`${API_URL}/api/menu`, { ...newDish, restaurant_id: adminUser.restaurant_id });
+        await apiService.createDish({ ...newDish, restaurant_id: adminUser.restaurant_id });
       }
       setShowMenuPopup(false);
       fetchData();
     } catch (e) {
       console.error(e);
-      alert("Failed to save dish");
+      toast.error("Failed to save dish");
     } finally {
       setActionLoading('save_dish', false);
     }
   };
 
   const deleteDish = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this neural dish?")) return;
+    if (!(await window.customConfirm("Are you sure you want to delete this neural dish?"))) return;
     setActionLoading(`delete_dish_${id}`, true);
     try {
-      await axios.delete(`${API_URL}/api/menu/${id}`);
+      await apiService.deleteDish(id);
       fetchData();
     } catch (e) {
       console.error(e);
-      alert("Failed to delete dish");
+      toast.error("Failed to delete dish");
     } finally {
       setActionLoading(`delete_dish_${id}`, false);
     }
@@ -506,7 +542,7 @@ const AdminPanel = () => {
   const toggleDishActive = async (item) => {
     setActionLoading(`toggle_dish_${item.id}`, true);
     try {
-      await axios.put(`${API_URL}/api/menu/${item.id}`, { ...item, is_active: !item.is_active });
+      await apiService.updateDish(item.id, { ...item, is_active: !item.is_active });
       fetchData();
     } catch (e) {
       console.error(e);
@@ -519,13 +555,13 @@ const AdminPanel = () => {
     if (!newCatName) return;
     setActionLoading('add_category', true);
     try {
-      await axios.post(`${API_URL}/api/menu/categories`, { name: newCatName, restaurant_id: adminUser.restaurant_id });
+      await apiService.createCategory({ name: newCatName, restaurant_id: adminUser.restaurant_id });
       setNewCatName('');
       setShowCatPopup(false);
       fetchData();
     } catch (e) {
       console.error(e);
-      alert("Failed to add category");
+      toast.error("Failed to add category");
     } finally {
       setActionLoading('add_category', false);
     }
@@ -535,11 +571,11 @@ const AdminPanel = () => {
     setActionLoading('save_staff', true);
     try {
       if (editingStaffId) {
-        await axios.put(`${API_URL}/api/users/${editingStaffId}`, newStaff);
-        alert("Staff updated successfully!");
+        await apiService.updateUser(editingStaffId, newStaff);
+        toast("Staff updated successfully!");
       } else {
-        await axios.post(`${API_URL}/api/users`, newStaff);
-        alert("Staff recruited successfully!");
+        await apiService.createUser(newStaff);
+        toast("Staff recruited successfully!");
       }
       setShowStaffPopup(false);
       setEditingStaffId(null);
@@ -547,7 +583,7 @@ const AdminPanel = () => {
       fetchData();
     } catch (e) {
       console.error(e);
-      alert("Action failed: " + e.message);
+      toast("Action failed: " + e.message);
     } finally {
       setActionLoading('save_staff', false);
     }
@@ -558,11 +594,11 @@ const AdminPanel = () => {
     setActionLoading('save_node', true);
     try {
       if (editingNodeId) {
-        await axios.put(`${API_URL}/api/restaurants/${editingNodeId}`, newNode);
-        alert("Node updated successfully!");
+        await apiService.updateRestaurant(editingNodeId, newNode);
+        toast("Node updated successfully!");
       } else {
-        await axios.post(`${API_URL}/api/restaurants`, newNode);
-        alert("Node deployed successfully!");
+        await apiService.createRestaurant(newNode);
+        toast("Node deployed successfully!");
       }
       setShowNodePopup(false);
       setEditingNodeId(null);
@@ -590,17 +626,17 @@ const AdminPanel = () => {
       fetchData();
     } catch (e) {
       console.error(e);
-      alert("Action failed: " + e.message);
+      toast("Action failed: " + e.message);
     } finally {
       setActionLoading('save_node', false);
     }
   };
 
   const deleteUser = async (id) => {
-    if (!window.confirm("Are you sure you want to terminate this neural contract?")) return;
+    if (!(await window.customConfirm("Are you sure you want to terminate this neural contract?"))) return;
     setActionLoading(`delete_user_${id}`, true);
     try {
-      await axios.delete(`${API_URL}/api/users/${id}`);
+      await apiService.deleteUser(id);
       fetchData();
     } catch (e) {
       console.error(e);
@@ -610,10 +646,10 @@ const AdminPanel = () => {
   };
 
   const deleteRestaurant = async (id) => {
-    if (!window.confirm("WARNING: Deleting this restaurant will wipe all associated data. Proceed?")) return;
+    if (!(await window.customConfirm("WARNING: Deleting this restaurant will wipe all associated data. Proceed?"))) return;
     setActionLoading(`delete_restaurant_${id}`, true);
     try {
-      await axios.delete(`${API_URL}/api/restaurants/${id}`);
+      await apiService.deleteRestaurant(id);
       fetchData();
     } catch (e) {
       console.error(e);
@@ -637,20 +673,20 @@ const AdminPanel = () => {
   };
 
   const handleDeleteRider = async (id) => {
-    if (window.confirm("Are you sure you want to remove this rider from the fleet?")) {
+    if (await window.customConfirm("Are you sure you want to remove this rider from the fleet?")) {
       try {
-        await axios.delete(`${API_URL}/api/mgmt/riders/${id}`);
+        await apiService.deleteRider(id);
         fetchData();
-      } catch (err) { alert("Failed to remove rider"); }
+      } catch (err) { toast.error("Failed to remove rider"); }
     }
   };
 
   const handleSaveRider = async () => {
     try {
       if (editingRiderId) {
-        await axios.put(`${API_URL}/api/mgmt/riders/${editingRiderId}`, { ...newRider });
+        await apiService.updateRider(editingRiderId, { ...newRider });
       } else {
-        await axios.post(`${API_URL}/api/mgmt/riders`, { ...newRider, restaurant_id: adminUser.restaurant_id });
+        await apiService.createRider({ ...newRider, restaurant_id: adminUser.restaurant_id });
       }
       setShowRiderPopup(false);
       setEditingRiderId(null);
@@ -660,43 +696,30 @@ const AdminPanel = () => {
         address: '', emergency_contact: ''
       });
       fetchData();
-    } catch (e) { alert(editingRiderId ? "Failed to update rider" : "Failed to recruit rider"); }
+    } catch (e) { toast(editingRiderId ? "Failed to update rider" : "Failed to recruit rider"); }
   };
 
   const deleteCoupon = async (id) => {
-    if (!window.confirm("Are you sure you want to deactivate this neural promotion?")) return;
+    if (!(await window.customConfirm("Are you sure you want to deactivate this neural promotion?"))) return;
     try {
-      await axios.delete(`${API_URL}/api/mgmt/coupons/${id}`);
+      await apiService.deleteCoupon(id);
       fetchData();
-    } catch (e) { alert("Failed to delete coupon"); }
+    } catch (e) { toast.error("Failed to delete coupon"); }
   };
 
-  const getPermittedTabs = (roleName) => {
-    // Priority 1: Dynamic Roles from Database
-    const matchedDbRole = dbRoles.find(r => r.name.toLowerCase() === roleName?.toLowerCase());
-    if (matchedDbRole) return matchedDbRole.permissions;
-
-    // Priority 2: Hardcoded Defaults (Fallback)
-    const permissions = {
-      super_admin: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'sidebar_order', 'coupons', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'staff', 'restaurants', 'roles', 'combos'],
-      manager: ['dashboard', 'orders', 'kitchen', 'marketing', 'menu', 'coupons', 'rider_fleet', 'inventory', 'reports', 'qr_codes', 'feedback', 'settings', 'combos'],
-      staff: ['orders'],
-      chef: ['kitchen', 'orders']
-    };
-    return permissions[roleName] || ['orders'];
-  };
-
-  if (!getPermittedTabs(adminUser.role).includes(activeTab)) {
+  // Display ACCESS RESTRICTED ONLY if sidebar has loaded and path is decidedly unauthorized
+  const validPaths = orderedSidebar?.map(item => item.path) || [];
+  if (orderedSidebar && orderedSidebar.length > 0 && !validPaths.includes(activeTab)) {
     return (
       <div className="admin-layout ext-cls-42d9d60a" >
-        <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} adminUser={adminUser} onLogout={handleLogout} />
-        <div  className="ext-cls-f9cd9043">
+        <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} adminUser={adminUser} onLogout={handleLogout} orderedSidebar={orderedSidebar} />
+        <div className="ext-cls-f9cd9043">
           <div className="glass-panel text-center animate-slide-up ext-cls-df783c22" >
-            <div  className="ext-cls-05ae1608">
-              <AlertCircle size={40}  className="ext-cls-ec836744" />
+            <div className="ext-cls-05ae1608">
+              <AlertCircle size={40} className="ext-cls-ec836744" />
             </div>
-            <h2  className="ext-cls-b9b33734">ACCESS RESTRICTED</h2>
-            <p  className="ext-cls-b061dfa4">Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong  className="ext-cls-507943c3">{activeTab}</strong> module.</p>
+            <h2 className="ext-cls-b9b33734">ACCESS RESTRICTED</h2>
+            <p className="ext-cls-b061dfa4">Your role (<strong>{adminUser.role}</strong>) does not have permission to access the <strong className="ext-cls-507943c3">{activeTab}</strong> module.</p>
             <button className="btn-primary st-cls-ff40caf4" onClick={() => handleTabChange('orders')} >Return to Safety</button>
           </div>
         </div>
@@ -707,9 +730,9 @@ const AdminPanel = () => {
   return (
     <div className="admin-layout animate-fade-in">
       {isLoading && (
-        <div  className="ext-cls-0fabc89b">
+        <div className="ext-cls-0fabc89b">
           <div className="premium-loader ext-cls-82a1a47f" ></div>
-          <h2  className="ext-cls-a47fb471">
+          <h2 className="ext-cls-a47fb471">
             NEURAL HUB SYNCHRONIZING
           </h2>
         </div>
@@ -774,6 +797,7 @@ const AdminPanel = () => {
         onLogout={handleLogout}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
+        orderedSidebar={orderedSidebar}
       />
 
       <main className={`admin-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -783,25 +807,25 @@ const AdminPanel = () => {
             <input type="text" placeholder="Neural Search Engine..." />
           </div>
           <div className="header-profile-premium">
-            <div className="ext-cls-e63b8a15"   onClick={() => {
+            <div className="ext-cls-e63b8a15" onClick={() => {
               if (activeWaiterCalls.length > 0) setActiveWaiterCalls([]); // temp clear all
             }}>
               <Bell size={22} color={activeWaiterCalls.length > 0 ? '#ef4444' : 'var(--text-muted)'} className={activeWaiterCalls.length > 0 ? 'pulse' : ''} />
               {activeWaiterCalls.length > 0 && (
-                <span  className="ext-cls-b5652ddf">
+                <span className="ext-cls-b5652ddf">
                   {activeWaiterCalls.length}
                 </span>
               )}
               {activeWaiterCalls.length > 0 && (
                 <div className="animate-fade-in ext-cls-624612c0" >
-                  <div  className="ext-cls-ca2f2f26">SERVICE ALERTS</div>
+                  <div className="ext-cls-ca2f2f26">SERVICE ALERTS</div>
                   {activeWaiterCalls.map((c, i) => (
-                    <div key={i}  className="ext-cls-2eed4490">
-                      <span  className="ext-cls-c5e63a58">Table {c.table_number}</span>
-                      <span  className="ext-cls-2388e344">{new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div key={i} className="ext-cls-2eed4490">
+                      <span className="ext-cls-c5e63a58">Table {c.table_number}</span>
+                      <span className="ext-cls-2388e344">{new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   ))}
-                  <div  className="ext-cls-f0f48cb7">Click bell to dismiss all</div>
+                  <div className="ext-cls-f0f48cb7">Click bell to dismiss all</div>
                 </div>
               )}
             </div>
@@ -877,23 +901,9 @@ const AdminPanel = () => {
             <CombosManagerView adminUser={adminUser} restaurantId={adminUser.restaurant_id || 4} menuItems={menuItems} refreshData={fetchData} />
           )}
 
-          {activeTab === 'staff' && adminUser.role === 'super_admin' && (
-            <TeamHierarchyView
-              restaurantsList={restaurantsList}
-              staffList={staffList}
-              setNewNode={setNewNode}
-              setEditingNodeId={setEditingNodeId}
-              setShowNodePopup={setShowNodePopup}
-              deleteRestaurant={deleteRestaurant}
-              setNewStaff={setNewStaff}
-              setEditingStaffId={setEditingStaffId}
-              setShowStaffPopup={setShowStaffPopup}
-              deleteUser={deleteUser}
-              loadingStates={loadingStates}
-            />
-          )}
 
-          {activeTab === 'restaurants' && adminUser.role === 'super_admin' && (
+
+          {activeTab === 'restaurants' && (adminUser.role === 'super_admin') && (
             <RestaurantNetworkView
               restaurantsList={restaurantsList}
               staffList={staffList}
@@ -942,7 +952,7 @@ const AdminPanel = () => {
 
           {activeTab === 'inventory' && (
             <div className="view-container animate-slide-up ext-cls-40bdd684" >
-              <div  className="ext-cls-bb123862">
+              <div className="ext-cls-bb123862">
                 <div>
                   <h1 className="view-title ext-cls-46d76c78" >Smart Inventory Hub</h1>
                   <p className="text-muted ext-cls-a6a615ae" >Automated restaurant stock operations.</p>
@@ -990,6 +1000,7 @@ const AdminPanel = () => {
               setCurrentRoleData={setCurrentRoleData}
               isRoleModalOpen={isRoleModalOpen}
               setIsRoleModalOpen={setIsRoleModalOpen}
+              orderedSidebar={orderedSidebar}
             />
           )}
 
@@ -1051,7 +1062,7 @@ const AdminPanel = () => {
         />
       )}
       {/* Staff Modal */}
-      <StaffMemberModal 
+      <StaffMemberModal
         isOpen={showStaffPopup}
         onClose={() => setShowStaffPopup(false)}
         newStaff={newStaff}
@@ -1064,7 +1075,7 @@ const AdminPanel = () => {
       />
 
       {/* Node Modal */}
-      <RestaurantNodeModal 
+      <RestaurantNodeModal
         isOpen={showNodePopup}
         onClose={() => setShowNodePopup(false)}
         editingNodeId={editingNodeId}
@@ -1089,15 +1100,15 @@ const AdminPanel = () => {
           try {
             const payload = { ...newCoupon, restaurant_id: adminUser.restaurant_id };
             if (editingCouponId) {
-              await axios.put(`${API_URL}/api/mgmt/coupons/${editingCouponId}`, payload);
+              await apiService.updateCoupon(editingCouponId, payload);
             } else {
-              await axios.post(`${API_URL}/api/mgmt/coupons`, payload);
+              await apiService.createCoupon(payload);
             }
             setShowCouponPopup(false);
             setEditingCouponId(null);
             setNewCoupon({ code: '', discount_type: 'percent', discount_value: '', min_order_value: '', usage_limit: '', expiry_date: '', is_active: true });
             fetchData();
-          } catch (e) { alert("Failed to save coupon"); }
+          } catch (e) { toast.error("Failed to save coupon"); }
           finally { setActionLoading('save_coupon', false); }
         }}
       />

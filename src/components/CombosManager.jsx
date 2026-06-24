@@ -1,3 +1,5 @@
+import apiService from '../services/apiService';
+import toast from 'react-hot-toast';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
@@ -66,7 +68,19 @@ const CombosManager = ({ adminUser, restaurantId }) => {
         setIsModalOpen(true);
     };
 
-    const handleSaveCombo = async () => {
+      const handleFileUpload = async (file) => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true);
+    try {
+      const res = await apiService.uploadImage(formData);
+      setComboForm({ ...comboForm, image_url: res.data.url });
+    } catch (err) { toast("Upload failed"); }
+    finally { setUploading(false); }
+  };
+
+  const handleSaveCombo = async () => {
         try {
             const endpoint = editingComboId 
                 ? `${API_URL}/api/menu/${editingComboId}` 
@@ -85,7 +99,7 @@ const CombosManager = ({ adminUser, restaurantId }) => {
             fetchData();
         } catch (e) {
             console.error(e);
-            alert("Failed to save combo");
+            toast.error("Failed to save combo");
         }
     };
 
@@ -107,13 +121,13 @@ const CombosManager = ({ adminUser, restaurantId }) => {
     };
 
     const deleteCombo = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this combo?")) return;
+        if (!(await window.customConfirm("Are you sure you want to delete this combo?"))) return;
         try {
-            await axios.delete(`${API_URL}/api/menu/${id}`);
+            await apiService.deleteDish(id);
             fetchData();
         } catch (e) {
             console.error(e);
-            alert("Failed to delete combo");
+            toast.error("Failed to delete combo");
         }
     };
 
@@ -211,9 +225,9 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                                                 formData.append('file', file);
                                                 setUploading(true);
                                                 try {
-                                                    const res = await axios.post(`${API_URL}/api/upload`, formData);
+                                                    const res = await apiService.uploadImage(formData);
                                                     setComboForm({ ...comboForm, image_url: res.data.url });
-                                                } catch (err) { alert("Upload failed"); } finally { setUploading(false); }
+                                                } catch (err) { toast("Upload failed"); } finally { setUploading(false); }
                                             }
                                         }}
                                     >
@@ -232,9 +246,9 @@ const CombosManager = ({ adminUser, restaurantId }) => {
                                                 formData.append('file', file);
                                                 setUploading(true);
                                                 try {
-                                                    const res = await axios.post(`${API_URL}/api/upload`, formData);
+                                                    const res = await apiService.uploadImage(formData);
                                                     setComboForm({ ...comboForm, image_url: res.data.url });
-                                                } catch (err) { alert("Upload failed"); } finally { setUploading(false); }
+                                                } catch (err) { toast("Upload failed"); } finally { setUploading(false); }
                                             }
                                         }} />
                                     </label>

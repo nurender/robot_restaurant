@@ -1,10 +1,16 @@
 const userService = require('../services/userService');
+const jwt = require('jsonwebtoken');
 
 const login = async (req, res) => {
     try {
         const user = await userService.login(req.body.email, req.body.password);
         if (user) {
-            res.json({ success: true, user });
+            const token = jwt.sign(
+                { id: user.id, email: user.email, role: user.role, restaurant_id: user.restaurant_id }, 
+                process.env.JWT_SECRET || 'super_secret_robot_key_2026', 
+                { expiresIn: '7d' }
+            );
+            res.json({ success: true, user, token });
         } else {
             res.status(401).json({ success: false, message: "Invalid credentials" });
         }

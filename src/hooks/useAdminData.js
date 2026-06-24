@@ -14,12 +14,13 @@ export const useAdminData = (adminUser, activeTab) => {
   const [restaurantTables, setRestaurantTables] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [riders, setRiders] = useState([]);
+
   const [feedbackList, setFeedbackList] = useState([]);
   const [dbRoles, setDbRoles] = useState([]);
   const [orderedMenu, setOrderedMenu] = useState([]);
   const [orderedSidebar, setOrderedSidebar] = useState([]);
   const [activeWaiterCalls, setActiveWaiterCalls] = useState([]);
+  const [riders, setRiders] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -74,8 +75,8 @@ export const useAdminData = (adminUser, activeTab) => {
       const val = o.created_at || o.timestamp;
       const d = val ? new Date(isNaN(val) ? val : Number(val)) : new Date();
       if (!isNaN(d.getTime())) {
-          const hour = d.getHours();
-          hourMap[hour] = (hourMap[hour] || 0) + 1;
+        const hour = d.getHours();
+        hourMap[hour] = (hourMap[hour] || 0) + 1;
       }
     });
     const hourlyHeatmap = Object.entries(hourMap).map(([hour, count]) => ({
@@ -141,7 +142,7 @@ export const useAdminData = (adminUser, activeTab) => {
       const auth = { params: { restaurant_id: adminUser.restaurant_id } };
       const fetchHelper = (url) => axios.get(url, auth).catch(() => ({ data: { data: [] } }));
 
-      if (tab === 'staff') {
+      if (tab === 'staff' || tab === 'restaurants') {
         const staffRes = await fetchHelper(`${API_URL}/api/users`);
         setStaffList(staffRes.data.data || []);
       }
@@ -161,16 +162,20 @@ export const useAdminData = (adminUser, activeTab) => {
         const tablesRes = await fetchHelper(`${API_URL}/api/tables`);
         setRestaurantTables(tablesRes.data.data || []);
       }
-      if (tab === 'coupons') {
+      if (tab === 'coupons' || tab === 'marketing') {
         const couponsRes = await fetchHelper(`${API_URL}/api/mgmt/coupons`);
         setCoupons(couponsRes.data.data || []);
       }
-      if (tab === 'sidebar_order') {
+      if (tab === 'marketing' || tab === 'customers') {
+        const custRes = await fetchHelper(`${API_URL}/api/mgmt/customers`);
+        setCustomers(custRes.data.data || []);
+      }
+      if (tab === 8 || tab === 20) {
         const sideRes = await axios.get(`${API_URL}/api/mgmt/sidebar`).catch(() => ({ data: { data: [] } }));
         const list = sideRes.data.data || [];
-        setOrderedSidebar(list.filter(item => item && item.id !== 'customers' && item.id !== 'menu_order'));
+        setOrderedSidebar(list.filter(item => item && item.id !== 10 && item.id !== 7));
       }
-    } catch(e) {}
+    } catch (e) { }
   };
 
   const fetchData = async () => {
@@ -196,12 +201,12 @@ export const useAdminData = (adminUser, activeTab) => {
   // Core Data and Socket Connection on Mount
   useEffect(() => {
     if (!adminUser?.id) return;
-    
+
     fetchCoreData();
 
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
-    
+
     const handleWaiterAlert = (data) => {
       const isMyRest = String(data.restaurant_id) === String(adminUser?.restaurant_id || 4);
       const isSuper = adminUser?.role === 'super_admin';

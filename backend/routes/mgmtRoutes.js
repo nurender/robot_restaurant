@@ -1,11 +1,12 @@
 const express = require('express');
 const { 
-    getCoupons, createCoupon, updateCoupon, deleteCoupon, 
+    getCoupons, createCoupon, updateCoupon, deleteCoupon, verifyCoupon,
     getCustomers, getSettings, updateSettings, 
     getRiders, createRider, updateRider, deleteRider, 
     assignRiderToOrder, getSidebarItems, updateSidebarOrder, toggleSidebarVisibility,
     getRoles, createRole, deleteRole
 } = require('../controllers/mgmtController');
+const { launchCampaign, getCampaigns, getMarketingConfig, saveMarketingConfig } = require('../controllers/marketingController');
 
 const router = express.Router();
 
@@ -18,11 +19,18 @@ router.post('/roles', createRole);
 router.delete('/roles/:id', deleteRole);
 
 router.get('/coupons', getCoupons);
+router.post('/coupons/verify', verifyCoupon);
 router.post('/coupons', createCoupon);
 router.put('/coupons/:id', updateCoupon);
 router.delete('/coupons/:id', deleteCoupon);
 
 router.get('/customers', getCustomers);
+
+router.post('/marketing/campaigns', launchCampaign);
+router.get('/marketing/campaigns', getCampaigns);
+
+router.get('/marketing/config', getMarketingConfig);
+router.post('/marketing/config', saveMarketingConfig);
 
 router.get('/settings', getSettings);
 router.post('/settings', updateSettings);

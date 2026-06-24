@@ -3269,4 +3269,101 @@
 
 .zomato-pure-toggle.on .toggle-thumb::before {
   background: #219653; /* green dot when on */
+}/* ADVANCED SUCCESS ANIMATION */
+.advanced-success-animation {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 10, 18, 0.95);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  animation: advancedFadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.success-halo {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(46,213,115,0.4) 0%, rgba(46,213,115,0) 70%);
+  border-radius: 50%;
+  animation: pulseHalo 2s infinite ease-in-out;
+  z-index: 1;
+}
+
+.success-icon-wrap {
+  position: relative;
+  z-index: 2;
+  width: 100px;
+  height: 100px;
+  background: var(--success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(46,213,115,0.5);
+  animation: popBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.success-check-icon {
+  color: white;
+  stroke-width: 3px;
+  animation: drawCheck 0.5s ease-out forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+.success-title {
+  margin-top: 24px;
+  z-index: 2;
+  font-size: 24px;
+  font-weight: 800;
+  color: white;
+  text-align: center;
+  animation: slideUpFade 0.5s ease-out forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.success-subtitle {
+  margin-top: 8px;
+  z-index: 2;
+  font-size: 14px;
+  color: #ccc;
+  text-align: center;
+  animation: slideUpFade 0.5s ease-out forwards;
+  animation-delay: 0.4s;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes advancedFadeIn {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(10px); }
+}
+
+@keyframes popBounce {
+  0% { transform: scale(0); }
+  80% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes drawCheck {
+  from { stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 1; }
+  to { stroke-dasharray: 100; stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseHalo {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.5); opacity: 0.2; }
+  100% { transform: scale(0.8); opacity: 0.5; }
 }

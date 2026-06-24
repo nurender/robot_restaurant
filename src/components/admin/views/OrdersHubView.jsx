@@ -1,3 +1,5 @@
+import apiService from '../../../services/apiService';
+import toast from 'react-hot-toast';
 import { RefreshCw, Plus, Calendar, Search, Phone, Users, Edit2, Edit, Printer } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../../../config';
@@ -30,6 +32,16 @@ export default function OrdersHubView({
   setActionLoading,
   riders
 }) {
+  const handleAssignRider = async (orderId, riderId) => {
+    if (!riderId) return;
+    setActionLoading(orderId, true);
+    try {
+      await apiService.assignRider(orderId, riderId);
+      fetchData();
+    } catch (err) { toast.error("Assignment failed"); }
+    finally { setActionLoading(orderId, false); }
+  };
+
   return (
     <div className="view-container animate-slide-up">
       <div>
@@ -290,16 +302,7 @@ export default function OrdersHubView({
                           <select
                             className="rider-select st-cls-c25152fd"
                             disabled={loadingStates[order.id]}
-                            onChange={async (e) => {
-                              const rId = e.target.value;
-                              if (!rId) return;
-                              setActionLoading(order.id, true);
-                              try {
-                                await axios.post(`${API_URL}/api/mgmt/orders/assign-rider`, { order_id: order.id, rider_id: rId });
-                                fetchData();
-                              } catch (e) { alert("Assignment failed"); }
-                              finally { setActionLoading(order.id, false); }
-                            }}
+                            onChange={(e) => handleAssignRider(order.id, e.target.value)}
                             
                           >
                             <option value="">Assign Rider</option>

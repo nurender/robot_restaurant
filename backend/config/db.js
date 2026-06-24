@@ -463,8 +463,37 @@ const connectDB = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS marketing_campaigns (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER DEFAULT 4,
+                name TEXT NOT NULL,
+                target_audience TEXT, -- 'all', 'high_spenders', 'inactive'
+                template_body TEXT NOT NULL,
+                coupon_code TEXT,
+                status TEXT DEFAULT 'draft', -- 'draft', 'queued', 'completed', 'failed'
+                total_sent INTEGER DEFAULT 0,
+                total_delivered INTEGER DEFAULT 0,
+                total_read INTEGER DEFAULT 0,
+                scheduled_for TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
 
-
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS campaign_messages (
+                id SERIAL PRIMARY KEY,
+                campaign_id INTEGER REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                customer_phone TEXT NOT NULL,
+                customer_name TEXT,
+                status TEXT DEFAULT 'queued', -- 'queued', 'sent', 'delivered', 'read', 'failed'
+                error_log TEXT,
+                sent_at TIMESTAMP,
+                delivered_at TIMESTAMP,
+                read_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
 
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 100`);
         await pool.query(`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER DEFAULT 10`);
@@ -564,59 +593,58 @@ const connectDB = async () => {
         `);
         // 8. Admin Sidebar Management
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS admin_sidebar_items (
-                id TEXT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS sidebar_menu (
+                id INTEGER PRIMARY KEY,
                 label TEXT NOT NULL,
+                path TEXT NOT NULL,
                 icon_name TEXT NOT NULL,
-                roles TEXT[] DEFAULT '{super_admin, manager}',
                 sort_order INTEGER DEFAULT 0,
                 is_active BOOLEAN DEFAULT TRUE
             );
         `);
 
-        const sidebarCheck = await pool.query("SELECT count(*) FROM admin_sidebar_items");
+        const sidebarCheck = await pool.query("SELECT count(*) FROM sidebar_menu");
         if (parseInt(sidebarCheck.rows[0].count) === 0) {
             const defaultSidebar = [
-                ['dashboard', 'Dashboard', 'LayoutDashboard', '{super_admin, manager}', 0],
-                ['orders', 'Order Management', 'ListTodo', '{super_admin, manager, staff}', 1],
-                ['kitchen', 'Kitchen Hub', 'ChefHat', '{super_admin, manager, chef}', 2],
-                ['marketing', 'Marketing Hub', 'Send', '{super_admin, manager}', 3],
-                ['menu', 'Menu Management', 'UtensilsCrossed', '{super_admin, manager}', 6],
-                ['menu_order', 'Menu Ordering', 'ListTodo', '{super_admin, manager}', 7],
-                ['sidebar_order', 'Sidebar Ordering', 'Settings', '{super_admin}', 8],
-                ['coupons', 'Offers & Coupons', 'Store', '{super_admin, manager}', 9],
-                ['customers', 'Customer Insights', 'Users', '{super_admin, manager}', 10],
-                ['rider_fleet', 'Rider Fleet', 'Bike', '{super_admin, manager}', 11],
-                ['inventory', 'Smart Inventory', 'Package', '{super_admin, manager}', 12],
-                ['reports', 'Reports & Analytics', 'BarChart2', '{super_admin, manager}', 13],
-                ['qr_codes', 'Tables & QR Codes', 'QrCode', '{super_admin, manager}', 14],
-                ['feedback', 'Customer Feedback', 'Star', '{super_admin, manager}', 15],
-                ['settings', 'General Settings', 'Settings', '{super_admin, manager}', 17],
-                ['restaurants', 'Our Restaurants', 'Store', '{super_admin}', 18],
-                ['staff', 'Team Members', 'Users', '{super_admin}', 19],
-                ['roles', 'Role Management', 'Users', '{super_admin}', 20]
+                [1, 'Dashboard', 'dashboard', 'LayoutDashboard', 0],
+                [2, 'Order Management', 'orders', 'ListTodo', 1],
+                [3, 'Kitchen Hub', 'kitchen', 'ChefHat', 2],
+                [4, 'Marketing Hub', 'marketing', 'Send', 3],
+                [5, 'Combos & Offers', 'combos', 'Package', 5],
+                [6, 'Menu Management', 'menu', 'UtensilsCrossed', 6],
+                [7, 'Menu Ordering', 'menu_order', 'ListTodo', 7],
+                [8, 'Sidebar Ordering', 'sidebar_order', 'Settings', 8],
+                [9, 'Offers & Coupons', 'coupons', 'Store', 9],
+                [11, 'Rider Fleet', 'rider_fleet', 'Bike', 11],
+                [12, 'Smart Inventory', 'inventory', 'Package', 12],
+                [13, 'Reports & Analytics', 'reports', 'BarChart2', 13],
+                [14, 'Tables & QR Codes', 'qr_codes', 'QrCode', 14],
+                [15, 'Customer Feedback', 'feedback', 'Star', 15],
+                [17, 'General Settings', 'settings', 'Settings', 17],
+                [18, 'Our Restaurants', 'restaurants', 'Store', 18],
+                [20, 'Role Management', 'roles', 'Users', 20]
             ];
             for (const item of defaultSidebar) {
-                await pool.query("INSERT INTO admin_sidebar_items (id, label, icon_name, roles, sort_order) VALUES ($1,$2,$3,$4,$5)", item);
+                await pool.query("INSERT INTO sidebar_menu (id, label, path, icon_name, sort_order) VALUES ($1,$2,$3,$4,$5)", item);
             }
         }
         
-        await pool.query(`DELETE FROM admin_sidebar_items WHERE id IN ('robo_control', 'ai_prompt')`);
+        await pool.query(`DELETE FROM sidebar_menu WHERE id IN (16, 19)`);
         
         // Ensure new items are added if they were missing from earlier versions
         await pool.query(`
-            INSERT INTO admin_sidebar_items (id, label, icon_name, roles, sort_order)
+            INSERT INTO sidebar_menu (id, label, path, icon_name, sort_order)
             VALUES 
-                ('combos', 'Combos & Offers', 'Package', '{super_admin}', 5),
-                ('sidebar_order', 'Sidebar Ordering', 'Settings', '{super_admin}', 8),
-                ('roles', 'Role Management', 'Users', '{super_admin}', 20)
+                (5, 'Combos & Offers', 'combos', 'Package', 5),
+                (8, 'Sidebar Ordering', 'sidebar_order', 'Settings', 8),
+                (20, 'Role Management', 'roles', 'Users', 20)
             ON CONFLICT (id) DO UPDATE SET is_active = TRUE
         `);
 
         console.log("✅ Admin Sidebar Verified");
         // 9. Role Management
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS admin_roles (
+            CREATE TABLE IF NOT EXISTS user_roles (
                 id SERIAL PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
                 permissions TEXT[] DEFAULT '{}', -- Array of module IDs
@@ -624,19 +652,19 @@ const connectDB = async () => {
             );
         `);
 
-        const rolesCheck = await pool.query("SELECT count(*) FROM admin_roles");
+        const rolesCheck = await pool.query("SELECT count(*) FROM user_roles");
         if (parseInt(rolesCheck.rows[0].count) === 0) {
             const defaultRoles = [
-                ['super_admin', '{dashboard, orders, kitchen, marketing, monitor, menu, menu_order, sidebar_order, coupons, customers, rider_fleet, inventory, reports, qr_codes, feedback, settings, staff, restaurants, roles}'],
-                ['manager', '{dashboard, orders, kitchen, marketing, monitor, menu, menu_order, coupons, customers, rider_fleet, inventory, reports, qr_codes, feedback, settings}'],
-                ['staff', '{orders, monitor}'],
-                ['chef', '{kitchen, orders, monitor}']
+                ['super_admin', '{1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 20}'],
+                ['manager', '{1, 2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17}'],
+                ['staff', '{2}'],
+                ['chef', '{3, 2}']
             ];
             for (const role of defaultRoles) {
-                await pool.query("INSERT INTO admin_roles (name, permissions) VALUES ($1,$2)", role);
+                await pool.query("INSERT INTO user_roles (name, permissions) VALUES ($1,$2)", role);
             }
         }
-        await pool.query("UPDATE admin_roles SET permissions = array_append(permissions, 'combos') WHERE name IN ('super_admin', 'manager') AND NOT ('combos' = ANY(permissions))");
+        await pool.query("UPDATE user_roles SET permissions = array_append(permissions, '5') WHERE name IN ('super_admin', 'manager') AND NOT ('5' = ANY(permissions))");
 
         console.log("✅ Admin Roles Verified");
     } catch (e) { 
@@ -656,6 +684,16 @@ const setupSettings = async () => {
                 company_logo TEXT,
                 theme_color TEXT DEFAULT '#7c3aed',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS marketing_settings (
+                restaurant_id INTEGER PRIMARY KEY,
+                smtp_user TEXT,
+                smtp_pass TEXT,
+                meta_access_token TEXT,
+                meta_phone_id TEXT,
+                meta_template TEXT
             );
         `);
         await pool.query(`INSERT INTO restaurant_settings (restaurant_id) VALUES (4) ON CONFLICT DO NOTHING;`);

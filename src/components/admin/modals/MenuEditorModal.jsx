@@ -1,5 +1,6 @@
+import apiService from '../../../services/apiService';
+import toast from 'react-hot-toast';
 import { AlertCircle, ImageIcon, Plus, Trash2 } from 'lucide-react';
-import axios from 'axios';
 import { API_URL } from '../../../config';
 
 export default function MenuEditorModal({
@@ -25,9 +26,9 @@ export default function MenuEditorModal({
       formData.append('file', file);
       setUploading(true);
       try {
-        const res = await axios.post(`${API_URL}/api/upload`, formData);
+        const res = await apiService.uploadImage(formData);
         setNewDish({ ...newDish, image_url: res.data.url });
-      } catch (err) { alert("Upload failed"); } finally { setUploading(false); }
+      } catch (err) { toast("Upload failed"); } finally { setUploading(false); }
     }
   };
 
@@ -199,9 +200,9 @@ export default function MenuEditorModal({
                       formData.append('file', file);
                       setUploading(true);
                       try {
-                        const res = await axios.post(`${API_URL}/api/upload`, formData);
+                        const res = await apiService.uploadImage(formData);
                         setNewDish({ ...newDish, image_url: res.data.url });
-                      } catch (err) { alert("Upload failed"); } finally { setUploading(false); }
+                      } catch (err) { toast("Upload failed"); } finally { setUploading(false); }
                     }
                   }}
                 >

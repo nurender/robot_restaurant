@@ -20,52 +20,21 @@ import {
     QrCode
 } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { API_URL } from '../config';
+import React from 'react';
 
 const iconMap = {
     LayoutDashboard, UtensilsCrossed, ListTodo, ChefHat, Users, Store, Bot, Send, LogOut, Package,
     BarChart2, Settings, StoreIcon, Bike, CreditCard, Star, ChevronLeft, ChevronRight, QrCode
 };
 
-const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapsed, setIsCollapsed }) => {
-    const [menuItems, setMenuItems] = useState([]);
-
-    useEffect(() => {
-        const fetchMenu = async () => {
-            try {
-                const res = await axios.get(`${API_URL}/api/mgmt/sidebar`);
-                if (res.data.success) {
-                    const mapped = res.data.data.map(item => ({
-                        ...item,
-                        icon: iconMap[item.icon_name] || Settings
-                    }));
-                    setMenuItems(mapped);
-                }
-            } catch (e) { console.error("Sidebar Load Error:", e); }
-        };
-        fetchMenu();
-    }, []);
-
-    const filteredItems = menuItems.filter(item => {
-        if (item.id === 'monitor' || item.id === 'customers' || item.id === 'menu_order') return false;
-        if (item.id === 'combos' && (adminUser.role === 'user' || adminUser.role === 'chef')) return false;
-        // Ensure roles is an array (sometimes PG arrays come as strings depending on config)
-        let rolesArray = item.roles;
-        if (typeof rolesArray === 'string') {
-            rolesArray = rolesArray.replace(/[{}]/g, '').split(',');
-        }
-
-        const isPermitted = Array.isArray(rolesArray) && rolesArray.includes(adminUser.role);
-        const isActive = item.is_active;
-
-        if (item.id === 'roles') {
-            console.log(`[Sidebar Debug] Item: ${item.label}, UserRole: ${adminUser.role}, Permitted: ${isPermitted}, Active: ${isActive}`);
-        }
-
-        return isPermitted && isActive;
-    });
+const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapsed, setIsCollapsed, orderedSidebar = [] }) => {
+    // Map with icons
+    const filteredItems = orderedSidebar
+        .filter(item => item && item.is_active)
+        .map(item => ({
+            ...item,
+            icon: iconMap[item.icon_name] || Settings
+        }));
 
     return (
         <aside className={`admin-sidebar shadow-premium ${isCollapsed ? 'collapsed' : ''} ext-cls-946d012f`} >
@@ -77,17 +46,17 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
                 </button>
             </div>
 
-            <nav className="sidebar-nav scrollbar-hidden ext-cls-a3dcb368" >
+            <nav className="sidebar-nav">
                 {filteredItems.map((item) => (
                     <button
                         key={item.id}
-                        className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-                        onClick={() => setActiveTab(item.id)}
+                        className={`nav-item ext-cls-afaeec86 ${activeTab === item.path ? 'active st-cls-e137c6ab' : ''}`}
+                        onClick={() => setActiveTab(item.path)}
                         title={isCollapsed ? item.label : ''}
                     >
                         <item.icon size={20} />
                         {!isCollapsed && <span>{item.label}</span>}
-                        {activeTab === item.id && !isCollapsed && <div className="active-indicator" />}
+                        {activeTab === item.path && !isCollapsed && <div className="active-indicator" />}
                     </button>
                 ))}
             </nav>
@@ -98,7 +67,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
                     {!isCollapsed && (
                         <div className="profile-info">
                             <span className="user-name">{adminUser.name}</span>
-                            <span className="user-role">{adminUser.role === 'super_admin' ? 'Master Admin' : adminUser.role === 'chef' ? 'Kitchen Lead' : 'Branch Manager'}</span>
+                            <span className="user-role">{adminUser.role ? adminUser.role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'System User'}</span>
                         </div>
                     )}
                 </div>

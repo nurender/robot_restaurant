@@ -1,11 +1,35 @@
+import apiService from '../../../services/apiService';
+import toast from 'react-hot-toast';
 import { ListTodo, GripVertical } from 'lucide-react';
 import { useState } from 'react';
-import axios from 'axios';
 import { API_URL } from '../../../config';
 
 export default function SidebarConfiguratorView({ orderedSidebar, setOrderedSidebar }) {
   const [dragItemIndex, setDragItemIndex] = useState(null);
   if (!orderedSidebar || !Array.isArray(orderedSidebar)) return null;
+
+  const handleDrop = async (index) => {
+    const items = [...orderedSidebar];
+    const draggedItem = items[dragItemIndex];
+    items.splice(dragItemIndex, 1);
+    items.splice(index, 0, draggedItem);
+    setOrderedSidebar(items);
+    try {
+      const payload = items.map((it, i) => it ? { id: it.id, sort_order: i } : null).filter(Boolean);
+      await apiService.reorderSidebar(payload);
+    } catch (err) { toast.error('Failed to save new order'); }
+  };
+
+  const handleToggle = async (e, index, item) => {
+    e.stopPropagation();
+    try {
+      await apiService.toggleSidebarItem(item.id, !item.is_active);
+      const updated = [...orderedSidebar];
+      updated[index] = { ...item, is_active: !item.is_active };
+      setOrderedSidebar(updated);
+    } catch (err) { toast.error('Failed to toggle visibility'); }
+  };
+
 
   return (
     <div className="view-container animate-slide-up view-container-deep">
@@ -27,18 +51,7 @@ export default function SidebarConfiguratorView({ orderedSidebar, setOrderedSide
                 draggable
                 onDragStart={() => setDragItemIndex(index)}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={async () => {
-                  const items = [...orderedSidebar];
-                  const draggedItem = items[dragItemIndex];
-                  items.splice(dragItemIndex, 1);
-                  items.splice(index, 0, draggedItem);
-                  setOrderedSidebar(items);
-                  try {
-                    await axios.post(`${API_URL}/api/mgmt/sidebar/reorder`, {
-                      orders: items.map((it, i) => it ? { id: it.id, sort_order: i } : null).filter(Boolean)
-                    });
-                  } catch (err) { alert("Failed to save new order"); }
-                }}
+                onDrop={() => handleDrop(index)}
               >
                 <div className="sc-item-left">
                   <div className="sc-drag-handle">
@@ -63,14 +76,10 @@ export default function SidebarConfiguratorView({ orderedSidebar, setOrderedSide
                       onClick={async (e) => {
                         e.stopPropagation();
                         try {
-                          await axios.post(`${API_URL}/api/mgmt/sidebar/toggle`, {
-                            id: item.id,
-                            is_active: !item.is_active
-                          });
                           const updated = [...orderedSidebar];
                           updated[index] = { ...item, is_active: !item.is_active };
                           setOrderedSidebar(updated);
-                        } catch (err) { alert("Failed to toggle visibility"); }
+                        } catch (err) { toast.error("Failed to toggle visibility"); }
                       }}
                     >
                       <div className="sc-toggle-knob" />

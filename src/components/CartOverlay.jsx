@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChefHat, Minus, Plus, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChefHat, Minus, Plus, Users, ChevronDown, ChevronUp, Loader } from 'lucide-react';
+import { API_URL } from '../config';
 
 const CartOverlay = ({
     currentCart,
@@ -18,15 +19,53 @@ const CartOverlay = ({
     availableCoupons,
     activeCoupon,
     setActiveCoupon,
-    getDiscountAmount
+    getDiscountAmount,
+    isSubmittingOrder
 }) => {
     const [splitCount, setSplitCount] = useState(1);
     const [showBillDetails, setShowBillDetails] = useState(false);
+    const [couponMessage, setCouponMessage] = useState(null);
     const { cgst, sgst } = getCartTax();
     const subtotal = getCartSubtotal();
 
     const finalTotal = getCartTotal();
     const splitAmount = splitCount > 1 ? (finalTotal / splitCount).toFixed(2) : finalTotal;
+
+    const handleApplyCoupon = async (e) => {
+        e.preventDefault();
+        const code = e.target.couponCode.value.toUpperCase();
+        if (!code) return;
+        
+        try {
+            const res = await fetch(`${API_URL}/api/mgmt/coupons/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, restaurant_id: restaurantData?.id || 4 })
+            });
+            const data = await res.json();
+            
+            if (data.success && data.data) {
+                const found = data.data;
+                if (found.min_order_value && subtotal < found.min_order_value) {
+                    setCouponMessage({ text: `Order value must be at least ₹${found.min_order_value}`, type: 'error' });
+                } else if (found.usage_limit && Number(found.current_usage_count || 0) >= found.usage_limit) {
+                    setCouponMessage({ text: "This coupon has reached its maximum usage limit.", type: 'error' });
+                } else if (found.expiry_date && new Date(found.expiry_date) < new Date(new Date().setHours(0,0,0,0))) {
+                    setCouponMessage({ text: "This coupon has expired.", type: 'error' });
+                } else {
+                    setActiveCoupon(found);
+                    setCouponMessage(null); // Clear errors on success
+                }
+            } else {
+                setCouponMessage({ text: "Invalid or inactive coupon code.", type: 'error' });
+            }
+        } catch(err) {
+            setCouponMessage({ text: "Network error parsing coupon.", type: 'error' });
+        }
+        
+        // Auto-clear message after 3 seconds
+        setTimeout(() => setCouponMessage(null), 3000);
+    };
 
     return (
         <div className="cart-summary-overlay animate-fade-in" onClick={() => setShowCartSummary(false)}>
@@ -95,31 +134,32 @@ const CartOverlay = ({
                 <div className="cart-summary-footer ext-cls-beb1d5f4" >
                     <div  className="ext-cls-a230f5c5">
                         {!activeCoupon ? (
-                            <form 
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const code = e.target.couponCode.value.toUpperCase();
-                                    if (!code) return;
-                                    const found = (availableCoupons || []).find(c => c.code.toUpperCase() === code);
-                                    if (found) {
-                                        if (found.min_order_value && subtotal < found.min_order_value) {
-                                            alert(`Order value must be at least ₹${found.min_order_value} to apply this coupon.`);
-                                        } else if (found.usage_limit && Number(found.current_usage_count) >= found.usage_limit) {
-                                            alert("This coupon has reached its maximum usage limit.");
-                                        } else if (found.expiry_date && new Date(found.expiry_date) < new Date(new Date().setHours(0,0,0,0))) {
-                                            alert("This coupon has expired.");
-                                        } else {
-                                            setActiveCoupon(found);
-                                        }
-                                    } else {
-                                        alert("Invalid or expired coupon code.");
-                                    }
-                                }} 
-                                className="st-cls-441e8d8e"
-                            >
-                                <input name="couponCode" type="text" placeholder="Got a Neural Promotion Code?"  className="ext-cls-3ebffb37" />
-                                <button type="submit"  className="ext-cls-ae2a67f1">Apply</button>
-                            </form>
+                            <>
+                                <form 
+                                    onSubmit={handleApplyCoupon} 
+                                    className="st-cls-441e8d8e"
+                                >
+                                    <input name="couponCode" type="text" placeholder="Got a Promotion Code?"  className="ext-cls-3ebffb37" />
+                                    <button type="submit"  className="ext-cls-ae2a67f1">Apply</button>
+                                </form>
+                                {couponMessage && (
+                                    <div style={{
+                                        backgroundColor: couponMessage.type === 'error' ? '#fef2f2' : '#ecfdf5',
+                                        color: couponMessage.type === 'error' ? '#ef4444' : '#10b981',
+                                        border: `1px solid ${couponMessage.type === 'error' ? '#fca5a5' : '#6ee7b7'}`,
+                                        borderRadius: '6px',
+                                        fontSize: '13px',
+                                        marginTop: '8px',
+                                        padding: '6px 10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontWeight: '500',
+                                        gap: '6px'
+                                    }}>
+                                        {couponMessage.type === 'error' ? '⚠️' : '✅'} {couponMessage.text}
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div  className="ext-cls-f0fb0a20">
                                 <span  className="ext-cls-b634164c">✓ {activeCoupon.code} Applied</span>
@@ -175,11 +215,10 @@ const CartOverlay = ({
                             </div>
                         </div>
                     )}
-                    <button className="final-checkout-btn" onClick={() => {
+                    <button className="final-checkout-btn" disabled={isSubmittingOrder} onClick={() => {
                         completeOrderProcess();
-                        setShowCartSummary(false);
                     }}>
-                        Finalize & Book Order
+                        {isSubmittingOrder ? <Loader size={20} className="spin" /> : 'Finalize & Book Order'}
                     </button>
                 </div>
             </div>

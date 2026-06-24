@@ -57,7 +57,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api', tableRoutes);
 app.use('/api', userRoutes);       // /api/login, /api/users, /api/restaurants
 
-app.use('/api/mgmt', mgmtRoutes);
+const authMiddleware = require('./middleware/authMiddleware');
+app.use('/api/mgmt', authMiddleware, mgmtRoutes);
 
 // 🔄 Route Aliases for Compatibility
 app.use('/api/auth/login', (req, res) => {

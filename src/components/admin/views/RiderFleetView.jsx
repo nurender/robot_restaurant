@@ -1,6 +1,6 @@
 import { Bike, Edit2, Trash2, Plus } from 'lucide-react';
 import React from 'react';
-import axios from 'axios';
+import apiService from '../../../services/apiService';
 import { API_URL } from '../../../config';
 
 export default function RiderFleetView({
@@ -38,7 +38,7 @@ export default function RiderFleetView({
               <div
                 onClick={() => {
                   const nextStatus = rider.status === 'online' ? 'offline' : 'online';
-                  axios.put(`${API_URL}/api/mgmt/riders/${rider.id}`, { ...rider, status: nextStatus }).then(() => fetchData());
+                  apiService.updateRider(rider.id, { ...rider, status: nextStatus }).then(() => fetchData());
                 }}
                 className="status-pill clickable-status ${rider.status === 'online' ? 'active' : 'inactive'} st-cls-d5067dc7"
                 

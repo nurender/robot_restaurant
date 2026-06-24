@@ -1,8 +1,9 @@
+import toast from 'react-hot-toast';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CheckCircle, X, Clock, ChefHat, Store, ListTodo, Mic, LogOut, UserCircle, CheckCheck } from 'lucide-react';
 import './RobotChat.css';
 import { io } from 'socket.io-client';
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from '../firebase';
 import { API_URL } from '../config';
 
@@ -20,6 +21,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const [showCartSummary, setShowCartSummary] = useState(false);
   const [activeOrders, setActiveOrders] = useState([]);
+  const [isGoogleVerified, setIsGoogleVerified] = useState(false);
 
   const [showOrderTracking, setShowOrderTracking] = useState(false);
   const [menuCategories, setMenuCategories] = useState([]);
@@ -97,7 +99,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Voice ordering is not supported in this browser. Please use Chrome.");
+      toast("Voice ordering is not supported in this browser. Please use Chrome.");
       return;
     }
 
@@ -146,17 +148,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
         await fetchMenuData();
 
-        // Fetch Table Occupancy dynamically
-        if (tableNumber) {
-          const occupancyRes = await fetch(`${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`);
-          const occupancyData = await occupancyRes.json();
-          const hasActiveOrders = occupancyData.orders && occupancyData.orders.length > 0;
-          const isLogged = !!localStorage.getItem('customerPhone');
-          if (hasActiveOrders && !isLogged) {
-            setShowSeatSelection(true);
-          }
-        }
-
       } catch (e) {
         console.error("Initialization Error:", e);
       } finally {
@@ -181,13 +172,6 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       setMenuCategories(grouped.filter(g => g.items.length > 0));
       setExpandedCats(new Set(uniqueCategoryNames));
 
-      const cpRes = await fetch(`${API_URL}/api/mgmt/coupons?restaurant_id=${restaurantId}`);
-      if (cpRes.ok) {
-        const cpData = await cpRes.json();
-        if (cpData.data) {
-          setAvailableCoupons(cpData.data.filter(c => c.is_active));
-        }
-      }
     } catch (e) {
       console.error("Menu Fetch Error:", e);
     }
@@ -198,35 +182,44 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const fetchTrackingStatus = useCallback(async () => {
     try {
       const userPhone = localStorage.getItem('customerPhone') || '';
-      if (!userPhone) {
-        setActiveOrders([]);
-        return;
+
+      // 1. Check if the table generally has active orders from ANYONE
+      const tableUrl = `${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`;
+      const tableRes = await fetch(tableUrl);
+      const tableData = await tableRes.json();
+      const tableHasOrders = tableData.orders && tableData.orders.length > 0;
+
+      if (tableHasOrders && !customerSeat) {
+        setShowSeatSelection(true);
       }
 
-      let url = `${API_URL}/api/orders/track/${tableNumber}?restaurant_id=${restaurantId}`;
+      // 2. Track personal orders for the user
       if (userPhone) {
-        url += `&phone=${encodeURIComponent(userPhone)}`;
-      }
+        const userUrl = `${tableUrl}&phone=${encodeURIComponent(userPhone)}`;
+        const userRes = await fetch(userUrl);
+        const userData = await userRes.json();
 
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.orders && data.orders.length > 0) {
-        setActiveOrders(data.orders);
-        // If any order just became ready, maybe show tracking popup automatically
-        const anyReady = data.orders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
-        const prevAnyReady = activeOrders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
-        const wasPreviouslyEmpty = activeOrders.length === 0;
+        if (userData.orders && userData.orders.length > 0) {
+          setActiveOrders(userData.orders);
+          const anyReady = userData.orders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
+          const prevAnyReady = activeOrders.some(o => o.status === 'ready' || o.status === 'out_for_delivery');
+          const wasPreviouslyEmpty = activeOrders.length === 0;
 
-        if (!wasPreviouslyEmpty && anyReady && !prevAnyReady) {
-          setShowOrderTracking(true);
+          if (!wasPreviouslyEmpty && anyReady && !prevAnyReady) {
+            setShowOrderTracking(true);
+          }
+        } else {
+          setActiveOrders([]);
+          setShowOrderTracking(false);
         }
       } else {
         setActiveOrders([]);
         setShowOrderTracking(false);
       }
+
       initialFetchDone.current = true;
     } catch (e) { console.error("Tracking fetch failed", e); }
-  }, [tableNumber, restaurantId, activeOrders]);
+  }, [tableNumber, restaurantId, activeOrders, customerSeat]);
 
   useEffect(() => {
     fetchTrackingStatus();
@@ -398,43 +391,53 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const completeOrderProcess = async (e) => {
     if (e) e.preventDefault();
     if (getCartCount() === 0) return;
-    if (!customerInfo.name || !customerInfo.phone) {
-      alert('Please enter your name and phone number.');
-      return;
-    }
 
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(customerInfo.phone)) {
-      alert('Please enter a valid 10-digit mobile number.');
-      return;
-    }
+      const finalName = customerInfo.name || localStorage.getItem('customerName') || 'Valued Guest';
+      const finalPhone = customerInfo.phone || localStorage.getItem('customerPhone');
+      const finalEmail = customerInfo.email || localStorage.getItem('customerEmail');
 
-    if (isSubmittingOrder) return;
-    setIsSubmittingOrder(true);
+      if (!finalPhone) {
+        toast('Please enter your phone number.');
+        return;
+      }
 
-    try {
-      const orderData = {
-        restaurant_id: restaurantId,
-        tableNumber,
-        items: currentCart,
-        total: getCartTotal(),
-        status: 'pending',
-        customerName: customerInfo.name,
-        customerSeat: customerSeat || null,
-        customerPhone: customerInfo.phone,
-        notes: orderNote,
-        applied_coupon: activeCoupon ? activeCoupon.code : null,
-        discount_amount: getDiscountAmount()
-      };
-      const res = await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(finalPhone)) {
+        toast('Please enter a valid 10-digit mobile number.');
+        return;
+      }
+
+      if (isSubmittingOrder) return;
+      setIsSubmittingOrder(true);
+
+      try {
+        const orderData = {
+          restaurant_id: restaurantId,
+          tableNumber,
+          items: currentCart,
+          total: getCartTotal(),
+          status: 'pending',
+          customerName: finalName,
+          customerSeat: customerSeat || null,
+          customerPhone: finalPhone,
+          customerEmail: finalEmail || null,
+          notes: orderNote,
+          applied_coupon: activeCoupon ? activeCoupon.code : null,
+          discount_amount: getDiscountAmount()
+        };
+        const res = await fetch(`${API_URL}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
       if (res.ok) {
-        localStorage.setItem('customerPhone', customerInfo.phone);
+        localStorage.setItem('customerPhone', finalPhone);
+        if (finalName && finalName !== 'Valued Guest') {
+          localStorage.setItem('customerName', finalName);
+        }
 
         setOrderConfirmedUI(true);
+        setShowCartSummary(false);
         setCurrentCart([]);
         setOrderNote('');
         setActiveCoupon(null);
@@ -452,7 +455,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       }
     } catch (e) {
       console.error("Order Failed:", e);
-      alert('Something went wrong while placing the order. Please try again.');
+      toast('Something went wrong while placing the order. Please try again.');
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -470,7 +473,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     if (e) e.preventDefault();
     const isBooking = getCartCount() > 0;
     if ((isBooking && !customerInfo.name) || !customerInfo.phone || customerInfo.phone.length !== 10) {
-      alert(isBooking ? 'Please enter your name and a valid 10-digit phone number.' : 'Please enter a valid 10-digit phone number.');
+      toast(isBooking ? 'Please enter your name and a valid 10-digit phone number.' : 'Please enter a valid 10-digit phone number.');
       return;
     }
     setupRecaptcha();
@@ -499,10 +502,70 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     }
   };
 
+  const handleInitialSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (isGoogleVerified) {
+      if (!customerInfo.phone || customerInfo.phone.length !== 10) {
+        toast.error("Please provide a 10-digit number to tie to your order.");
+        return;
+      }
+      localStorage.setItem('customerName', customerInfo.name);
+      localStorage.setItem('customerPhone', customerInfo.phone);
+      setIsCustomerLoggedIn(true);
+      if (getCartCount() > 0) {
+        completeOrderProcess();
+      } else {
+        setShowCustomerForm(false);
+        fetchTrackingStatus();
+      }
+    } else {
+      handleSendOtp(e);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      const newName = user.displayName || 'Google User';
+      const newEmail = user.email || '';
+      let phoneToUse = user.phoneNumber;
+      
+      if (!phoneToUse) {
+         phoneToUse = '99' + Math.floor(10000000 + Math.random() * 90000000).toString();
+      } else {
+         phoneToUse = phoneToUse.replace(/[^0-9]/g, '').slice(-10);
+      }
+
+      setCustomerInfo({ name: newName, phone: phoneToUse, email: newEmail });
+      setIsGoogleVerified(true);
+      
+      localStorage.setItem('customerName', newName);
+      localStorage.setItem('customerPhone', phoneToUse);
+      if (newEmail) {
+        localStorage.setItem('customerEmail', newEmail);
+      }
+      setIsCustomerLoggedIn(true);
+      toast.success('Logged in successfully!');
+      
+      if (getCartCount() > 0) {
+        completeOrderProcess();
+      } else {
+        setShowCustomerForm(false);
+        fetchTrackingStatus();
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Google login failed or closed.');
+    }
+  };
+
   const handleVerifyOtpAndOrder = async (e) => {
     if (e) e.preventDefault();
     if (!otpCode || otpCode.length !== 6) {
-      alert('Please enter the 6-digit OTP.');
+      toast('Please enter the 6-digit OTP.');
       return;
     }
     setIsSubmittingOrder(true);
@@ -525,14 +588,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       }
     } catch (error) {
       console.error(error);
-      alert('Invalid OTP entered.');
+      toast.error('Invalid OTP entered.');
       setIsSubmittingOrder(false);
     }
   };
 
   const proceedToAuthOrOrder = () => {
     const phone = localStorage.getItem('customerPhone');
-    if (phone && customerInfo.name && customerInfo.phone) {
+    if (phone && (customerInfo.phone === phone || !customerInfo.phone)) {
       // Auto submit order if already logged in
       completeOrderProcess();
     } else {
@@ -543,7 +606,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const initiateCheckout = () => {
     if (getCartCount() === 0) {
-      alert('Your cart is empty. Please add some items first.');
+      toast('Your cart is empty. Please add some items first.');
       return;
     }
 
@@ -589,7 +652,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           comment: feedback.comment
         })
       });
-      alert('Thank you for your feedback!');
+      toast('Thank you for your feedback!');
       setShowFeedbackPopup(false);
       setFeedback({ rating: 5, comment: '', name: '', phone: '' });
     } catch (e) { console.error("Feedback failed:", e); }
@@ -600,14 +663,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       <div className="top-call-gradient"></div>
       <div className="avatar-header">
         <div className="header-badge">
-          <span  className="ext-cls-b72ed605">Table</span> {tableNumber}
+          <span className="ext-cls-b72ed605">Table</span> {tableNumber}
           {customerSeat && (
-            <span  className="ext-cls-6f678e19">{customerSeat}</span>
+            <span className="ext-cls-6f678e19">{customerSeat}</span>
           )}
-          <span  className="ext-cls-484b29e1">|</span>
-          <span  className="ext-cls-524b4cd3">₹{getCartTotal()}</span>
+          <span className="ext-cls-484b29e1">|</span>
+          <span className="ext-cls-524b4cd3">₹{getCartTotal()}</span>
         </div>
-        <div  className="ext-cls-021fa4e0">
+        <div className="ext-cls-021fa4e0">
           <ThemeToggle />
           {isCustomerLoggedIn && activeOrders.length > 0 && (
             <button
@@ -617,7 +680,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <Clock size={14} color="#a78bfa" />
               <span className="hide-on-mobile">Tracking</span>
               {activeOrders.length > 0 && (
-                <span  className="ext-cls-1ce196f4">
+                <span className="ext-cls-1ce196f4">
                   {activeOrders.length}
                 </span>
               )}
@@ -627,7 +690,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             onClick={() => setShowFeedbackPopup(true)}
             className="robot-header-btn"
           >
-            <span  className="ext-cls-ae3b32ee">★</span>
+            <span className="ext-cls-ae3b32ee">★</span>
             <span className="hide-on-mobile">Feedback</span>
           </button>
 
@@ -642,7 +705,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 setShowOrderTracking(false);
               }}
               className="robot-header-btn st-cls-c767cd7c"
-              
+
               title="Logout"
             >
               <LogOut size={16} />
@@ -651,9 +714,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <button
               onClick={() => setShowCustomerForm(true)}
               className="robot-header-btn st-cls-c4843ad3"
-              
+
             >
-              <UserCircle size={16}  className="ext-cls-5da48443" />
+              <UserCircle size={16} className="ext-cls-5da48443" />
               <span className="hide-on-mobile">Login</span>
             </button>
           )}
@@ -683,14 +746,19 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           activeCoupon={activeCoupon}
           setActiveCoupon={setActiveCoupon}
           getDiscountAmount={getDiscountAmount}
+          isSubmittingOrder={isSubmittingOrder}
         />
 
 
 
         {orderConfirmedUI && (
-          <div className="order-success-overlay scale-in">
-            <CheckCircle size={48} color="white" fill="var(--success)" />
-            <p>{'Order Confirmed!'}</p>
+          <div className="advanced-success-animation">
+            <div className="success-halo"></div>
+            <div className="success-icon-wrap">
+              <CheckCircle size={54} className="success-check-icon" />
+            </div>
+            <h2 className="success-title">Order Confirmed!</h2>
+            <p className="success-subtitle">Preparing your delicious food 👨‍🍳</p>
           </div>
         )}
 
@@ -771,6 +839,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           activeCoupon={activeCoupon}
           setActiveCoupon={setActiveCoupon}
           getDiscountAmount={getDiscountAmount}
+          isSubmittingOrder={isSubmittingOrder}
         />
       )}
 
@@ -788,17 +857,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       )}
 
       {showSeatSelection && (
-        <div className="modal-overlay ext-cls-02b1ca14"  onClick={() => setShowSeatSelection(false)}>
+        <div className="modal-overlay ext-cls-02b1ca14">
           <div className="booking-modal animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div  className="ext-cls-91d58929">
+            <div className="ext-cls-91d58929">
               <h3 className="view-title ext-cls-e7deb31c" >Shared Table 🪑</h3>
-              <button className="close-modal-btn ext-cls-1cc350ab"  onClick={() => setShowSeatSelection(false)}><X size={24} /></button>
             </div>
             <p className="text-muted ext-cls-02be399f" >
               There are other active orders on this table. Please specify your <strong>Seat Number</strong> or <strong>Name</strong> so the waiter knows who ordered this!
             </p>
             <div className="booking-form">
-              <div  className="ext-cls-038ac31c">
+              <div className="ext-cls-038ac31c">
                 {['Seat A', 'Seat B', 'Seat C', 'Seat D', 'Seat E', 'Seat F'].map(seat => (
                   <button
                     key={seat}
@@ -827,10 +895,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 ))}
               </div>
 
-              <div  className="ext-cls-d3115725">
-                <span  className="ext-cls-279028dd" />
-                <span  className="ext-cls-34ccc8e3">OR TYPE CUSTOM</span>
-                <span  className="ext-cls-279028dd" />
+              <div className="ext-cls-d3115725">
+                <span className="ext-cls-279028dd" />
+                <span className="ext-cls-34ccc8e3">OR TYPE CUSTOM</span>
+                <span className="ext-cls-279028dd" />
               </div>
 
               <input
@@ -841,9 +909,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               />
               <button
                 className="btn-primary ext-cls-7bc384a3"
-                
+
                 onClick={() => {
-                  if (!customerSeat) { alert('Please select or specify your seat details.'); return; }
+                  if (!customerSeat) { toast('Please select or specify your seat details.'); return; }
                   setShowSeatSelection(false);
                   if (currentCart && currentCart.length > 0) {
                     proceedToAuthOrOrder();
@@ -868,14 +936,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
             <p className="modal-subtitle">
               {getCartCount() > 0 ? 'Please provide your details to confirm the order.' : 'Enter your details to view past orders.'}
             </p>
-            <form onSubmit={otpSent ? handleVerifyOtpAndOrder : handleSendOtp} className="modal-form">
+            <form onSubmit={otpSent ? handleVerifyOtpAndOrder : handleInitialSubmit} className="modal-form">
               {getCartCount() > 0 && (
                 <div className="form-group">
                   <label>{'Full Name'}</label>
                   <input
                     type="text"
-                    required={getCartCount() > 0}
-                    disabled={otpSent}
+                    required={getCartCount() > 0 && !isGoogleVerified}
+                    disabled={otpSent || isGoogleVerified}
                     className="modal-input"
                     placeholder={'Enter your name'}
                     value={customerInfo.name}
@@ -903,10 +971,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
               {otpSent && (
                 <div className="form-group">
-                  <label  className="ext-cls-1bdb758b">
+                  <label className="ext-cls-1bdb758b">
                     <span>{'OTP Code'}</span>
                     {mockOtpToast && (
-                      <span  className="ext-cls-6fdc2e24">
+                      <span className="ext-cls-6fdc2e24">
                         Test OTP: {mockOtpToast}
                       </span>
                     )}
@@ -926,28 +994,45 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                 </div>
               )}
 
-              <div id="recaptcha-container"  className="ext-cls-e032a669"></div>
+              <div id="recaptcha-container" className="ext-cls-e032a669"></div>
 
-              <div className="modal-actions-row">
-                <button type="button" className="btn-secondary flex-1" onClick={() => {
-                  setShowCustomerForm(false);
-                  setCustomerInfo({ name: '', phone: '' });
-                  setOtpCode('');
-                  setOtpSent(false);
-                  setMockOtpToast(null);
-                  setConfirmationResult(null);
-                }}>
-                  {'Cancel'}
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => {
+                    setShowCustomerForm(false);
+                    setCustomerInfo({ name: '', phone: '' });
+                    setOtpCode('');
+                    setOtpSent(false);
+                    setIsGoogleVerified(false);
+                    setMockOtpToast(null);
+                    setConfirmationResult(null);
+                  }}>
+                    {'Cancel'}
+                  </button>
 
-                {!otpSent ? (
-                  <button type="submit" disabled={isSendingOtp} className={`btn-primary flex-1 ${isSendingOtp ? 'loading' : ''}`}>
-                    {isSendingOtp ? ('Sending...') : ('Send OTP')}
-                  </button>
-                ) : (
-                  <button type="submit" disabled={isSubmittingOrder || otpCode.length !== 6} className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`} style={{ background: otpCode.length === 6 ? 'linear-gradient(135deg, #00e676 0%, #10b981 100%)' : '' }}>
-                    {isSubmittingOrder ? ('Processing...') : (getCartCount() > 0 ? 'Confirm Order' : 'Verify & Login')}
-                  </button>
+                  {!otpSent ? (
+                    <button type="submit" disabled={isSendingOtp} className={`btn-primary flex-1 ${(isSendingOtp) ? 'loading' : ''}`}>
+                      {isGoogleVerified ? 'Complete Login' : (isSendingOtp ? 'Sending...' : 'Send OTP')}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={handleVerifyOtpAndOrder} disabled={isSubmittingOrder || otpCode.length !== 6} className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`} style={{ background: otpCode.length === 6 ? 'linear-gradient(135deg, #00e676 0%, #10b981 100%)' : '' }}>
+                      {isSubmittingOrder ? ('Processing...') : (getCartCount() > 0 ? 'Confirm Order' : 'Verify & Login')}
+                    </button>
+                  )}
+                </div>
+
+                {!otpSent && !isGoogleVerified && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0' }}>
+                      <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }}></div>
+                      <span style={{ margin: '0 12px', fontSize: '13px', color: 'var(--text-muted)' }}>OR</span>
+                      <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }}></div>
+                    </div>
+                    <button type="button" onClick={handleGoogleLogin} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#1e293b', padding: '12px', borderRadius: '12px' }}>
+                      <img src="https://www.google.com/favicon.ico" alt="G" style={{ width: '18px', height: '18px' }} />
+                      <span style={{ fontWeight: 600 }}>Continue with Google</span>
+                    </button>
+                  </>
                 )}
               </div>
             </form>
@@ -1012,7 +1097,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <button
                 type="submit"
                 className="btn-primary full-width ext-cls-12eba061"
-                
+
               >
                 {'Submit Feedback'}
               </button>
@@ -1042,9 +1127,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     <div className="order-id-meta">
                       <span className="order-id-badge">
                         #ORDER-{order.id}
-                        <span  className="ext-cls-2c474884">🍽️ Table {order.tableNumber}</span>
-                        {order.customerSeat && <span  className="ext-cls-2c474884">🪑 {order.customerSeat}</span>}
-                        {order.customerName && <span  className="ext-cls-2c474884">👤 {order.customerName}</span>}
+                        <span className="ext-cls-2c474884">🍽️ Table {order.tableNumber}</span>
+                        {order.customerSeat && <span className="ext-cls-2c474884">🪑 {order.customerSeat}</span>}
+                        {order.customerName && <span className="ext-cls-2c474884">👤 {order.customerName}</span>}
                       </span>
                       <span className="order-amount-text">₹{order.total}</span>
                     </div>
@@ -1056,7 +1141,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                     <div className="items-list-tiny">
                       {order.items.map((item, i) => (
                         <div key={i} className="tiny-item-row">
-                          <span className="item-name-qty">{item.qty}x {item.name} {item.selectedVariant && <span  className="ext-cls-7428a996">({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span  className="ext-cls-240e9bcd">[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
+                          <span className="item-name-qty">{item.qty}x {item.name} {item.selectedVariant && <span className="ext-cls-7428a996">({item.selectedVariant.size})</span>} {item.selectedAddons && item.selectedAddons.length > 0 && <span className="ext-cls-240e9bcd">[+{item.selectedAddons.map(a => a.name).join(', ')}]</span>}</span>
                           <span className="item-price-sum">₹{item.price * item.qty}</span>
                         </div>
                       ))}

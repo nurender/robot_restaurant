@@ -8,6 +8,25 @@ const getCoupons = async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
 
+const verifyCoupon = async (req, res) => {
+    try {
+        const { code, restaurant_id } = req.body;
+        if (!code || !restaurant_id) return res.status(400).json({ success: false, message: 'Missing parameters' });
+        
+        const { pool } = require('../config/db');
+        const couponRes = await pool.query(
+            "SELECT * FROM coupons WHERE UPPER(code) = UPPER($1) AND restaurant_id = $2 AND is_active = true", 
+            [code, restaurant_id]
+        );
+        
+        if (couponRes.rows.length > 0) {
+            res.json({ success: true, data: couponRes.rows[0] });
+        } else {
+            res.status(404).json({ success: false, message: "Invalid or expired coupon code." });
+        }
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
 const createCoupon = async (req, res) => {
     try {
         const coupon = await mgmtService.createCoupon(req.body);
@@ -97,7 +116,16 @@ const updateStock = async (req, res) => {
 
 const getSidebarItems = async (req, res) => {
     try {
-        const items = await mgmtService.getSidebarItems();
+        // Securely extract role from JWT Middleware
+        let roleToUse = req.user?.role || req.query.role; 
+        
+        let items = await mgmtService.getSidebarItems();
+        
+        if (roleToUse && roleToUse !== 'super_admin') {
+            const roleData = await mgmtService.getRoleByName(roleToUse);
+            let permissions = roleData && roleData.permissions ? roleData.permissions : [];
+            items = items.filter(item => permissions.includes(String(item.id)));
+        }
         res.json({ success: true, data: items });
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
@@ -138,7 +166,7 @@ const deleteRole = async (req, res) => {
 };
 
 module.exports = { 
-    getCoupons, createCoupon, updateCoupon, deleteCoupon, 
+    getCoupons, createCoupon, updateCoupon, deleteCoupon, verifyCoupon,
     getCustomers, getSettings, updateSettings, 
     getRiders, createRider, updateRider, deleteRider, 
     assignRiderToOrder, updateStock,

@@ -155,6 +155,20 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbar for cleaner look, similar to other panels */
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-nav {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .nav-item {
@@ -4042,7 +4056,6 @@ select option {
   border-radius: 12px !important;
   background: var(--bg-deep) !important;
   border: 1px solid var(--card-border) !important;
-  color: white !important;
   margin-top: 8px !important;
 }
 
@@ -5068,7 +5081,7 @@ select option {
 .ext-cls-1406a30b {
   font-size: 11px !important;
   font-weight: 800 !important;
-  color: f.color !important;
+  color: var(--accent-color) !important;
 }
 
 .ext-cls-76847ffc {
@@ -5238,7 +5251,7 @@ select option {
   width: 10px !important;
   height: 10px !important;
   border-radius: 50% !important;
-  background: getStatusColor(item.status) !important;
+  background: var(--accent-color) !important;
 }
 
 .ext-cls-fe26727a {

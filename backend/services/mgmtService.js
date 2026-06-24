@@ -118,38 +118,43 @@ class MgmtService {
 
     // --- Sidebar Items ---
     async getSidebarItems() {
-        const result = await pool.query("SELECT * FROM admin_sidebar_items ORDER BY sort_order ASC");
+        const result = await pool.query("SELECT * FROM sidebar_menu ORDER BY sort_order ASC");
         return result.rows;
     }
 
     async updateSidebarOrder(orders) {
         for (const item of orders) {
-            await pool.query("UPDATE admin_sidebar_items SET sort_order = $1 WHERE id = $2", [item.sort_order, item.id]);
+            await pool.query("UPDATE sidebar_menu SET sort_order = $1 WHERE id = $2", [item.sort_order, item.id]);
         }
         return true;
     }
 
     async toggleSidebarVisibility(id, is_active) {
-        await pool.query("UPDATE admin_sidebar_items SET is_active = $1 WHERE id = $2", [is_active, id]);
+        await pool.query("UPDATE sidebar_menu SET is_active = $1 WHERE id = $2", [is_active, id]);
         return true;
     }
 
     // --- Roles ---
     async getRoles() {
-        const result = await pool.query("SELECT * FROM admin_roles ORDER BY name ASC");
+        const result = await pool.query("SELECT * FROM user_roles ORDER BY name ASC");
         return result.rows;
+    }
+
+    async getRoleByName(name) {
+        const result = await pool.query("SELECT * FROM user_roles WHERE name = $1", [name]);
+        return result.rows.length > 0 ? result.rows[0] : null;
     }
 
     async createRole(name, permissions) {
         const result = await pool.query(
-            "INSERT INTO admin_roles (name, permissions) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET permissions = $2 RETURNING *",
+            "INSERT INTO user_roles (name, permissions) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET permissions = $2 RETURNING *",
             [name, permissions]
         );
         return result.rows[0];
     }
 
     async deleteRole(id) {
-        await pool.query("DELETE FROM admin_roles WHERE id = $1", [id]);
+        await pool.query("DELETE FROM user_roles WHERE id = $1", [id]);
         return true;
     }
 }

@@ -1,6 +1,7 @@
+import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
 import React from 'react';
-import axios from 'axios';
+import apiService from '../../../services/apiService';
 import { API_URL } from '../../../config';
 
 export default function CategoryManagerModal({
@@ -14,6 +15,18 @@ export default function CategoryManagerModal({
   fetchData
 }) {
   if (!isOpen) return null;
+
+  const handleDeleteCategory = async (e, cat) => {
+    e.stopPropagation();
+    if (await window.customConfirm(`Are you sure you want to delete "${cat.name}"?`)) {
+      try {
+        await apiService.deleteCategory(cat.id);
+        fetchData();
+      } catch (err) {
+        toast.error("Failed to delete category. It might have items assigned to it.");
+      }
+    }
+  };
 
   return (
     <div className="modal-overlay ext-cls-e0b4af75" >
@@ -66,17 +79,7 @@ export default function CategoryManagerModal({
                 >
                   {cat.name}
                   <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Are you sure you want to delete "${cat.name}"?`)) {
-                        try {
-                          await axios.delete(`${API_URL}/api/menu/categories/${cat.id}`);
-                          fetchData();
-                        } catch (err) {
-                          alert("Failed to delete category. It might have items assigned to it.");
-                        }
-                      }
-                    }}
+                    onClick={(e) => handleDeleteCategory(e, cat)}
                     className="st-cls-3a00955a"
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}

@@ -5,6 +5,60 @@ import RobotChat from './components/RobotChat';
 import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
 import { API_URL } from './config';
+import toast, { Toaster } from 'react-hot-toast';
+
+// Globally override browser default alerts to show a premium popup instead
+window.alert = (message) => {
+  toast(message, {
+    icon: '🔔',
+    style: {
+      borderRadius: '12px',
+      background: '#1a1a24',
+      color: '#fff',
+      border: '1px solid rgba(124, 58, 237, 0.3)',
+      boxShadow: '0 4px 15px rgba(124, 58, 237, 0.2)',
+      fontWeight: '600'
+    },
+  });
+};
+
+window.customConfirm = (message) => {
+  return new Promise((resolve) => {
+    toast((t) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '220px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '18px' }}>⚠️</span>
+          <strong style={{ fontSize: '14px', color: '#fff' }}>Confirmation Required</strong>
+        </div>
+        <span style={{ fontSize: '13px', color: '#cbd5e1' }}>{message}</span>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button 
+            style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }} 
+            onClick={() => { toast.dismiss(t.id); resolve(false); }}
+          >
+            Cancel
+          </button>
+          <button 
+            style={{ padding: '6px 14px', background: '#ef4444', border: '1px solid #dc2626', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', boxShadow: '0 0 10px rgba(239, 68, 68, 0.3)' }} 
+            onClick={() => { toast.dismiss(t.id); resolve(true); }}
+          >
+            Confirm Action
+          </button>
+        </div>
+      </div>
+    ), { 
+      duration: Infinity, // don't close untill clicked
+      style: { 
+        background: '#09090b', 
+        color: '#fff', 
+        border: '1px solid rgba(239, 68, 68, 0.4)',
+        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+        padding: '16px',
+        maxWidth: '350px'
+      } 
+    });
+  });
+};
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -31,7 +85,7 @@ class ErrorBoundary extends React.Component {
         </div>
       );
     }
-    return this.props.children; 
+    return this.props.children;
   }
 }
 
@@ -70,7 +124,7 @@ function CustomerApp() {
           if (data.success) {
             setSession({ table: data.table_number, restaurant: data.restaurant_id });
           } else {
-            alert("Invalid or Expired QR Code");
+            toast.error("Invalid or Expired QR Code");
           }
         } catch (err) {
           console.error("Token verification failed", err);
@@ -81,7 +135,7 @@ function CustomerApp() {
     };
     fetchTokenDetails();
   }, []);
-  
+
   const navigate = useNavigate();
 
   const handleStartDemo = () => {
@@ -94,12 +148,12 @@ function CustomerApp() {
 
   if (isLoading) {
     return (
-      <div style={{ 
-        height: '100vh', 
-        background: '#0a0a0b', 
-        display: 'flex', 
+      <div style={{
+        height: '100vh',
+        background: '#0a0a0b',
+        display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center', 
+        alignItems: 'center',
         justifyContent: 'center',
         color: 'white',
         fontFamily: 'Inter, sans-serif'
@@ -128,9 +182,9 @@ function CustomerApp() {
   return (
     <>
       {!session ? (
-        <LandingPage 
-          onStartDemo={handleStartDemo} 
-          onAdminLogin={handleAdminLogin} 
+        <LandingPage
+          onStartDemo={handleStartDemo}
+          onAdminLogin={handleAdminLogin}
         />
       ) : (
         <div className="app-container">
@@ -144,6 +198,31 @@ function CustomerApp() {
 function App() {
   return (
     <ErrorBoundary>
+      <Toaster 
+        position="top-right" 
+        reverseOrder={false} 
+        containerStyle={{ zIndex: 999999 }} 
+        toastOptions={{
+          style: {
+            borderRadius: '12px',
+            background: '#09090b',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+            fontWeight: '600',
+            fontSize: '14px',
+            padding: '12px 18px',
+          },
+          success: {
+            iconTheme: { primary: '#10b981', secondary: '#fff' },
+            style: { border: '1px solid rgba(16, 185, 129, 0.3)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.15)' }
+          },
+          error: {
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
+            style: { border: '1px solid rgba(239, 68, 68, 0.3)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.15)' }
+          }
+        }}
+      />
       <Router>
         <Routes>
           <Route path="/" element={<CustomerApp />} />

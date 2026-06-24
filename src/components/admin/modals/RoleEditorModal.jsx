@@ -1,6 +1,7 @@
+import toast from 'react-hot-toast';
 import { Plus, Check } from 'lucide-react';
 import React from 'react';
-import axios from 'axios';
+import apiService from '../../../services/apiService';
 import { API_URL } from '../../../config';
 
 export default function RoleEditorModal({
@@ -8,19 +9,23 @@ export default function RoleEditorModal({
   onClose,
   currentRoleData,
   setCurrentRoleData,
-  onSaveSuccess
+  onSaveSuccess,
+  orderedSidebar = []
 }) {
   if (!isOpen) return null;
 
+  // Use the exact database-backed sidebar items to build the access matrix.
+  const dynamicModules = orderedSidebar.map(item => ({ id: String(item.id), label: item.label }));
+
   const handleSave = async () => {
-    if (!currentRoleData.name) return alert("Role name is required");
+    if (!currentRoleData.name) return toast("Role name is required");
     try {
-      await axios.post(`${API_URL}/api/mgmt/roles`, currentRoleData);
-      const res = await axios.get(`${API_URL}/api/mgmt/roles`);
+      await apiService.createRole(currentRoleData);
+      const res = await apiService.getRoles();
       onSaveSuccess(res.data.data);
       onClose();
     } catch (e) {
-      alert("Failed to save role");
+      toast.error("Failed to save role");
     }
   };
 
@@ -55,19 +60,15 @@ export default function RoleEditorModal({
           <div  className="ext-cls-02be399f">
             <label  className="ext-cls-4602bfef">ACCESS MATRIX</label>
             <div  className="ext-cls-f64ce9bf">
-              {[
-                'dashboard', 'orders', 'kitchen', 'marketing', 'menu',
-                'sidebar_order', 'coupons', 'customers', 'rider_fleet', 'inventory', 'reports', 'qr_codes',
-                'feedback', 'settings', 'staff', 'restaurants', 'roles'
-              ].map(mod => {
-                const isSelected = currentRoleData.permissions.includes(mod);
+              {dynamicModules.length > 0 ? dynamicModules.map(mod => {
+                const isSelected = currentRoleData.permissions.includes(mod.id);
                 return (
                   <div
-                    key={mod}
+                    key={mod.id}
                     onClick={() => {
                       let newPerms = [...currentRoleData.permissions];
-                      if (isSelected) newPerms = newPerms.filter(p => p !== mod);
-                      else newPerms.push(mod);
+                      if (isSelected) newPerms = newPerms.filter(p => p !== mod.id);
+                      else newPerms.push(mod.id);
                       setCurrentRoleData({ ...currentRoleData, permissions: newPerms });
                     }}
                     style={{
@@ -81,10 +82,12 @@ export default function RoleEditorModal({
                     <div style={{ width: '18px', height: '18px', borderRadius: '5px', border: '2px solid', borderColor: isSelected ? 'var(--accent-primary)' : 'var(--card-border)', background: isSelected ? 'var(--accent-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {isSelected && <Check size={12} color="#fff" strokeWidth={4} />}
                     </div>
-                    <span style={{ fontSize: '14px', color: isSelected ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: '700', textTransform: 'capitalize' }}>{(mod || '').replace('_', ' ')}</span>
+                    <span style={{ fontSize: '14px', color: isSelected ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: '700' }}>{mod.label || mod.id}</span>
                   </div>
                 );
-              })}
+              }) : (
+                <div style={{ padding: '10px', color: 'var(--text-muted)' }}>Loading system modules...</div>
+              )}
             </div>
           </div>
         </div>

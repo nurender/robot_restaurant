@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState } from 'react';
 import { 
   Package, AlertTriangle, ArrowDownRight, ArrowUpRight, 
@@ -324,7 +325,7 @@ const SmartInventory = () => {
                       <td  className="ext-cls-2b40f511">{sup.lastPrice}</td>
                       <td  className="ext-cls-ea0b5850">
                         <button 
-                          onClick={() => alert(`Creating Purchase Order for ${sup.name}...`)}
+                          onClick={() => toast(`Creating Purchase Order for ${sup.name}...`)}
                           className="st-cls-33dd27c8"
                         >
                           Issue PO

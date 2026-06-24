@@ -1,10 +1,10 @@
 import { Edit, Trash2, Plus } from 'lucide-react';
 import React from 'react';
-import axios from 'axios';
+import apiService from '../../../services/apiService';
 import { API_URL } from '../../../config';
 import RoleEditorModal from '../modals/RoleEditorModal';
 
-export default function RolesManagementView({ dbRoles, setDbRoles, currentRoleData, setCurrentRoleData, isRoleModalOpen, setIsRoleModalOpen }) {
+export default function RolesManagementView({ dbRoles, setDbRoles, currentRoleData, setCurrentRoleData, isRoleModalOpen, setIsRoleModalOpen, orderedSidebar }) {
   return (
     <div className="view-container animate-slide-up view-container-deep">
       <div className="view-header-row mb-8 ext-cls-6902f166" >
@@ -50,9 +50,13 @@ export default function RolesManagementView({ dbRoles, setDbRoles, currentRoleDa
                 </td>
                 <td  className="ext-cls-b65a50f4">
                   <div  className="ext-cls-b552c8a3">
-                    {role.permissions.slice(0, 4).map(p => (
-                      <span key={p}  className="ext-cls-826db71a">{(p || '').replace('_', ' ')}</span>
-                    ))}
+                    {role.permissions.slice(0, 4).map(p => {
+                      const matchedItem = orderedSidebar?.find(item => String(item.id) === String(p));
+                      const displayLabel = matchedItem ? matchedItem.label : (String(p) || '').replace('_', ' ');
+                      return (
+                        <span key={p}  className="ext-cls-826db71a">{displayLabel}</span>
+                      );
+                    })}
                     {role.permissions.length > 4 && <span  className="ext-cls-fc38bcec">+{role.permissions.length - 4} more</span>}
                   </div>
                 </td>
@@ -69,9 +73,9 @@ export default function RolesManagementView({ dbRoles, setDbRoles, currentRoleDa
                     </button>
                     <button
                       onClick={async () => {
-                        if (window.confirm(`Delete role ${role.name}?`)) {
-                          await axios.delete(`${API_URL}/api/mgmt/roles/${role.id}`);
-                          axios.get(`${API_URL}/api/mgmt/roles`).then(res => setDbRoles(res.data.data));
+                        if (await window.customConfirm(`Delete role ${role.name}?`)) {
+                          await apiService.deleteRole(role.id);
+                          apiService.getRoles().then(res => setDbRoles(res.data.data));
                         }
                       }}
                       className="st-cls-82527b1e"
@@ -92,6 +96,7 @@ export default function RolesManagementView({ dbRoles, setDbRoles, currentRoleDa
         currentRoleData={currentRoleData}
         setCurrentRoleData={setCurrentRoleData}
         onSaveSuccess={(roles) => setDbRoles(roles)}
+        orderedSidebar={orderedSidebar}
       />
     </div>
   );

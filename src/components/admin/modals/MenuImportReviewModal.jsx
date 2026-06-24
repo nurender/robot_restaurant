@@ -1,5 +1,6 @@
+import apiService from '../../../services/apiService';
+import toast from 'react-hot-toast';
 import { Sparkles } from 'lucide-react';
-import axios from 'axios';
 import { API_URL } from '../../../config';
 
 export default function MenuImportReviewModal({
@@ -21,13 +22,13 @@ export default function MenuImportReviewModal({
         let catName = cat.name;
         let existingCat = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
         if (!existingCat) {
-          const catRes = await axios.post(`${API_URL}/api/menu/categories`, { name: catName, restaurant_id: adminUser.restaurant_id });
+          const catRes = await apiService.createCategory({ name: catName, restaurant_id: adminUser.restaurant_id });
           categories.push({ id: catRes.data.id, name: catName });
         }
 
         // 2. Publish items
         for (const itm of cat.items) {
-          await axios.post(`${API_URL}/api/menu`, {
+          await apiService.createDish({
             restaurant_id: adminUser.restaurant_id,
             name: itm.name,
             category: catName,
@@ -37,11 +38,11 @@ export default function MenuImportReviewModal({
           });
         }
       }
-      alert("Menu populated successfully!");
+      toast("Menu populated successfully!");
       onClose(); // This equates to setShowImportReview(false)
       fetchData();
     } catch (err) {
-      alert("Publish failed: " + err.message);
+      toast("Publish failed: " + err.message);
     }
   };
 

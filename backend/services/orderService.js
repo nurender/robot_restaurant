@@ -2,7 +2,7 @@ const { pool } = require('../config/db');
 
 class OrderService {
     async createOrder(data) {
-        const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone, notes, customerSeat, applied_coupon, discount_amount } = data;
+        const { restaurant_id, tableNumber, items, total, status, customerName, customerPhone, customerEmail, notes, customerSeat, applied_coupon, discount_amount } = data;
         const finalRestId = restaurant_id || 1;
 
         const client = await pool.connect();
@@ -18,14 +18,15 @@ class OrderService {
 
             if (customerPhone) {
                 await client.query(`
-                    INSERT INTO customers (restaurant_id, name, phone, total_orders, total_spend, last_order_date)
-                    VALUES ($1, $2, $3, 1, $4, CURRENT_TIMESTAMP)
+                    INSERT INTO customers (restaurant_id, name, phone, email, total_orders, total_spend, last_order_date)
+                    VALUES ($1, $2, $3, $4, 1, $5, CURRENT_TIMESTAMP)
                     ON CONFLICT (phone) DO UPDATE SET
                         total_orders = customers.total_orders + 1,
                         total_spend = customers.total_spend + EXCLUDED.total_spend,
                         last_order_date = CURRENT_TIMESTAMP,
-                        name = COALESCE(EXCLUDED.name, customers.name)
-                `, [finalRestId, customerName, customerPhone, total]);
+                        name = COALESCE(EXCLUDED.name, customers.name),
+                        email = COALESCE(EXCLUDED.email, customers.email)
+                `, [finalRestId, customerName, customerPhone, customerEmail || null, total]);
             }
 
             for (const item of items) {

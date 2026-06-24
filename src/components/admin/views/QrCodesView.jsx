@@ -1,6 +1,7 @@
+import toast from 'react-hot-toast';
 import { Edit2, Trash2, ListTodo, Plus } from 'lucide-react';
 import React from 'react';
-import axios from 'axios';
+import apiService from '../../../services/apiService';
 import { API_URL } from '../../../config';
 
 export default function QrCodesView({ restaurantTables, adminUser, fetchData, printTableQR }) {
@@ -19,14 +20,14 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
 
             const randomSecret = `T${nextId}-DINE${Math.floor(1000 + Math.random() * 9000)}`;
             try {
-              const res = await axios.post(`${API_URL}/api/tables`, {
+              const res = await apiService.createTable({
                 table_number: nextId,
                 secret_token: randomSecret,
                 restaurant_id: adminUser.restaurant_id || 4,
                 name: tableName
               });
               fetchData('New Table Added');
-            } catch (err) { alert("Persistence failed"); }
+            } catch (err) { toast("Persistence failed"); }
           }}
           className="btn-global-primary"
           
@@ -54,7 +55,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                   onClick={() => {
                     const newName = prompt("Edit Table Name:", t.name || t.table);
                     if (newName) {
-                      axios.put(`${API_URL}/api/tables/${t.id}`, { name: newName, table_number: t.table_number })
+                      apiService.updateTable(t.id, { name: newName, table_number: t.table_number })
                         .then(() => fetchData('Table Updated'));
                     }
                   }}
@@ -69,7 +70,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                   onClick={() => {
                     const newKey = prompt("Edit Secret Key (Token):", tokenVal);
                     if (newKey) {
-                      axios.put(`${API_URL}/api/tables/${t.id}`, { name: t.name || t.table, table_number: t.table_number, secret_token: newKey })
+                      apiService.updateTable(t.id, { name: t.name || t.table, table_number: t.table_number, secret_token: newKey })
                         .then(() => fetchData('Key Updated'));
                     }
                   }}
@@ -83,7 +84,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(liveUrl);
-                    alert("Table URL copied to clipboard!");
+                    toast("Table URL copied to clipboard!");
                   }}
                   className="btn-global-primary"
                   
@@ -98,11 +99,11 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                 </button>
                 <button
                   onClick={async () => {
-                    if (window.confirm("Are you sure you want to delete this table?")) {
+                    if (await window.customConfirm("Are you sure you want to delete this table?")) {
                       try {
-                        await axios.delete(`${API_URL}/api/tables/${t.id}`);
+                        await apiService.deleteTable(t.id);
                         fetchData('Table Deleted');
-                      } catch (err) { alert("Delete failed"); }
+                      } catch (err) { toast("Delete failed"); }
                     }
                   }}
                   className="st-cls-9265d60b"
@@ -125,7 +126,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                       a.remove();
                       window.URL.revokeObjectURL(blobUrl);
                     })
-                    .catch(() => alert("Download failed"));
+                    .catch(() => toast("Download failed"));
                 }}
                 className="st-cls-e930308b"
               >
@@ -160,7 +161,7 @@ export default function QrCodesView({ restaurantTables, adminUser, fetchData, pr
                   <td  className="ext-cls-3b376603">{t.name || t.table}</td>
                   <td  className="ext-cls-5feee2a5">{t.token}</td>
                   <td  className="ext-cls-2590b86a">
-                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); alert("Copied!"); }} className="st-cls-228e32a7">Copy URL</button>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?s=${t.token}`); toast("Copied!"); }} className="st-cls-228e32a7">Copy URL</button>
                   </td>
                 </tr>
               ))}
