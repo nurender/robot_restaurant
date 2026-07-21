@@ -56,7 +56,12 @@ export default function RestaurantNetworkView({
                           <Store size={16} />
                         </div>
                         <div>
-                          <div  className="ext-cls-3d54a0db">{res.name}</div>
+                          <div  className="ext-cls-3d54a0db">
+                            {res.name}
+                            <span style={{ marginLeft: '8px', fontSize: '10px', background: 'rgba(255, 255, 255, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {(res.branch_type || 'Standalone').replace('_', ' ').toUpperCase()}
+                            </span>
+                          </div>
                           <div  className="ext-cls-f3cd0888">
                             <div  className="animate-pulse ext-cls-43522f59"></div> Active Live Sync
                           </div>

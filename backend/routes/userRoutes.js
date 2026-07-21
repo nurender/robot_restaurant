@@ -1,5 +1,6 @@
 const express = require('express');
 const { login, getUsers, createUser, updateUser, deleteUser, getRestaurants, createRestaurant, updateRestaurant, deleteRestaurant } = require('../controllers/userController');
+const { getSettings, updateSettings } = require('../controllers/mgmtController');
 
 const router = express.Router();
 
@@ -13,5 +14,13 @@ router.get('/restaurants', getRestaurants);
 router.post('/restaurants', createRestaurant);
 router.put('/restaurants/:id', updateRestaurant);
 router.delete('/restaurants/:id', deleteRestaurant);
+router.get('/settings', getSettings);
+router.put('/settings', updateSettings);
+const { getQrConfig, updateQrConfig } = require('../controllers/mgmtController');
+router.get('/mgmt/qr-config', getQrConfig);
+router.post('/mgmt/qr-config', updateQrConfig);
+const { getOrgTheme, updateOrgTheme } = require('../controllers/mgmtController');
+router.get('/org-theme/:orgId', getOrgTheme);
+router.post('/org-theme/:orgId', updateOrgTheme);
 
 module.exports = router;

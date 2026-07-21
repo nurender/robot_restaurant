@@ -6,6 +6,7 @@ import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
 import { API_URL } from './config';
 import toast, { Toaster } from 'react-hot-toast';
+import ThemeEngine from './components/ThemeEngine';
 
 // Globally override browser default alerts to show a premium popup instead
 window.alert = (message) => {
@@ -100,7 +101,12 @@ function ProtectedRoute({ children }) {
     }
   })();
   if (!user) return <Navigate to="/admin/login" replace />;
-  return children;
+  return (
+    <>
+      <ThemeEngine organizationId={1} />
+      {children}
+    </>
+  );
 }
 
 function CustomerApp() {
@@ -122,7 +128,15 @@ function CustomerApp() {
           const response = await fetch(`${API_URL}/api/verify-token/${secretToken}`);
           const data = await response.json();
           if (data.success) {
-            setSession({ table: data.table_number, restaurant: data.restaurant_id });
+            setSession({ 
+              table: data.table_number, 
+              restaurant: data.restaurant_id,
+              is_room: data.is_room,
+              floor_name: data.floor_name,
+              is_food_court: data.is_food_court,
+              organization_id: data.organization_id,
+              branches: data.branches
+            });
           } else {
             toast.error("Invalid or Expired QR Code");
           }
@@ -181,6 +195,7 @@ function CustomerApp() {
 
   return (
     <>
+      {session?.organization_id && <ThemeEngine organizationId={session.organization_id} />}
       {!session ? (
         <LandingPage
           onStartDemo={handleStartDemo}
@@ -188,7 +203,15 @@ function CustomerApp() {
         />
       ) : (
         <div className="app-container">
-          <RobotChat tableNumber={session.table} restaurantId={session.restaurant} />
+          <RobotChat 
+            tableNumber={session.table} 
+            restaurantId={session.restaurant} 
+            isRoom={session.is_room}
+            floorName={session.floor_name}
+            isFoodCourt={session.is_food_court}
+            organizationId={session.organization_id}
+            branches={session.branches}
+          />
         </div>
       )}
     </>

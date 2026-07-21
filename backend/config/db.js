@@ -10,6 +10,25 @@ const connectDB = async () => {
         await pool.query('SELECT NOW()');
         console.log("Connected to the PostgreSQL database.");
 
+        // 0. Organizations (Multi-Branch/Food Court support)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS organizations (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                is_food_court BOOLEAN DEFAULT FALSE,
+                theme_config JSONB DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        // Seed default organization for Demo
+        await pool.query(`
+            INSERT INTO organizations (id, name, is_food_court) 
+            VALUES (1, 'Cyber Food Court', TRUE)
+            ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, is_food_court = EXCLUDED.is_food_court
+        `);
+        
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS theme_config JSONB DEFAULT '{}'`);
+
         await pool.query(`CREATE TABLE IF NOT EXISTS restaurants (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -107,12 +126,16 @@ const connectDB = async () => {
             ['invoice_prefix', 'TEXT'],
             ['bill_footer', 'TEXT'],
             ['logo_url', 'TEXT'],
-            ['cover_url', 'TEXT']
+            ['cover_url', 'TEXT'],
+            ['qr_ordering_config', "JSONB DEFAULT '{}'"]
         ];
 
         for (const [col, type] of restaurantColumns) {
             await pool.query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ${col} ${type}`);
         }
+        await pool.query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL`);
+        // Associate Cyber Chef branch with Cyber Food Court (org 1)
+        await pool.query(`UPDATE restaurants SET organization_id = 1 WHERE id = 4`);
 
         const restCheck = await pool.query("SELECT count(*) FROM restaurants");
         if (parseInt(restCheck.rows[0].count) === 0) {
@@ -154,6 +177,52 @@ const connectDB = async () => {
             `, t);
         }
 
+        // 5.1 Hotel Room QR Setup (Hotel Room QR Ordering)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS hotel_floors (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                UNIQUE (restaurant_id, name)
+            );
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS hotel_rooms (
+                id SERIAL PRIMARY KEY,
+                restaurant_id INTEGER NOT NULL,
+                floor_id INTEGER NOT NULL REFERENCES hotel_floors(id) ON DELETE CASCADE,
+                room_number TEXT NOT NULL,
+                category TEXT, -- Deluxe, Suite, etc.
+                secret_token TEXT UNIQUE NOT NULL,
+                status TEXT DEFAULT 'available', -- available, occupied, cleaning
+                UNIQUE (restaurant_id, room_number)
+            );
+        `);
+
+        // Seed some test floors & rooms for Restaurant 4
+        const floorRes = await pool.query(`
+            INSERT INTO hotel_floors (restaurant_id, name) VALUES (4, 'Floor 1'), (4, 'Floor 2')
+            ON CONFLICT (restaurant_id, name) DO UPDATE SET name = EXCLUDED.name RETURNING id, name
+        `);
+        if (floorRes.rows.length > 0) {
+            const floor1Id = floorRes.rows.find(f => f.name === 'Floor 1')?.id;
+            const floor2Id = floorRes.rows.find(f => f.name === 'Floor 2')?.id;
+
+            if (floor1Id) {
+                await pool.query(`INSERT INTO hotel_rooms (restaurant_id, floor_id, room_number, category, secret_token) VALUES 
+                    (4, $1, '101', 'Deluxe', 'R101-R4-SECRET'),
+                    (4, $1, '102', 'Deluxe', 'R102-R4-SECRET'),
+                    (4, $1, '103', 'Suite', 'R103-R4-SECRET')
+                    ON CONFLICT (restaurant_id, room_number) DO NOTHING`, [floor1Id]);
+            }
+            if (floor2Id) {
+                await pool.query(`INSERT INTO hotel_rooms (restaurant_id, floor_id, room_number, category, secret_token) VALUES 
+                    (4, $1, '201', 'Super Deluxe', 'R201-R4-SECRET'),
+                    (4, $1, '202', 'Suite', 'R202-R4-SECRET')
+                    ON CONFLICT (restaurant_id, room_number) DO NOTHING`, [floor2Id]);
+            }
+        }
+
         await pool.query(`CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY,
             restaurant_id INTEGER NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
@@ -170,6 +239,8 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_seat TEXT`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS applied_coupon TEXT`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0.00`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS menu (
             id TEXT PRIMARY KEY,
@@ -484,7 +555,8 @@ const connectDB = async () => {
             CREATE TABLE IF NOT EXISTS campaign_messages (
                 id SERIAL PRIMARY KEY,
                 campaign_id INTEGER REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
-                customer_phone TEXT NOT NULL,
+                customer_phone TEXT,
+                customer_email TEXT,
                 customer_name TEXT,
                 status TEXT DEFAULT 'queued', -- 'queued', 'sent', 'delivered', 'read', 'failed'
                 error_log TEXT,
@@ -576,10 +648,10 @@ const connectDB = async () => {
             );
         `);
 
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_id INTEGER REFERENCES riders(id) ON DELETE SET NULL`);
-    await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS rider_id INTEGER REFERENCES riders(id) ON DELETE SET NULL`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
 
-    await pool.query(`
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS customer_feedback (
                 id SERIAL PRIMARY KEY,
                 restaurant_id INTEGER NOT NULL,
@@ -612,34 +684,36 @@ const connectDB = async () => {
                 [4, 'Marketing Hub', 'marketing', 'Send', 3],
                 [5, 'Combos & Offers', 'combos', 'Package', 5],
                 [6, 'Menu Management', 'menu', 'UtensilsCrossed', 6],
-                [7, 'Menu Ordering', 'menu_order', 'ListTodo', 7],
                 [8, 'Sidebar Ordering', 'sidebar_order', 'Settings', 8],
                 [9, 'Offers & Coupons', 'coupons', 'Store', 9],
                 [11, 'Rider Fleet', 'rider_fleet', 'Bike', 11],
                 [12, 'Smart Inventory', 'inventory', 'Package', 12],
                 [13, 'Reports & Analytics', 'reports', 'BarChart2', 13],
                 [14, 'Tables & QR Codes', 'qr_codes', 'QrCode', 14],
+                [16, 'QR Ordering Config', 'qr_config', 'SlidersHorizontal', 16],
                 [15, 'Customer Feedback', 'feedback', 'Star', 15],
                 [17, 'General Settings', 'settings', 'Settings', 17],
-                [18, 'Our Restaurants', 'restaurants', 'Store', 18],
+                [18, 'Branch Network', 'restaurants', 'Store', 18],
                 [20, 'Role Management', 'roles', 'Users', 20]
             ];
             for (const item of defaultSidebar) {
                 await pool.query("INSERT INTO sidebar_menu (id, label, path, icon_name, sort_order) VALUES ($1,$2,$3,$4,$5)", item);
             }
         }
-        
-        await pool.query(`DELETE FROM sidebar_menu WHERE id IN (16, 19)`);
-        
+
         // Ensure new items are added if they were missing from earlier versions
         await pool.query(`
             INSERT INTO sidebar_menu (id, label, path, icon_name, sort_order)
             VALUES 
                 (5, 'Combos & Offers', 'combos', 'Package', 5),
                 (8, 'Sidebar Ordering', 'sidebar_order', 'Settings', 8),
+                (16, 'QR Ordering Config', 'qr_config', 'SlidersHorizontal', 16),
+                (18, 'Branch Network', 'restaurants', 'Store', 18),
                 (20, 'Role Management', 'roles', 'Users', 20)
-            ON CONFLICT (id) DO UPDATE SET is_active = TRUE
+            ON CONFLICT (id) DO UPDATE SET is_active = TRUE, label = EXCLUDED.label
         `);
+
+        // Removed QR config from being deleted since the user wants it inside General Settings now? Wait, no, they said remove QR Ordering Rules from General Settings and remove Theme from Side Menu. So they want QR Config from sidebar and Theme from General Settings.
 
         console.log("✅ Admin Sidebar Verified");
         // 9. Role Management
@@ -667,8 +741,8 @@ const connectDB = async () => {
         await pool.query("UPDATE user_roles SET permissions = array_append(permissions, '5') WHERE name IN ('super_admin', 'manager') AND NOT ('5' = ANY(permissions))");
 
         console.log("✅ Admin Roles Verified");
-    } catch (e) { 
-        console.error("❌ DB Init Error:", e.message); 
+    } catch (e) {
+        console.error("❌ DB Init Error:", e.message);
         throw e; // Ensure the caller knows it failed
     }
 };
@@ -686,6 +760,30 @@ const setupSettings = async () => {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        const settingsCols = [
+            ['qr_payment_required', 'BOOLEAN DEFAULT FALSE'],
+            ['qr_login_required', 'BOOLEAN DEFAULT FALSE'],
+            ['qr_customer_details', "JSONB DEFAULT '{\"name\": \"required\", \"mobile\": \"required\", \"email\": \"optional\"}'::jsonb"],
+            ['qr_guest_checkout', 'BOOLEAN DEFAULT TRUE'],
+            ['qr_delivery_instruction', 'BOOLEAN DEFAULT TRUE'],
+            ['qr_special_note', 'BOOLEAN DEFAULT TRUE'],
+            ['qr_tip_option', 'BOOLEAN DEFAULT TRUE'],
+            ['primary_color', "TEXT DEFAULT '#7c3aed'"],
+            ['secondary_color', "TEXT DEFAULT '#4f46e5'"],
+            ['accent_color', "TEXT DEFAULT '#f59e0b'"],
+            ['background_color', "TEXT DEFAULT '#0a0a0b'"],
+            ['button_color', "TEXT DEFAULT '#7c3aed'"],
+            ['sidebar_color', "TEXT DEFAULT '#111116'"],
+            ['card_color', "TEXT DEFAULT '#1a1a24'"],
+            ['text_color', "TEXT DEFAULT '#ffffff'"],
+            ['logo_url', 'TEXT'],
+            ['favicon_url', 'TEXT'],
+            ['banner_url', 'TEXT'],
+            ['splash_url', 'TEXT']
+        ];
+        for (const [col, type] of settingsCols) {
+            await pool.query(`ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS ${col} ${type}`);
+        }
         await pool.query(`
             CREATE TABLE IF NOT EXISTS marketing_settings (
                 restaurant_id INTEGER PRIMARY KEY,

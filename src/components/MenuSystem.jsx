@@ -439,6 +439,11 @@ const MenuSystem = ({
                                                                         </div>
                                                                     )}
                                                                     {item.name}
+                                                                    {item.stall_name && (
+                                                                        <span style={{ fontSize: '9px', fontWeight: 'bold', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', textTransform: 'uppercase', verticalAlign: 'middle' }}>
+                                                                            {item.stall_name}
+                                                                        </span>
+                                                                    )}
                                                                     {item.spice_level > 0 && (
                                                                         <span  className="ext-cls-90e26b58">
                                                                             {'🌶️'.repeat(Math.min(item.spice_level, 5))}

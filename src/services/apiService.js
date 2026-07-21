@@ -9,6 +9,19 @@ const apiService = {
   login: (credentials) => axios.post(`${API_URL}/api/login`, credentials),
   verifyToken: (token) => axios.get(`${API_URL}/api/verify-token/${token}`),
   
+  getSettings: (restaurantId = null) => {
+      const qs = restaurantId ? `?restaurant_id=${restaurantId}` : '';
+      return axios.get(`${API_URL}/api/settings${qs}`);
+  },
+  updateSettings: (data) => axios.put(`${API_URL}/api/settings`, data),
+  getQrConfig: (restaurantId = null) => {
+      const qs = restaurantId ? `?restaurant_id=${restaurantId}` : '';
+      return axios.get(`${API_URL}/api/qr-config${qs}`);
+  },
+  updateQrConfig: (data) => axios.post(`${API_URL}/api/qr-config`, data),
+  getOrgTheme: (orgId) => axios.get(`${API_URL}/api/org-theme/${orgId}`),
+  updateOrgTheme: (orgId, data) => axios.post(`${API_URL}/api/org-theme/${orgId}`, data),
+  
   // --- MENU & INVENTORY ---
   getMenu: (restaurantId = null) => {
       const qs = restaurantId ? `?restaurant_id=${restaurantId}` : '';
@@ -67,6 +80,7 @@ const apiService = {
       const qs = restaurantId ? `?restaurant_id=${restaurantId}` : '';
       return axios.get(`${API_URL}/api/mgmt/marketing/campaigns${qs}`);
   },
+  getCampaignMessages: (campaignId) => axios.get(`${API_URL}/api/mgmt/marketing/campaigns/${campaignId}/messages`),
   launchCampaign: (data) => axios.post(`${API_URL}/api/mgmt/marketing/campaigns`, data),
   getMarketingConfig: (restaurantId) => axios.get(`${API_URL}/api/mgmt/marketing/config?restaurant_id=${restaurantId}`),
   saveMarketingConfig: (data) => axios.post(`${API_URL}/api/mgmt/marketing/config`, data),
@@ -76,6 +90,17 @@ const apiService = {
   createTable: (data) => axios.post(`${API_URL}/api/tables`, data),
   updateTable: (id, data) => axios.put(`${API_URL}/api/tables/${id}`, data),
   deleteTable: (id) => axios.delete(`${API_URL}/api/tables/${id}`),
+
+  // --- HOTEL FLOORS ---
+  getFloors: (restaurantId) => axios.get(`${API_URL}/api/hotel/floors?restaurant_id=${restaurantId}`),
+  createFloor: (data) => axios.post(`${API_URL}/api/hotel/floors`, data),
+  deleteFloor: (id) => axios.delete(`${API_URL}/api/hotel/floors/${id}`),
+
+  // --- HOTEL ROOMS ---
+  getRooms: (restaurantId) => axios.get(`${API_URL}/api/hotel/rooms?restaurant_id=${restaurantId}`),
+  createRoom: (data) => axios.post(`${API_URL}/api/hotel/rooms`, data),
+  updateRoom: (id, data) => axios.put(`${API_URL}/api/hotel/rooms/${id}`, data),
+  deleteRoom: (id) => axios.delete(`${API_URL}/api/hotel/rooms/${id}`),
 
   // --- UPLOADS ---
   uploadImage: (formData) => axios.post(`${API_URL}/api/upload`, formData),

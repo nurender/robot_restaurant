@@ -54,13 +54,37 @@ class MgmtService {
     }
 
     async updateSettings(data) {
-        // AI columns are removed from restaurant_settings
-        const { restaurant_id, theme_color, company_logo } = data;
+        const { 
+            restaurant_id, theme_color, company_logo,
+            qr_payment_required, qr_login_required, qr_customer_details,
+            qr_guest_checkout, qr_delivery_instruction, qr_special_note, qr_tip_option,
+            primary_color, secondary_color, accent_color, background_color,
+            button_color, sidebar_color, card_color, text_color,
+            logo_url, favicon_url, banner_url, splash_url
+        } = data;
+
         const result = await pool.query(
             `UPDATE restaurant_settings SET 
-                theme_color = $1, company_logo = $2, updated_at = NOW()
-             WHERE restaurant_id = $3 RETURNING *`,
-            [theme_color, company_logo, restaurant_id || 4]
+                theme_color = $1, company_logo = $2,
+                qr_payment_required = $3, qr_login_required = $4, 
+                qr_customer_details = $5::jsonb, qr_guest_checkout = $6, 
+                qr_delivery_instruction = $7, qr_special_note = $8, qr_tip_option = $9,
+                primary_color = $10, secondary_color = $11, accent_color = $12, 
+                background_color = $13, button_color = $14, sidebar_color = $15, 
+                card_color = $16, text_color = $17, logo_url = $18, 
+                favicon_url = $19, banner_url = $20, splash_url = $21,
+                updated_at = NOW()
+             WHERE restaurant_id = $22 RETURNING *`,
+            [
+                theme_color, company_logo,
+                qr_payment_required, qr_login_required, 
+                typeof qr_customer_details === 'string' ? qr_customer_details : JSON.stringify(qr_customer_details || {}),
+                qr_guest_checkout, qr_delivery_instruction, qr_special_note, qr_tip_option,
+                primary_color, secondary_color, accent_color, background_color,
+                button_color, sidebar_color, card_color, text_color,
+                logo_url, favicon_url, banner_url, splash_url,
+                restaurant_id || 4
+            ]
         );
         return result.rows[0];
     }

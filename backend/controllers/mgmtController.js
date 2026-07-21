@@ -71,6 +71,52 @@ const updateSettings = async (req, res) => {
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
 
+const getQrConfig = async (req, res) => {
+    try {
+        const restId = req.query.restaurant_id || 4;
+        const { pool } = require('../config/db');
+        const r = await pool.query('SELECT qr_ordering_config FROM restaurants WHERE id = $1', [restId]);
+        if (r.rows.length > 0) {
+            res.json({ success: true, data: r.rows[0].qr_ordering_config || {} });
+        } else {
+            res.json({ success: true, data: {} });
+        }
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const updateQrConfig = async (req, res) => {
+    try {
+        const restId = req.body.restaurant_id || 4;
+        const config = req.body.config || {};
+        const { pool } = require('../config/db');
+        await pool.query('UPDATE restaurants SET qr_ordering_config = $1 WHERE id = $2', [config, restId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const getOrgTheme = async (req, res) => {
+    try {
+        const orgId = req.params.orgId;
+        const { pool } = require('../config/db');
+        const r = await pool.query('SELECT theme_config FROM organizations WHERE id = $1', [orgId]);
+        if (r.rows.length > 0) {
+            res.json({ success: true, data: r.rows[0].theme_config || {} });
+        } else {
+            res.json({ success: true, data: {} });
+        }
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
+const updateOrgTheme = async (req, res) => {
+    try {
+        const orgId = req.params.orgId;
+        const themeConfig = req.body;
+        const { pool } = require('../config/db');
+        await pool.query('UPDATE organizations SET theme_config = $1 WHERE id = $2', [themeConfig, orgId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+};
+
 // --- Riders ---
 const getRiders = async (req, res) => {
     try {
@@ -132,7 +178,8 @@ const getSidebarItems = async (req, res) => {
 
 const updateSidebarOrder = async (req, res) => {
     try {
-        await mgmtService.updateSidebarOrder(req.body.orders);
+        const orders = Array.isArray(req.body) ? req.body : (req.body.items || req.body.orders || []);
+        await mgmtService.updateSidebarOrder(orders);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 };
@@ -167,7 +214,8 @@ const deleteRole = async (req, res) => {
 
 module.exports = { 
     getCoupons, createCoupon, updateCoupon, deleteCoupon, verifyCoupon,
-    getCustomers, getSettings, updateSettings, 
+    getCustomers, getSettings, updateSettings, getQrConfig, updateQrConfig,
+    getOrgTheme, updateOrgTheme,
     getRiders, createRider, updateRider, deleteRider, 
     assignRiderToOrder, updateStock,
     getSidebarItems, updateSidebarOrder, toggleSidebarVisibility,

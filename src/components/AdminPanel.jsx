@@ -1,13 +1,14 @@
 import apiService from '../services/apiService';
 import toast from 'react-hot-toast';
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, Bell, Search } from 'lucide-react';
+import { AlertCircle, Bell, Search, LogOut } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdminData } from '../hooks/useAdminData';
 import './AdminPanel.css';
 import AdminSidebar from './AdminSidebar';
 import ThemeToggle from './ThemeToggle';
+import RobotChat from './RobotChat';
 import SmartInventoryView from './admin/views/SmartInventoryView';
 import CombosManagerView from './admin/views/CombosManagerView';
 import RoleEditorModal from './admin/modals/RoleEditorModal';
@@ -32,11 +33,13 @@ import CouponsView from './admin/views/CouponsView';
 import RiderFleetView from './admin/views/RiderFleetView';
 import ReportsView from './admin/views/ReportsView';
 import QrCodesView from './admin/views/QrCodesView';
+import QrConfigView from './admin/views/QrConfigView';
 
 import SidebarConfiguratorView from './admin/views/SidebarConfiguratorView';
 import RolesManagementView from './admin/views/RolesManagementView';
 import FeedbackView from './admin/views/FeedbackView';
 import SystemSettingsView from './admin/views/SystemSettingsView';
+import SuperAdminView from './admin/views/SuperAdminView';
 import { API_URL } from '../config';
 
 const AdminPanel = () => {
@@ -63,6 +66,9 @@ const AdminPanel = () => {
   const tabFromUrl = (pathParts.length > 2 && pathParts[2]) ? pathParts[2] : null;
   const activeTab = tabFromUrl || localStorage.getItem('admin_active_tab') || 'dashboard';
 
+  const [selectedBranchId, setSelectedBranchId] = useState(adminUser?.restaurant_id || 4);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
   const {
     orders, setOrders, menuItems, setMenuItems, categories, setCategories,
     staffList, setStaffList, restaurantsList, setRestaurantsList, restaurantTables,
@@ -70,7 +76,7 @@ const AdminPanel = () => {
     setRiders, feedbackList, setFeedbackList, dbRoles, setDbRoles, orderedMenu,
     setOrderedMenu, orderedSidebar, setOrderedSidebar, analyticsData,
     activeWaiterCalls, setActiveWaiterCalls, safeGetISODate, isConnected, isLoading, fetchData
-  } = useAdminData(adminUser, activeTab);
+  } = useAdminData(adminUser, activeTab, selectedBranchId);
 
   useEffect(() => {
     const ensureValidRoute = async () => {
@@ -187,7 +193,7 @@ const AdminPanel = () => {
   const [kitchenItemChecked, setKitchenItemChecked] = useState({});
   const [newStaff, setNewStaff] = useState({ name: '', email: '', password: '', role: 'admin', restaurant_id: adminUser.restaurant_id });
   const [newNode, setNewNode] = useState({
-    name: '', branch_code: '', brand_name: '', description: '', branch_type: 'dine_in',
+    name: '', branch_code: '', brand_name: '', description: '', branch_type: 'standalone',
     address: '', landmark: '', city: '', state: '', country: 'India', pincode: '', latitude: '', longitude: '',
     phone: '', whatsapp_number: '', email: '', manager_name: '', emergency_contact: '',
     working_hours: {
@@ -760,11 +766,7 @@ const AdminPanel = () => {
           color: #fff !important;
         }
         /* Input theming */
-        input, textarea, select {
-          // background: var(--input-bg) !important;
-          border-color: var(--input-border) !important;
-          color: var(--input-text) !important;
-        }
+     
         /* Status pills */
         .status-pill.active   { background: var(--success-bg);  color: var(--success);  border: 1px solid var(--success); }
         .status-pill.inactive { background: var(--bg-tertiary); color: var(--text-muted); }
@@ -802,11 +804,34 @@ const AdminPanel = () => {
 
       <main className={`admin-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <header className="main-header">
-          <div className="header-search">
-            <Search size={20} color="var(--text-muted)" />
-            <input type="text" placeholder="Neural Search Engine..." />
+          <div className="flex items-center gap-2 mr-auto pl-4">
+            {(adminUser.role === 'super_admin' || adminUser.role === 'org_admin') && restaurantsList.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Active Stall/Branch:</span>
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(parseInt(e.target.value))}
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '8px',
+                    padding: '4px 12px',
+                    fontSize: '12px',
+                    color: 'var(--text-main)',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  {restaurantsList.map(r => (
+                    <option key={r.id} value={r.id} style={{ background: 'var(--bg-primary)', color: 'var(--text-main)' }}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="header-profile-premium">
+            <ThemeToggle />
             <div className="ext-cls-e63b8a15" onClick={() => {
               if (activeWaiterCalls.length > 0) setActiveWaiterCalls([]); // temp clear all
             }}>
@@ -830,18 +855,78 @@ const AdminPanel = () => {
               )}
             </div>
 
-            <ThemeToggle />
             <div className="profile-details-group">
               <span className="profile-name">{adminUser.name}</span>
               <span className="profile-role">{adminUser.role === 'super_admin' ? 'Master Intelligence' : 'Branch Node'}</span>
             </div>
-            <div className="profile-avatar-glow">{adminUser.name?.charAt(0)}</div>
+            <div
+              className="profile-avatar-glow"
+              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              style={{ cursor: 'pointer' }}
+            >
+              {adminUser.name?.charAt(0)}
+            </div>
+
+            {showProfileDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '55px',
+                  right: '16px',
+                  backgroundColor: '#1a1a24',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '12px',
+                  padding: '8px',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                  zIndex: 9999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: '160px',
+                  animation: 'fadeIn 0.2s ease'
+                }}
+              >
+                <div style={{ padding: '6px 8px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>{adminUser.name}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{adminUser.role === 'super_admin' ? 'Master Intelligence' : 'Branch Node'}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '11px',
+                    color: '#f87171',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    width: '100%',
+                    transition: 'all 0.2s',
+                    outline: 'none'
+                  }}
+                >
+                  <LogOut size={12} />
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
         <div className="content-scrollable scrollbar-hidden">
           {activeTab === 'dashboard' && (
-            <DashboardView orders={orders} menuItems={menuItems} formatDate={formatDate} />
+            <DashboardView
+              orders={orders}
+              menuItems={menuItems}
+              formatDate={formatDate}
+              feedbackList={feedbackList}
+              restaurantsList={restaurantsList}
+              fetchData={fetchData}
+            />
           )}
 
           {activeTab === 'orders' && (
@@ -977,8 +1062,14 @@ const AdminPanel = () => {
 
           {activeTab === 'reports' && (
             <ReportsView
-              analyticsData={analyticsData}
+              orders={orders}
+              menuItems={menuItems}
+              categories={categories}
+              restaurantsList={restaurantsList}
+              customers={customers}
+              feedbackList={feedbackList}
               fetchData={fetchData}
+              formatDate={formatDate}
             />
           )}
 
@@ -991,7 +1082,11 @@ const AdminPanel = () => {
             />
           )}
 
-
+          {activeTab === 'qr_config' && (
+            <QrConfigView
+              adminUser={adminUser}
+            />
+          )}
           {activeTab === 'roles' && (
             <RolesManagementView
               dbRoles={dbRoles}
@@ -1018,7 +1113,11 @@ const AdminPanel = () => {
           )}
 
           {activeTab === 'settings' && (
-            <SystemSettingsView adminUser={adminUser} />
+            <SystemSettingsView adminUser={adminUser} restaurantsList={restaurantsList} />
+          )}
+
+          {activeTab === 'super_admin' && (
+            <SuperAdminView adminUser={adminUser} />
           )}
         </div>
       </main>

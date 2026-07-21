@@ -867,7 +867,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-hover);
   padding: 4px 8px;
   border-radius: 8px;
 }
@@ -885,7 +885,7 @@
 }
 
 .qty-controls-premium button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-default);
 }
 
 .qty-val {
@@ -897,15 +897,16 @@
 }
 
 .qty-controls-premium button {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border-default);
   border: none;
   color: var(--text-main);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   transition: all 0.2s;
 }
 
@@ -1334,7 +1335,7 @@
   border: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
+  max-height: 98vh;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   overflow: hidden;
   animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1354,7 +1355,7 @@
 }
 
 .cart-summary-header {
-  padding: 16px 20px;
+  padding: 5px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1362,7 +1363,7 @@
 }
 
 .cart-summary-header h3 {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
   color: var(--text-main);
   margin: 0;
@@ -1468,7 +1469,7 @@
 }
 
 .cart-summary-footer {
-  padding: 32px 32px 24px 32px;
+  padding: 9px 32px 14px 32px;
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border-default);
   display: flex;
@@ -1484,14 +1485,14 @@
 
 .cart-final-total span {
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .cart-final-total strong {
-  font-size: 32px;
+  font-size: 24px;
   color: var(--text-main);
   font-weight: 900;
   letter-spacing: -1px;
@@ -2364,7 +2365,7 @@
     max-width: 100% !important;
     border-radius: 24px 24px 0 0 !important;
     height: auto !important;
-    max-height: 82vh !important;
+    max-height: 95vh !important;
     margin-top: auto;
     overflow: hidden !important;
   }
@@ -2374,7 +2375,7 @@
   }
 
   .cart-summary-header h3 {
-    font-size: 18px !important;
+    font-size: 16px !important;
   }
 
   .cart-summary-items {
@@ -2434,7 +2435,7 @@
   }
 
   .cart-final-total strong {
-    font-size: 28px !important;
+    font-size: 22px !important;
   }
 
   .final-checkout-btn {
@@ -2771,11 +2772,11 @@
 }
 
 .robot-header-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--border-default);
+  background: var(--ap-glass-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--ap-glass-border, rgba(255, 255, 255, 0.15));
   padding: 6px 12px;
   border-radius: 12px;
-  color: var(--text-main);
+  color: var(--ap-text-main, var(--text-main, #fff));
   font-size: 12px;
   font-weight: 700;
   display: flex;
@@ -2786,9 +2787,13 @@
   position: relative;
 }
 
+.robot-header-btn:hover {
+  background: var(--ap-glass-bg, rgba(255, 255, 255, 0.12));
+}
+
 .robot-header-btn:active {
   transform: scale(0.95);
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ap-glass-border, rgba(255, 255, 255, 0.2));
 }
 
 .veg-filters-row {
@@ -3231,11 +3236,12 @@
   position: relative;
   transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .zomato-pure-toggle.on {
-  background: #219653; /* Pure green */
+  background: #219653;
+  /* Pure green */
   border-color: #219653;
 }
 
@@ -3262,17 +3268,24 @@
   content: '';
   width: 6px;
   height: 6px;
-  background: #ef4444; /* red dot when off */
+  background: #ef4444;
+  /* red dot when off */
   border-radius: 50%;
   display: block;
 }
 
 .zomato-pure-toggle.on .toggle-thumb::before {
-  background: #219653; /* green dot when on */
-}/* ADVANCED SUCCESS ANIMATION */
+  background: #219653;
+  /* green dot when on */
+}
+
+/* ADVANCED SUCCESS ANIMATION */
 .advanced-success-animation {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
   background: rgba(10, 10, 18, 0.95);
@@ -3289,7 +3302,7 @@
   position: absolute;
   width: 250px;
   height: 250px;
-  background: radial-gradient(circle, rgba(46,213,115,0.4) 0%, rgba(46,213,115,0) 70%);
+  background: radial-gradient(circle, rgba(46, 213, 115, 0.4) 0%, rgba(46, 213, 115, 0) 70%);
   border-radius: 50%;
   animation: pulseHalo 2s infinite ease-in-out;
   z-index: 1;
@@ -3305,7 +3318,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(46,213,115,0.5);
+  box-shadow: 0 10px 30px rgba(46, 213, 115, 0.5);
   animation: popBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
@@ -3343,27 +3356,65 @@
 }
 
 @keyframes advancedFadeIn {
-  from { opacity: 0; backdrop-filter: blur(0px); }
-  to { opacity: 1; backdrop-filter: blur(10px); }
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+
+  to {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
 }
 
 @keyframes popBounce {
-  0% { transform: scale(0); }
-  80% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+
+  80% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes drawCheck {
-  from { stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 1; }
-  to { stroke-dasharray: 100; stroke-dashoffset: 0; opacity: 1; }
+  from {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+
+  to {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
 }
 
 @keyframes slideUpFade {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulseHalo {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  50% { transform: scale(1.5); opacity: 0.2; }
-  100% { transform: scale(0.8); opacity: 0.5; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
 }

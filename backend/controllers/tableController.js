@@ -48,3 +48,68 @@ exports.deleteTable = async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 };
+
+// --- HOTEL FLOORS ---
+exports.getFloors = async (req, res) => {
+    try {
+        const floors = await tableService.getFloors(req.query.restaurant_id);
+        res.json({ data: floors });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.createFloor = async (req, res) => {
+    try {
+        const floor = await tableService.createFloor(req.body);
+        res.json(floor);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.deleteFloor = async (req, res) => {
+    try {
+        await tableService.deleteFloor(req.params.id);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// --- HOTEL ROOMS ---
+exports.getRooms = async (req, res) => {
+    try {
+        const rooms = await tableService.getRooms(req.query.restaurant_id);
+        res.json({ data: rooms });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.createRoom = async (req, res) => {
+    try {
+        const room = await tableService.createRoom(req.body);
+        res.json(room);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.updateRoom = async (req, res) => {
+    try {
+        const room = await tableService.updateRoom(req.params.id, req.body);
+        res.json(room);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.deleteRoom = async (req, res) => {
+    try {
+        await tableService.deleteRoom(req.params.id);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};

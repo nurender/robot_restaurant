@@ -20,7 +20,12 @@ const CartOverlay = ({
     activeCoupon,
     setActiveCoupon,
     getDiscountAmount,
-    isSubmittingOrder
+    isSubmittingOrder,
+    qrSettings,
+    tipAmount,
+    setTipAmount,
+    deliveryInstruction,
+    setDeliveryInstruction
 }) => {
     const [splitCount, setSplitCount] = useState(1);
     const [showBillDetails, setShowBillDetails] = useState(false);
@@ -28,14 +33,14 @@ const CartOverlay = ({
     const { cgst, sgst } = getCartTax();
     const subtotal = getCartSubtotal();
 
-    const finalTotal = getCartTotal();
+    const finalTotal = getCartTotal() + (tipAmount || 0);
     const splitAmount = splitCount > 1 ? (finalTotal / splitCount).toFixed(2) : finalTotal;
 
     const handleApplyCoupon = async (e) => {
         e.preventDefault();
         const code = e.target.couponCode.value.toUpperCase();
         if (!code) return;
-        
+
         try {
             const res = await fetch(`${API_URL}/api/mgmt/coupons/verify`, {
                 method: 'POST',
@@ -43,14 +48,14 @@ const CartOverlay = ({
                 body: JSON.stringify({ code, restaurant_id: restaurantData?.id || 4 })
             });
             const data = await res.json();
-            
+
             if (data.success && data.data) {
                 const found = data.data;
                 if (found.min_order_value && subtotal < found.min_order_value) {
                     setCouponMessage({ text: `Order value must be at least ₹${found.min_order_value}`, type: 'error' });
                 } else if (found.usage_limit && Number(found.current_usage_count || 0) >= found.usage_limit) {
                     setCouponMessage({ text: "This coupon has reached its maximum usage limit.", type: 'error' });
-                } else if (found.expiry_date && new Date(found.expiry_date) < new Date(new Date().setHours(0,0,0,0))) {
+                } else if (found.expiry_date && new Date(found.expiry_date) < new Date(new Date().setHours(0, 0, 0, 0))) {
                     setCouponMessage({ text: "This coupon has expired.", type: 'error' });
                 } else {
                     setActiveCoupon(found);
@@ -59,10 +64,10 @@ const CartOverlay = ({
             } else {
                 setCouponMessage({ text: "Invalid or inactive coupon code.", type: 'error' });
             }
-        } catch(err) {
+        } catch (err) {
             setCouponMessage({ text: "Network error parsing coupon.", type: 'error' });
         }
-        
+
         // Auto-clear message after 3 seconds
         setTimeout(() => setCouponMessage(null), 3000);
     };
@@ -71,76 +76,127 @@ const CartOverlay = ({
         <div className="cart-summary-overlay animate-fade-in" onClick={() => setShowCartSummary(false)}>
             <div className="cart-summary-modal slide-up" onClick={e => e.stopPropagation()}>
                 <div className="cart-summary-header">
-                    <h3  className="ext-cls-847f26d6">Review Your Order</h3>
+                    <h3 className="ext-cls-847f26d6">Review Your Order</h3>
                     <button className="close-cart-btn" onClick={() => setShowCartSummary(false)}>×</button>
                 </div>
 
-                <div className="cart-summary-items custom-scrollbar">
-                    {currentCart.length === 0 ? (
-                        <div  className="ext-cls-6395e718">
-                            <ChefHat size={48}  className="ext-cls-b70a18fb" />
-                            <p>Your cart is empty</p>
-                        </div>
-                    ) : (
-                        currentCart.map((item, idx) => (
-                            <div key={item.cartId || `${item.id}-${idx}`} className="cart-summary-item">
-                                <div className="cart-item-photo" onClick={() => item.image_url && setZoomedImage(getMediaUrl(item.image_url))}>
-                                    {item.image_url ? (
-                                        <img src={getMediaUrl(item.image_url)} alt={item.name} />
-                                    ) : (
-                                        <div className="cart-item-placeholder ext-cls-2cdddd2c" >
-                                            <ChefHat size={24} color="var(--text-dim)" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="cart-item-info">
-                                    <span className="cart-item-name ext-cls-afade7f3" >
-                                        {item.name}
-                                        {item.selectedVariant && (
-                                            <span  className="ext-cls-763e0ad5">
-                                                {item.selectedVariant.size}
-                                            </span>
+                <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
+                    <div className="cart-summary-items" style={{ overflowY: 'visible', flex: 'none' }}>
+                        {currentCart.length === 0 ? (
+                            <div className="ext-cls-6395e718">
+                                <ChefHat size={48} className="ext-cls-b70a18fb" />
+                                <p>Your cart is empty</p>
+                            </div>
+                        ) : (
+                            currentCart.map((item, idx) => (
+                                <div key={item.cartId || `${item.id}-${idx}`} className="cart-summary-item">
+                                    <div className="cart-item-photo" onClick={() => item.image_url && setZoomedImage(getMediaUrl(item.image_url))}>
+                                        {item.image_url ? (
+                                            <img src={getMediaUrl(item.image_url)} alt={item.name} />
+                                        ) : (
+                                            <div className="cart-item-placeholder ext-cls-2cdddd2c" >
+                                                <ChefHat size={24} color="var(--text-dim)" />
+                                            </div>
                                         )}
-                                        {item.selectedAddons && item.selectedAddons.length > 0 && (
-                                            <span  className="ext-cls-e874b837">
-                                                + {item.selectedAddons.map(a => a.name).join(', ')}
-                                            </span>
-                                        )}
-                                    </span>
-                                    <span className="cart-item-price">₹{item.price} per unit</span>
-                                </div>
-                                <div className="cart-item-actions">
-                                    <div className="qty-controls-premium">
-                                        <button onClick={() => handleManualCartUpdate(item, -1, item.selectedVariant, item.selectedAddons)}><Minus size={14} /></button>
-                                        <span className="qty-val">{item.qty}</span>
-                                        <button onClick={() => handleManualCartUpdate(item, 1, item.selectedVariant, item.selectedAddons)}><Plus size={14} /></button>
                                     </div>
-                                    <span className="cart-item-subtotal">₹{item.price * item.qty}</span>
+                                    <div className="cart-item-info">
+                                        <span className="cart-item-name ext-cls-afade7f3" >
+                                            {item.name}
+                                            {item.selectedVariant && (
+                                                <span className="ext-cls-763e0ad5">
+                                                    {item.selectedVariant.size}
+                                                </span>
+                                            )}
+                                            {item.selectedAddons && item.selectedAddons.length > 0 && (
+                                                <span className="ext-cls-e874b837">
+                                                    + {item.selectedAddons.map(a => a.name).join(', ')}
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="cart-item-price">₹{item.price} per unit</span>
+                                    </div>
+                                    <div className="cart-item-actions">
+                                        <div className="qty-controls-premium">
+                                            <button onClick={() => handleManualCartUpdate(item, -1, item.selectedVariant, item.selectedAddons)}><Minus size={14} /></button>
+                                            <span className="qty-val">{item.qty}</span>
+                                            <button onClick={() => handleManualCartUpdate(item, 1, item.selectedVariant, item.selectedAddons)}><Plus size={14} /></button>
+                                        </div>
+                                        <span className="cart-item-subtotal">₹{item.price * item.qty}</span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingBottom: '20px' }}>
+                        {(qrSettings === null || qrSettings.qr_special_note !== false) && (
+                            <div style={{ padding: '16px 32px 8px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>Cooking Notes</label>
+                                <textarea
+                                    value={orderNote || ''}
+                                    onChange={(e) => setOrderNote(e.target.value)}
+                                    placeholder="e.g. Less spicy, Extra cheese..."
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-main)', padding: '10px 14px', fontSize: '13px', outline: 'none', resize: 'none', height: '56px', transition: 'border-color 0.2s' }}
+                                    onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                                ></textarea>
+                            </div>
+                        )}
+
+                        {/* {(qrSettings === null || qrSettings.qr_delivery_instruction !== false) && (
+                            <div style={{ padding: '8px 32px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>Delivery/Service Instructions</label>
+                                <textarea
+                                    value={deliveryInstruction || ''}
+                                    onChange={(e) => setDeliveryInstruction(e.target.value)}
+                                    placeholder="e.g. Leave at door, call when outside..."
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-main)', padding: '10px 14px', fontSize: '13px', outline: 'none', resize: 'none', height: '56px', transition: 'border-color 0.2s' }}
+                                    onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                                ></textarea>
+                            </div>
+                        )} */}
+
+                        {(qrSettings === null || qrSettings.qr_tip_option !== false) && (
+                            <div style={{ padding: '8px 32px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>Support Staff Tip</label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {[0, 10, 20, 30, 50].map(amt => (
+                                        <button
+                                            key={amt}
+                                            onClick={() => setTipAmount(amt)}
+                                            style={{
+                                                flex: 1,
+                                                padding: '10px 0',
+                                                border: `1px solid ${tipAmount === amt ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+                                                background: tipAmount === amt ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                                borderRadius: '8px',
+                                                color: tipAmount === amt ? '#fff' : 'var(--text-main)',
+                                                fontSize: '12px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {amt === 0 ? 'No Tip' : `₹${amt}`}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
-                        ))
-                    )}
+                        )}
+                    </div>
                 </div>
 
-                {/* <div  className="ext-cls-cb03bfb8">
-                    <textarea
-                        value={orderNote || ''}
-                        onChange={(e) => setOrderNote(e.target.value)}
-                        placeholder="Any special cooking instructions? (e.g. Less spicy, Extra cheese)"
-                        className="st-cls-61d09163"
-                    ></textarea>
-                </div> */}
-
                 <div className="cart-summary-footer ext-cls-beb1d5f4" >
-                    <div  className="ext-cls-a230f5c5">
+                    <div className="ext-cls-a230f5c5">
                         {!activeCoupon ? (
                             <>
-                                <form 
-                                    onSubmit={handleApplyCoupon} 
+                                <form
+                                    onSubmit={handleApplyCoupon}
                                     className="st-cls-441e8d8e"
                                 >
-                                    <input name="couponCode" type="text" placeholder="Got a Promotion Code?"  className="ext-cls-3ebffb37" />
-                                    <button type="submit"  className="ext-cls-ae2a67f1">Apply</button>
+                                    <input name="couponCode" type="text" placeholder="Got a Promotion Code?" className="ext-cls-3ebffb37" />
+                                    <button type="submit" className="ext-cls-ae2a67f1">Apply</button>
                                 </form>
                                 {couponMessage && (
                                     <div style={{
@@ -161,33 +217,33 @@ const CartOverlay = ({
                                 )}
                             </>
                         ) : (
-                            <div  className="ext-cls-f0fb0a20">
-                                <span  className="ext-cls-b634164c">✓ {activeCoupon.code} Applied</span>
+                            <div className="ext-cls-f0fb0a20">
+                                <span className="ext-cls-b634164c">✓ {activeCoupon.code} Applied</span>
                                 <button onClick={() => setActiveCoupon(null)} className="st-cls-0be79454">Remove</button>
                             </div>
                         )}
                     </div>
 
                     {/* Space reserved for bill details to be moved down */}
-                    <div  className="ext-cls-a62da7ea">
-                        <div  className="ext-cls-b95895ae">
+                    <div className="ext-cls-a62da7ea">
+                        <div className="ext-cls-b95895ae">
                             <Users size={16} /> Split the Bill?
                         </div>
-                        <div  className="ext-cls-cc0ebbd6">
+                        <div className="ext-cls-cc0ebbd6">
                             <button onClick={() => setSplitCount(Math.max(1, splitCount - 1))} className="st-cls-b60b47af">-</button>
-                            <span  className="ext-cls-b2d9cfd1">{splitCount}</span>
+                            <span className="ext-cls-b2d9cfd1">{splitCount}</span>
                             <button onClick={() => setSplitCount(Math.min(10, splitCount + 1))} className="st-cls-b60b47af">+</button>
                         </div>
                     </div>
 
                     <div className="cart-final-total" style={{ cursor: 'pointer', padding: '8px 4px', borderRadius: '12px', transition: 'all 0.2s', borderBottom: showBillDetails ? '1px dashed var(--border-default)' : 'none', marginBottom: showBillDetails ? '8px' : '0' }} onClick={() => setShowBillDetails(!showBillDetails)}>
-                        <div  className="ext-cls-dc3bece4">
-                            <span  className="ext-cls-1d97b50c">
+                        <div className="ext-cls-dc3bece4">
+                            <span className="ext-cls-1d97b50c">
                                 {splitCount > 1 ? `Grand Total (₹${splitAmount} x ${splitCount})` : 'Grand Total'}
                             </span>
-                            {restaurantData?.is_round_off && <span  className="ext-cls-c5b5a8ab">Rounded Off</span>}
+                            {restaurantData?.is_round_off && <span className="ext-cls-c5b5a8ab">Rounded Off</span>}
                         </div>
-                        <strong  className="ext-cls-3656d0f4">
+                        <strong className="ext-cls-3656d0f4">
                             ₹{finalTotal}
                             {showBillDetails ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </strong>
@@ -195,21 +251,21 @@ const CartOverlay = ({
 
                     {showBillDetails && (
                         <div className="animate-fade-in ext-cls-14aec927" >
-                            <div  className="ext-cls-f71f3a0f">
+                            <div className="ext-cls-f71f3a0f">
                                 <span>Item Total</span>
                                 <span>₹{subtotal.toFixed(2)}</span>
                             </div>
                             {activeCoupon && getDiscountAmount() > 0 && (
-                                <div  className="ext-cls-2a7a3077">
+                                <div className="ext-cls-2a7a3077">
                                     <span>Discount ({activeCoupon.code})</span>
                                     <span>-₹{getDiscountAmount().toFixed(2)}</span>
                                 </div>
                             )}
-                            <div  className="ext-cls-f71f3a0f">
+                            <div className="ext-cls-f71f3a0f">
                                 <span>Taxes (CGST {restaurantData?.cgst || 0}%)</span>
                                 <span>₹{cgst.toFixed(2)}</span>
                             </div>
-                            <div  className="ext-cls-f71f3a0f">
+                            <div className="ext-cls-f71f3a0f">
                                 <span>Taxes (SGST {restaurantData?.sgst || 0}%)</span>
                                 <span>₹{sgst.toFixed(2)}</span>
                             </div>
@@ -218,7 +274,9 @@ const CartOverlay = ({
                     <button className="final-checkout-btn" disabled={isSubmittingOrder} onClick={() => {
                         completeOrderProcess();
                     }}>
-                        {isSubmittingOrder ? <Loader size={20} className="spin" /> : 'Finalize & Book Order'}
+                        {isSubmittingOrder ? <Loader size={20} className="spin" /> : (
+                            qrSettings?.payBeforeConfirm ? 'Pay & Confirm Order' : 'Place Order (Postpaid)'
+                        )}
                     </button>
                 </div>
             </div>

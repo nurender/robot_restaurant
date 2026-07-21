@@ -6,7 +6,7 @@ const {
     assignRiderToOrder, getSidebarItems, updateSidebarOrder, toggleSidebarVisibility,
     getRoles, createRole, deleteRole
 } = require('../controllers/mgmtController');
-const { launchCampaign, getCampaigns, getMarketingConfig, saveMarketingConfig } = require('../controllers/marketingController');
+const { launchCampaign, getCampaigns, getMarketingConfig, saveMarketingConfig, getCampaignMessages } = require('../controllers/marketingController');
 
 const router = express.Router();
 
@@ -28,6 +28,7 @@ router.get('/customers', getCustomers);
 
 router.post('/marketing/campaigns', launchCampaign);
 router.get('/marketing/campaigns', getCampaigns);
+router.get('/marketing/campaigns/:id/messages', getCampaignMessages);
 
 router.get('/marketing/config', getMarketingConfig);
 router.post('/marketing/config', saveMarketingConfig);

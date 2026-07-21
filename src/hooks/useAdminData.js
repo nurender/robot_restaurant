@@ -5,7 +5,9 @@ import { io } from 'socket.io-client';
 
 const socket = io(API_URL, { autoConnect: true });
 
-export const useAdminData = (adminUser, activeTab) => {
+export const useAdminData = (adminUser, activeTab, selectedBranchId) => {
+  const activeRestaurantId = selectedBranchId || adminUser?.restaurant_id || 4;
+
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -112,7 +114,7 @@ export const useAdminData = (adminUser, activeTab) => {
     if (!adminUser?.id) return;
     setIsLoading(true);
     try {
-      const auth = { params: { restaurant_id: adminUser.restaurant_id } };
+      const auth = { params: { restaurant_id: activeRestaurantId } };
       const fetchHelper = (url) => axios.get(url, auth).catch(err => {
         console.warn(`⚠️ Partial Fetch Failure for ${url}:`, err.message);
         return { data: { data: [] } };
@@ -139,18 +141,18 @@ export const useAdminData = (adminUser, activeTab) => {
   const fetchTabData = async (tab) => {
     if (!adminUser?.id) return;
     try {
-      const auth = { params: { restaurant_id: adminUser.restaurant_id } };
+      const auth = { params: { restaurant_id: activeRestaurantId } };
       const fetchHelper = (url) => axios.get(url, auth).catch(() => ({ data: { data: [] } }));
 
-      if (tab === 'staff' || tab === 'restaurants') {
+      if (tab === 'staff' || tab === 'restaurants' || tab === 'dashboard' || tab === 'reports') {
         const staffRes = await fetchHelper(`${API_URL}/api/users`);
         setStaffList(staffRes.data.data || []);
       }
-      if (tab === 'restaurants' || tab === 'staff') {
+      if (tab === 'restaurants' || tab === 'staff' || tab === 'dashboard' || tab === 'reports') {
         const restRes = await axios.get(`${API_URL}/api/restaurants`).catch(() => ({ data: { data: [] } }));
         setRestaurantsList(restRes.data.data || []);
       }
-      if (tab === 'feedback') {
+      if (tab === 'feedback' || tab === 'dashboard' || tab === 'reports') {
         const fbRes = await fetchHelper(`${API_URL}/api/mgmt/feedback`);
         setFeedbackList(fbRes.data.data || []);
       }
@@ -193,10 +195,10 @@ export const useAdminData = (adminUser, activeTab) => {
     }
   }, [activeTab, menuItems]);
 
-  // Tab change effect
+  // Tab change or branch switch effect
   useEffect(() => {
-    fetchTabData(activeTab);
-  }, [activeTab, adminUser?.id]);
+    fetchData();
+  }, [activeTab, adminUser?.id, activeRestaurantId]);
 
   // Core Data and Socket Connection on Mount
   useEffect(() => {

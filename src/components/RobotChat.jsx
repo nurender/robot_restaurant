@@ -14,7 +14,7 @@ import ThemeToggle from './ThemeToggle';
 
 const socket = io(API_URL, { autoConnect: true });
 
-const RobotChat = ({ tableNumber, restaurantId }) => {
+const RobotChat = ({ tableNumber, restaurantId, isRoom = false, floorName = '', isFoodCourt = false, organizationId = null, branches = [] }) => {
   const [restaurantData, setRestaurantData] = useState(null);
   const [restaurantName, setRestaurantName] = useState(null);
   const [isCustomerLoggedIn, setIsCustomerLoggedIn] = useState(() => !!localStorage.getItem('customerPhone'));
@@ -34,8 +34,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const [zoomedImage, setZoomedImage] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
-    name: localStorage.getItem('customerName') || '',
-    phone: localStorage.getItem('customerPhone') || ''
+    name: (localStorage.getItem('customerName') === 'null' ? '' : localStorage.getItem('customerName')) || '',
+    phone: (localStorage.getItem('customerPhone') === 'null' ? '' : localStorage.getItem('customerPhone')) || '',
+    email: (localStorage.getItem('customerEmail') === 'null' ? '' : localStorage.getItem('customerEmail')) || ''
   });
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -129,6 +130,8 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     return `${API_URL}${url}`;
   };
 
+  const [qrSettings, setQrSettings] = useState(null);
+
   useEffect(() => {
     const initApp = async () => {
       setIsGlobalLoading(true);
@@ -146,6 +149,30 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           setRestaurantData(mine);
         }
 
+        // Fetch Settings
+        const settingsRes = await fetch(`${API_URL}/api/settings?restaurant_id=${restaurantId}`);
+        const settingsData = await settingsRes.json();
+        if (settingsData.success && settingsData.data) {
+          const config = settingsData.data;
+          setQrSettings(config);
+
+          // Apply Dynamic colors as CSS variables
+          if (config.primary_color) {
+            document.documentElement.style.setProperty('--accent-primary', config.primary_color);
+            document.documentElement.style.setProperty('--accent-secondary', config.secondary_color || config.primary_color);
+            document.documentElement.style.setProperty('--bg-deep', config.background_color || '#0a0a0b');
+            document.documentElement.style.setProperty('--card-bg', config.card_color || '#1a1a24');
+            document.documentElement.style.setProperty('--text-main', config.text_color || '#ffffff');
+          }
+        }
+
+        // Fetch QR Ordering Config
+        const qrConfRes = await fetch(`${API_URL}/api/mgmt/qr-config?restaurant_id=${restaurantId}`);
+        const qrConfData = await qrConfRes.json();
+        if (qrConfData.success && qrConfData.data) {
+          setQrSettings(prev => ({ ...prev, qrConfig: qrConfData.data }));
+        }
+
         await fetchMenuData();
 
       } catch (e) {
@@ -160,18 +187,46 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
   const fetchMenuData = async () => {
     if (!restaurantId) return;
     try {
-      const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
-      const menuData = await menuRes.json();
-      const allItems = menuData.data || [];
-      const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
-      const grouped = uniqueCategoryNames.map(catName => ({
-        category: catName,
-        items: allItems.filter(item => (item.category || 'Other') === catName)
-      }));
-      grouped.sort((a, b) => a.category.localeCompare(b.category));
-      setMenuCategories(grouped.filter(g => g.items.length > 0));
-      setExpandedCats(new Set(uniqueCategoryNames));
-
+      if (isFoodCourt && branches && branches.length > 0) {
+        const promises = branches.map(async (b) => {
+          try {
+            const res = await fetch(`${API_URL}/api/menu?restaurant_id=${b.id}`);
+            const resJson = await res.json();
+            return (resJson.data || []).map(item => ({
+              ...item,
+              stall_id: b.id,
+              stall_name: b.name
+            }));
+          } catch(e) {
+            console.error(`Failed to fetch menu for stall ${b.name}`, e);
+            return [];
+          }
+        });
+        
+        const results = await Promise.all(promises);
+        const allItems = results.flat();
+        
+        const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
+        const grouped = uniqueCategoryNames.map(catName => ({
+          category: catName,
+          items: allItems.filter(item => (item.category || 'Other') === catName)
+        }));
+        grouped.sort((a, b) => a.category.localeCompare(b.category));
+        setMenuCategories(grouped.filter(g => g.items.length > 0));
+        setExpandedCats(new Set(uniqueCategoryNames));
+      } else {
+        const menuRes = await fetch(`${API_URL}/api/menu?restaurant_id=${restaurantId}`);
+        const menuData = await menuRes.json();
+        const allItems = menuData.data || [];
+        const uniqueCategoryNames = Array.from(new Set(allItems.map(i => i.category || 'Other')));
+        const grouped = uniqueCategoryNames.map(catName => ({
+          category: catName,
+          items: allItems.filter(item => (item.category || 'Other') === catName)
+        }));
+        grouped.sort((a, b) => a.category.localeCompare(b.category));
+        setMenuCategories(grouped.filter(g => g.items.length > 0));
+        setExpandedCats(new Set(uniqueCategoryNames));
+      }
     } catch (e) {
       console.error("Menu Fetch Error:", e);
     }
@@ -296,8 +351,10 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const getCartTax = () => {
     const discountedSubtotal = Math.max(0, getCartSubtotal() - getDiscountAmount());
-    const cgstRate = Number(restaurantData?.cgst || 0) / 100;
-    const sgstRate = Number(restaurantData?.sgst || 0) / 100;
+    const taxPercent = Number(restaurantData?.tax_percent !== undefined ? restaurantData?.tax_percent : 5.0);
+    const halfTaxRate = (taxPercent / 2) / 100;
+    const cgstRate = restaurantData?.cgst !== undefined ? Number(restaurantData?.cgst) / 100 : halfTaxRate;
+    const sgstRate = restaurantData?.sgst !== undefined ? Number(restaurantData?.sgst) / 100 : halfTaxRate;
     return {
       cgst: discountedSubtotal * cgstRate,
       sgst: discountedSubtotal * sgstRate
@@ -388,71 +445,141 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
     return totalQty;
   };
 
+  const [tipAmount, setTipAmount] = useState(0);
+  const [deliveryInstruction, setDeliveryInstruction] = useState('');
+
   const completeOrderProcess = async (e) => {
     if (e) e.preventDefault();
     if (getCartCount() === 0) return;
 
-      const finalName = customerInfo.name || localStorage.getItem('customerName') || 'Valued Guest';
-      const finalPhone = customerInfo.phone || localStorage.getItem('customerPhone');
-      const finalEmail = customerInfo.email || localStorage.getItem('customerEmail');
+    // Check QR Config for Authentication
+    if (qrSettings?.qrConfig?.requireLogin && !isCustomerLoggedIn) {
+      toast('Please login to place your order.');
+      setShowCustomerForm(true);
+      setShowCartSummary(false);
+      return;
+    }
 
-      if (!finalPhone) {
-        toast('Please enter your phone number.');
-        return;
-      }
+      const storedName = localStorage.getItem('customerName');
+      const storedPhone = localStorage.getItem('customerPhone');
+      const storedEmail = localStorage.getItem('customerEmail');
+      const finalName = customerInfo.name || (storedName !== 'null' ? storedName : '') || 'Valued Guest';
+      const finalPhone = customerInfo.phone || (storedPhone !== 'null' ? storedPhone : '');
+      const finalEmail = customerInfo.email || (storedEmail !== 'null' ? storedEmail : '');
 
-      const phoneRegex = /^\d{10}$/;
-      if (!phoneRegex.test(finalPhone)) {
-        toast('Please enter a valid 10-digit mobile number.');
-        return;
+      const isMobileRequired = qrSettings?.qrConfig?.requireLogin !== false || qrSettings?.qrConfig?.customerDetails?.mobile === 'required';
+
+      if (isMobileRequired) {
+        if (!finalPhone) {
+          toast('Please enter your phone number.');
+          return;
+        }
+
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(finalPhone)) {
+          toast('Please enter a valid 10-digit mobile number.');
+          return;
+        }
       }
+      
+      const phonePayload = finalPhone || '0000000000';
 
       if (isSubmittingOrder) return;
       setIsSubmittingOrder(true);
 
       try {
-        const orderData = {
-          restaurant_id: restaurantId,
-          tableNumber,
-          items: currentCart,
-          total: getCartTotal(),
-          status: 'pending',
-          customerName: finalName,
-          customerSeat: customerSeat || null,
-          customerPhone: finalPhone,
-          customerEmail: finalEmail || null,
-          notes: orderNote,
-          applied_coupon: activeCoupon ? activeCoupon.code : null,
-          discount_amount: getDiscountAmount()
-        };
-        const res = await fetch(`${API_URL}/api/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
-        });
-      if (res.ok) {
-        localStorage.setItem('customerPhone', finalPhone);
-        if (finalName && finalName !== 'Valued Guest') {
-          localStorage.setItem('customerName', finalName);
+        let orderPayloads = [];
+
+        if (isFoodCourt && currentCart.some(i => i.stall_id)) {
+          // Group cart items by stall_id
+          const stallGroups = {};
+          currentCart.forEach(item => {
+            const sId = item.stall_id || restaurantId;
+            if (!stallGroups[sId]) stallGroups[sId] = [];
+            stallGroups[sId].push(item);
+          });
+
+          // Create separate order payload for each stall
+          Object.keys(stallGroups).forEach(sId => {
+            const stallItems = stallGroups[sId];
+            const stallSubtotal = stallItems.reduce((acc, i) => acc + (i.price * i.qty), 0);
+            
+            // Proportional tax and discount splits
+            const totalSubtotal = getCartSubtotal();
+            const ratio = totalSubtotal > 0 ? (stallSubtotal / totalSubtotal) : 1;
+            const stallTotal = Math.round((getCartTotal() + tipAmount) * ratio);
+            const stallDiscount = getDiscountAmount() * ratio;
+
+            orderPayloads.push({
+              restaurant_id: parseInt(sId),
+              tableNumber: isRoom ? `Room ${tableNumber}` : tableNumber,
+              items: stallItems,
+              total: stallTotal,
+              status: 'pending',
+              customerName: finalName,
+              customerSeat: customerSeat || null,
+              customerPhone: phonePayload,
+              customerEmail: finalEmail || null,
+              notes: [orderNote, deliveryInstruction ? `Delivery Instructions: ${deliveryInstruction}` : '', tipAmount > 0 ? `Tip: ₹${Math.round(tipAmount * ratio)}` : ''].filter(Boolean).join('\n'),
+              applied_coupon: activeCoupon ? activeCoupon.code : null,
+              discount_amount: stallDiscount
+            });
+          });
+        } else {
+          orderPayloads.push({
+            restaurant_id: restaurantId,
+            tableNumber: isRoom ? `Room ${tableNumber}` : tableNumber,
+            items: currentCart,
+            total: getCartTotal() + tipAmount,
+            status: 'pending',
+            customerName: finalName,
+            customerSeat: customerSeat || null,
+            customerPhone: phonePayload,
+            customerEmail: finalEmail || null,
+            notes: [orderNote, deliveryInstruction ? `Delivery Instructions: ${deliveryInstruction}` : '', tipAmount > 0 ? `Tip: ₹${tipAmount}` : ''].filter(Boolean).join('\n'),
+            applied_coupon: activeCoupon ? activeCoupon.code : null,
+            discount_amount: getDiscountAmount()
+          });
         }
 
-        setOrderConfirmedUI(true);
-        setShowCartSummary(false);
-        setCurrentCart([]);
-        setOrderNote('');
-        setActiveCoupon(null);
-        setShowCustomerForm(false);
-        setCustomerInfo({ name: '', phone: '' });
-        setOtpCode('');
-        setOtpSent(false);
-        setMockOtpToast(null);
-        setConfirmationResult(null);
+        const submitPromises = orderPayloads.map(async (payload) => {
+          const res = await fetch(`${API_URL}/api/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          return res;
+        });
 
-        // Refresh orders immediately so tracking badge shows up
-        fetchTrackingStatus();
+        const responses = await Promise.all(submitPromises);
+        const allOk = responses.every(res => res.ok);
 
-        setTimeout(() => setOrderConfirmedUI(false), 5000);
-      }
+        if (allOk) {
+          if (finalPhone && finalPhone !== '0000000000') localStorage.setItem('customerPhone', finalPhone);
+          if (finalName && finalName !== 'Valued Guest') {
+            localStorage.setItem('customerName', finalName);
+          }
+          setOrderConfirmedUI(true);
+          setShowCartSummary(false);
+          setCurrentCart([]);
+          setOrderNote('');
+          setTipAmount(0);
+          setDeliveryInstruction('');
+          setActiveCoupon(null);
+          setShowCustomerForm(false);
+          setCustomerInfo({ name: '', phone: '' });
+          setOtpCode('');
+          setOtpSent(false);
+          setMockOtpToast(null);
+          setConfirmationResult(null);
+
+          // Refresh orders immediately so tracking badge shows up
+          fetchTrackingStatus();
+
+          setTimeout(() => setOrderConfirmedUI(false), 5000);
+        } else {
+          toast('One or more orders failed to submit. Please contact staff.');
+        }
     } catch (e) {
       console.error("Order Failed:", e);
       toast('Something went wrong while placing the order. Please try again.');
@@ -504,13 +631,39 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const handleInitialSubmit = (e) => {
     if (e) e.preventDefault();
+    
+    const isBooking = getCartCount() > 0;
+    const isLoginRequired = qrSettings?.qrConfig?.requireLogin !== false;
+
+    // Bypass OTP if login is not required for booking
+    if (isBooking && !isLoginRequired) {
+      if (qrSettings?.qrConfig?.customerDetails?.name === 'required' && !customerInfo.name) {
+        toast("Please enter your full name to proceed.");
+        return;
+      }
+      if (qrSettings?.qrConfig?.customerDetails?.mobile === 'required' && (!customerInfo.phone || customerInfo.phone.length !== 10)) {
+        toast("Please enter a valid 10-digit phone number to proceed.");
+        return;
+      }
+      if (qrSettings?.qrConfig?.customerDetails?.email === 'required' && !customerInfo.email) {
+        toast("Please enter your email to proceed.");
+        return;
+      }
+      completeOrderProcess();
+      return;
+    }
+
     if (isGoogleVerified) {
-      if (!customerInfo.phone || customerInfo.phone.length !== 10) {
+      if ((!customerInfo.phone || customerInfo.phone.length !== 10) && qrSettings?.qrConfig?.loginMethods?.mobileOtp !== false) {
         toast.error("Please provide a 10-digit number to tie to your order.");
         return;
       }
-      localStorage.setItem('customerName', customerInfo.name);
-      localStorage.setItem('customerPhone', customerInfo.phone);
+      localStorage.setItem('customerName', customerInfo.name || 'Valued Guest');
+      if (customerInfo.phone) {
+        localStorage.setItem('customerPhone', customerInfo.phone);
+      } else {
+        localStorage.setItem('customerPhone', '9999999999');
+      }
       setIsCustomerLoggedIn(true);
       if (getCartCount() > 0) {
         completeOrderProcess();
@@ -595,12 +748,35 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
 
   const proceedToAuthOrOrder = () => {
     const phone = localStorage.getItem('customerPhone');
-    if (phone && (customerInfo.phone === phone || !customerInfo.phone)) {
-      // Auto submit order if already logged in
-      completeOrderProcess();
+    const name = localStorage.getItem('customerName');
+    const email = localStorage.getItem('customerEmail');
+    const isLoginRequired = qrSettings?.qrConfig?.requireLogin !== false;
+    
+    const details = qrSettings?.qrConfig?.customerDetails || {};
+    const isNameRequired = details.name === 'required';
+    const isMobileRequired = details.mobile === 'required';
+    const isEmailRequired = details.email === 'required';
+
+    if (isLoginRequired) {
+      if (phone && (customerInfo.phone === phone || !customerInfo.phone)) {
+        // Auto submit order if already logged in
+        completeOrderProcess();
+      } else {
+        setShowCustomerForm(true);
+        setShowCartSummary(false);
+      }
     } else {
-      setShowCustomerForm(true);
-      setShowCartSummary(false);
+      // Login not required - only show form if a REQUIRED field is missing
+      if (
+        (isNameRequired && !name && !customerInfo.name) ||
+        (isMobileRequired && !phone && !customerInfo.phone) ||
+        (isEmailRequired && !email && !customerInfo.email)
+      ) {
+        setShowCustomerForm(true);
+        setShowCartSummary(false);
+      } else {
+        completeOrderProcess();
+      }
     }
   };
 
@@ -645,7 +821,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           restaurant_id: restaurantId,
-          table_number: tableNumber,
+          table_number: isRoom ? `Room ${tableNumber}` : tableNumber,
           customer_phone: feedback.phone || 'Anonymous',
           customer_name: feedback.name || 'Anonymous',
           rating: feedback.rating,
@@ -663,7 +839,7 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
       <div className="top-call-gradient"></div>
       <div className="avatar-header">
         <div className="header-badge">
-          <span className="ext-cls-b72ed605">Table</span> {tableNumber}
+          <span className="ext-cls-b72ed605">{isRoom ? 'Room' : 'Table'}</span> {tableNumber} {floorName && <span className="text-slate-400 text-[10px] ml-1">({floorName})</span>}
           {customerSeat && (
             <span className="ext-cls-6f678e19">{customerSeat}</span>
           )}
@@ -711,14 +887,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               <LogOut size={16} />
             </button>
           ) : (
-            <button
-              onClick={() => setShowCustomerForm(true)}
-              className="robot-header-btn st-cls-c4843ad3"
+            qrSettings?.qrConfig?.requireLogin !== false && (
+              <button
+                onClick={() => setShowCustomerForm(true)}
+                className="robot-header-btn st-cls-c4843ad3"
 
-            >
-              <UserCircle size={16} className="ext-cls-5da48443" />
-              <span className="hide-on-mobile">Login</span>
-            </button>
+              >
+                <UserCircle size={16} className="ext-cls-5da48443" />
+                <span className="hide-on-mobile">Login</span>
+              </button>
+            )
           )}
         </div>
       </div>
@@ -738,13 +916,14 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           getCartTotal={getCartTotal}
           getCartCount={getCartCount}
           setShowCartSummary={setShowCartSummary}
-          completeOrderProcess={initiateCheckout}
+          completeOrderProcess={completeOrderProcess}
           getMediaUrl={getMediaUrl}
           setZoomedImage={setZoomedImage}
           currentCart={currentCart}
           availableCoupons={availableCoupons}
           activeCoupon={activeCoupon}
           setActiveCoupon={setActiveCoupon}
+          qrConfig={qrSettings?.qrConfig}
           getDiscountAmount={getDiscountAmount}
           isSubmittingOrder={isSubmittingOrder}
         />
@@ -840,6 +1019,11 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
           setActiveCoupon={setActiveCoupon}
           getDiscountAmount={getDiscountAmount}
           isSubmittingOrder={isSubmittingOrder}
+          qrSettings={qrSettings}
+          tipAmount={tipAmount}
+          setTipAmount={setTipAmount}
+          deliveryInstruction={deliveryInstruction}
+          setDeliveryInstruction={setDeliveryInstruction}
         />
       )}
 
@@ -937,12 +1121,12 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
               {getCartCount() > 0 ? 'Please provide your details to confirm the order.' : 'Enter your details to view past orders.'}
             </p>
             <form onSubmit={otpSent ? handleVerifyOtpAndOrder : handleInitialSubmit} className="modal-form">
-              {getCartCount() > 0 && (
+              {(getCartCount() > 0 && qrSettings?.qrConfig?.customerDetails?.name !== 'disabled') && (
                 <div className="form-group">
                   <label>{'Full Name'}</label>
                   <input
                     type="text"
-                    required={getCartCount() > 0 && !isGoogleVerified}
+                    required={getCartCount() > 0 && !isGoogleVerified && (qrSettings?.qrConfig?.customerDetails?.name === 'required' || !qrSettings?.qrConfig?.customerDetails)}
                     disabled={otpSent || isGoogleVerified}
                     className="modal-input"
                     placeholder={'Enter your name'}
@@ -951,23 +1135,39 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   />
                 </div>
               )}
-              <div className="form-group">
-                <label>{'Phone Number'}</label>
-                <input
-                  type="tel"
-                  required
-                  disabled={otpSent}
-                  pattern="[0-9]{10}"
-                  maxLength={10}
-                  className="modal-input"
-                  placeholder={'10-digit number'}
-                  value={customerInfo.phone}
-                  onChange={(e) => {
-                    const onlyNums = e.target.value.replace(/[^0-9]/g, '');
-                    setCustomerInfo({ ...customerInfo, phone: onlyNums.slice(0, 10) });
-                  }}
-                />
-              </div>
+              {((qrSettings?.qrConfig?.requireLogin !== false && qrSettings?.qrConfig?.loginMethods?.mobileOtp !== false) || (getCartCount() > 0 && qrSettings?.qrConfig?.customerDetails?.mobile !== 'disabled')) && (
+                <div className="form-group">
+                  <label>{'Phone Number'}</label>
+                  <input
+                    type="tel"
+                    required={getCartCount() === 0 || (qrSettings?.qrConfig?.requireLogin !== false && qrSettings?.qrConfig?.loginMethods?.mobileOtp !== false) || qrSettings?.qrConfig?.customerDetails?.mobile === 'required'}
+                    disabled={otpSent}
+                    pattern="[0-9]{10}"
+                    maxLength={10}
+                    className="modal-input"
+                    placeholder={'10-digit number'}
+                    value={customerInfo.phone || ''}
+                    onChange={(e) => {
+                      const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+                      setCustomerInfo({ ...customerInfo, phone: onlyNums.slice(0, 10) });
+                    }}
+                  />
+                </div>
+              )}
+              {(getCartCount() > 0 && qrSettings?.qrConfig?.customerDetails?.email !== 'disabled') && (
+                <div className="form-group">
+                  <label>{'Email Address'}</label>
+                  <input
+                    type="email"
+                    required={!isGoogleVerified && qrSettings?.qrConfig?.customerDetails?.email === 'required'}
+                    disabled={otpSent || isGoogleVerified}
+                    className="modal-input"
+                    placeholder={'Enter your email address'}
+                    value={customerInfo.email || ''}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                  />
+                </div>
+              )}
 
               {otpSent && (
                 <div className="form-group">
@@ -1011,8 +1211,9 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   </button>
 
                   {!otpSent ? (
-                    <button type="submit" disabled={isSendingOtp} className={`btn-primary flex-1 ${(isSendingOtp) ? 'loading' : ''}`}>
-                      {isGoogleVerified ? 'Complete Login' : (isSendingOtp ? 'Sending...' : 'Send OTP')}
+                    (qrSettings?.qrConfig?.requireLogin !== false && qrSettings?.qrConfig?.loginMethods?.mobileOtp === false && !isGoogleVerified) ? null :
+                    <button type="submit" disabled={isSendingOtp || isSubmittingOrder} className={`btn-primary flex-1 ${(isSendingOtp || isSubmittingOrder) ? 'loading' : ''}`}>
+                      {(getCartCount() > 0 && qrSettings?.qrConfig?.requireLogin === false) ? 'Confirm Order' : (isGoogleVerified ? 'Complete Login' : (isSendingOtp ? 'Sending...' : 'Send OTP'))}
                     </button>
                   ) : (
                     <button type="button" onClick={handleVerifyOtpAndOrder} disabled={isSubmittingOrder || otpCode.length !== 6} className={`btn-primary flex-1 ${isSubmittingOrder ? 'loading' : ''}`} style={{ background: otpCode.length === 6 ? 'linear-gradient(135deg, #00e676 0%, #10b981 100%)' : '' }}>
@@ -1021,14 +1222,16 @@ const RobotChat = ({ tableNumber, restaurantId }) => {
                   )}
                 </div>
 
-                {!otpSent && !isGoogleVerified && (
+                {!otpSent && !isGoogleVerified && qrSettings?.qrConfig?.requireLogin !== false && qrSettings?.qrConfig?.loginMethods?.google !== false && (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0' }}>
-                      <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }}></div>
-                      <span style={{ margin: '0 12px', fontSize: '13px', color: 'var(--text-muted)' }}>OR</span>
-                      <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }}></div>
-                    </div>
-                    <button type="button" onClick={handleGoogleLogin} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#1e293b', padding: '12px', borderRadius: '12px' }}>
+                    {qrSettings?.qrConfig?.loginMethods?.mobileOtp !== false && (
+                      <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0' }}>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }}></div>
+                        <span style={{ margin: '0 12px', fontSize: '13px', color: 'var(--text-muted)' }}>OR</span>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }}></div>
+                      </div>
+                    )}
+                    <button type="button" onClick={handleGoogleLogin} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', border: '1px solid #e2e8f0', background: '#fff', color: '#1e293b', padding: '12px', borderRadius: '12px', marginTop: qrSettings?.qrConfig?.loginMethods?.mobileOtp === false ? '0' : '8px' }}>
                       <img src="https://www.google.com/favicon.ico" alt="G" style={{ width: '18px', height: '18px' }} />
                       <span style={{ fontWeight: 600 }}>Continue with Google</span>
                     </button>

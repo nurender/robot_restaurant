@@ -18,21 +18,24 @@ async function run() {
         [4, 'Marketing Hub', 'marketing', 'Send', 3],
         [5, 'Combos & Offers', 'combos', 'Package', 5],
         [6, 'Menu Management', 'menu', 'UtensilsCrossed', 6],
-        [7, 'Menu Ordering', 'menu_order', 'ListTodo', 7],
         [8, 'Sidebar Ordering', 'sidebar_order', 'Settings', 8],
         [9, 'Offers & Coupons', 'coupons', 'Store', 9],
         [11, 'Rider Fleet', 'rider_fleet', 'Bike', 11],
         [12, 'Smart Inventory', 'inventory', 'Package', 12],
         [13, 'Reports & Analytics', 'reports', 'BarChart2', 13],
         [14, 'Tables & QR Codes', 'qr_codes', 'QrCode', 14],
+        [16, 'QR Ordering Config', 'qr_config', 'SlidersHorizontal', 16],
         [15, 'Customer Feedback', 'feedback', 'Star', 15],
         [17, 'General Settings', 'settings', 'Settings', 17],
-        [18, 'Our Restaurants', 'restaurants', 'Store', 18],
+        [18, 'Branch Network', 'restaurants', 'Store', 18],
         [20, 'Role Management', 'roles', 'Users', 20]
     ];
     for (const item of defaultSidebar) {
-        await pool.query('INSERT INTO sidebar_menu (id, label, path, icon_name, sort_order) VALUES ($1,$2,$3,$4,$5)', item);
+        await pool.query('INSERT INTO sidebar_menu (id, label, path, icon_name, sort_order) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET is_active=TRUE', item);
     }
+    
+    // Cleanup any lingering unwanted items
+    await pool.query(`DELETE FROM sidebar_menu WHERE id = 21`);
     console.log('success');
     process.exit(0);
 }

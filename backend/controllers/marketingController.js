@@ -126,9 +126,9 @@ exports.launchCampaign = async (req, res) => {
         for (const cust of customers) {
             const msgRes = await pool.query(`
                 INSERT INTO campaign_messages 
-                (campaign_id, customer_phone, customer_name, status) 
-                VALUES ($1, $2, $3, 'queued') RETURNING id
-            `, [campaignId, cust.phone, cust.name]);
+                (campaign_id, customer_phone, customer_email, customer_name, status) 
+                VALUES ($1, $2, $3, $4, 'queued') RETURNING id
+            `, [campaignId, cust.phone, cust.email || null, cust.name]);
 
             // Add to in-memory processing queue
             marketingQueue.push({
@@ -161,6 +161,19 @@ exports.getCampaigns = async (req, res) => {
         const final_rest_id = req.query.restaurant_id || 4;
         const campaigns = await pool.query("SELECT * FROM marketing_campaigns WHERE restaurant_id = $1 ORDER BY created_at DESC LIMIT 20", [final_rest_id]);
         res.json({ success: true, data: campaigns.rows });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+exports.getCampaignMessages = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const messages = await pool.query(
+            "SELECT id, customer_phone, customer_email, customer_name, status, delivered_at, error_log FROM campaign_messages WHERE campaign_id = $1 ORDER BY id ASC", 
+            [id]
+        );
+        res.json({ success: true, data: messages.rows });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }

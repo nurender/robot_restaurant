@@ -171,16 +171,16 @@ export default function NeuralInventoryView({
           <div className="glass-panel" style={{ display: 'flex', padding: '4px', gap: '4px', borderRadius: '12px' }}>
             <button 
               onClick={() => setViewMode('grid')}
-              className={`btn-icon ${viewMode === 'grid' ? 'bg-accent' : ''}`}
-              style={{ padding: '8px', borderRadius: '8px', color: viewMode === 'grid' ? 'white' : 'var(--text-muted)' }}
+              className="btn-icon"
+              style={{ padding: '8px', borderRadius: '8px', background: viewMode === 'grid' ? 'var(--accent-color)' : 'transparent', color: viewMode === 'grid' ? 'white' : 'var(--text-muted)' }}
               title="Grid View"
             >
               <LayoutGrid size={18} />
             </button>
             <button 
               onClick={() => setViewMode('table')}
-              className={`btn-icon ${viewMode === 'table' ? 'bg-accent' : ''}`}
-              style={{ padding: '8px', borderRadius: '8px', color: viewMode === 'table' ? 'white' : 'var(--text-muted)' }}
+              className="btn-icon"
+              style={{ padding: '8px', borderRadius: '8px', background: viewMode === 'table' ? 'var(--accent-color)' : 'transparent', color: viewMode === 'table' ? 'white' : 'var(--text-muted)' }}
               title="Table View"
             >
               <List size={18} />

@@ -17,14 +17,15 @@ import {
     Star,
     ChevronLeft,
     ChevronRight,
-    QrCode
+    QrCode,
+    Shield
 } from 'lucide-react';
 
 import React from 'react';
 
 const iconMap = {
     LayoutDashboard, UtensilsCrossed, ListTodo, ChefHat, Users, Store, Bot, Send, LogOut, Package,
-    BarChart2, Settings, StoreIcon, Bike, CreditCard, Star, ChevronLeft, ChevronRight, QrCode
+    BarChart2, Settings, StoreIcon, Bike, CreditCard, Star, ChevronLeft, ChevronRight, QrCode, Shield
 };
 
 const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapsed, setIsCollapsed, orderedSidebar = [] }) => {
@@ -35,6 +36,15 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
             ...item,
             icon: iconMap[item.icon_name] || Settings
         }));
+
+    if (adminUser?.role === 'super_admin') {
+        filteredItems.push({
+            id: 'super_admin',
+            label: 'Super Admin Portal',
+            path: 'super_admin',
+            icon: Shield
+        });
+    }
 
     return (
         <aside className={`admin-sidebar shadow-premium ${isCollapsed ? 'collapsed' : ''} ext-cls-946d012f`} >
@@ -60,22 +70,6 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
                     </button>
                 ))}
             </nav>
-
-            <div className="sidebar-footer-premium">
-                <div className="user-profile-plate">
-                    <div className="profile-avatar">{adminUser.name?.charAt(0) || 'A'}</div>
-                    {!isCollapsed && (
-                        <div className="profile-info">
-                            <span className="user-name">{adminUser.name}</span>
-                            <span className="user-role">{adminUser.role ? adminUser.role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'System User'}</span>
-                        </div>
-                    )}
-                </div>
-                <button className="btn-logout-minimal" onClick={onLogout}>
-                    <LogOut size={18} />
-                    {!isCollapsed && <span>Sign Out</span>}
-                </button>
-            </div>
         </aside>
     );
 };

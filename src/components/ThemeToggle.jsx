@@ -1,27 +1,22 @@
 import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import './ThemeToggle.css';
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <button
-      className={`theme-toggle ${theme}`}
       onClick={toggleTheme}
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="robot-header-btn"
       title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+
     >
-      <span className="toggle-track">
-        <span className="toggle-thumb">
-          {theme === 'dark' ? (
-            <Moon size={12} strokeWidth={2.5} />
-          ) : (
-            <Sun size={12} strokeWidth={2.5} />
-          )}
-        </span>
-      </span>
+      {theme === 'dark' ? (
+        <Sun size={15} color="#fbbf24" />
+      ) : (
+        <Moon size={15} color="#818cf8" />
+      )}
     </button>
   );
 }

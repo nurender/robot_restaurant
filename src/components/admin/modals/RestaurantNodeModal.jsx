@@ -75,6 +75,8 @@ export default function RestaurantNodeModal({
               <div>
                 <label  className="ext-cls-0c40bbfd">BRANCH TYPE</label>
                 <select value={newNode.branch_type} onChange={(e) => setNewNode({ ...newNode, branch_type: e.target.value })} className="st-cls-30e033af">
+                  <option value="standalone">Independent Branch (Standalone)</option>
+                  <option value="food_court">Food Court Branch</option>
                   <option value="dine_in">Dine-in</option>
                   <option value="delivery">Delivery Only</option>
                   <option value="pickup">Pickup Only</option>
