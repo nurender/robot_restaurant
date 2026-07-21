@@ -16,6 +16,13 @@ const connectDB = async () => {
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 is_food_court BOOLEAN DEFAULT FALSE,
+                address TEXT,
+                city TEXT,
+                contact TEXT,
+                manager TEXT,
+                working_hours JSONB DEFAULT '{}',
+                logo_url TEXT,
+                cover_url TEXT,
                 theme_config JSONB DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -28,6 +35,13 @@ const connectDB = async () => {
         `);
         
         await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS theme_config JSONB DEFAULT '{}'`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS address TEXT`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS city TEXT`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS contact TEXT`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS manager TEXT`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS working_hours JSONB DEFAULT '{}'`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_url TEXT`);
+        await pool.query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS cover_url TEXT`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS restaurants (
             id SERIAL PRIMARY KEY,
@@ -694,6 +708,7 @@ const connectDB = async () => {
                 [15, 'Customer Feedback', 'feedback', 'Star', 15],
                 [17, 'General Settings', 'settings', 'Settings', 17],
                 [18, 'Branch Network', 'restaurants', 'Store', 18],
+                [19, 'Food Courts', 'food_courts', 'Building', 19],
                 [20, 'Role Management', 'roles', 'Users', 20]
             ];
             for (const item of defaultSidebar) {
@@ -709,6 +724,7 @@ const connectDB = async () => {
                 (8, 'Sidebar Ordering', 'sidebar_order', 'Settings', 8),
                 (16, 'QR Ordering Config', 'qr_config', 'SlidersHorizontal', 16),
                 (18, 'Branch Network', 'restaurants', 'Store', 18),
+                (19, 'Food Courts', 'food_courts', 'Building2', 19),
                 (20, 'Role Management', 'roles', 'Users', 20)
             ON CONFLICT (id) DO UPDATE SET is_active = TRUE, label = EXCLUDED.label
         `);

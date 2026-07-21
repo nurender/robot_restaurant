@@ -25,6 +25,7 @@ import OrdersHubView from './admin/views/OrdersHubView';
 import NeuralInventoryView from './admin/views/NeuralInventoryView';
 
 import RestaurantNetworkView from './admin/views/RestaurantNetworkView';
+import FoodCourtsView from './admin/views/FoodCourtsView';
 
 import MarketingHubView from './admin/views/MarketingHubView';
 
@@ -987,6 +988,9 @@ const AdminPanel = () => {
           )}
 
 
+          {activeTab === 'food_courts' && (adminUser.role === 'super_admin') && (
+            <FoodCourtsView adminUser={adminUser} />
+          )}
 
           {activeTab === 'restaurants' && (adminUser.role === 'super_admin') && (
             <RestaurantNetworkView

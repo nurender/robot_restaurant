@@ -46,6 +46,7 @@ const userRoutes = require('./routes/userRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const tableRoutes = require('./routes/tableRoutes');
 const mgmtRoutes = require('./routes/mgmtRoutes');
+const organizationRoutes = require('./routes/organizationRoutes');
 
 // Pass socket.io instance to controllers via app
 app.set('socketio', io);
@@ -56,6 +57,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api', tableRoutes);
 app.use('/api', userRoutes);       // /api/login, /api/users, /api/restaurants
+app.use('/api/food-courts', organizationRoutes);
 
 const authMiddleware = require('./middleware/authMiddleware');
 app.use('/api/mgmt', authMiddleware, mgmtRoutes);

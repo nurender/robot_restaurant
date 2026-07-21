@@ -11,6 +11,19 @@ export default function RestaurantNodeModal({
   setNodeActiveTab,
   isLoading
 }) {
+  const [foodCourts, setFoodCourts] = React.useState([]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetch('http://localhost:3001/api/food-courts', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` }
+      })
+      .then(res => res.json())
+      .then(data => setFoodCourts(data))
+      .catch(err => console.error(err));
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -83,6 +96,17 @@ export default function RestaurantNodeModal({
                   <option value="cloud_kitchen">Cloud Kitchen</option>
                 </select>
               </div>
+              {newNode.branch_type === 'food_court' && (
+                <div>
+                  <label className="ext-cls-0c40bbfd">SELECT FOOD COURT</label>
+                  <select value={newNode.organization_id || ''} onChange={(e) => setNewNode({ ...newNode, organization_id: e.target.value })} className="st-cls-30e033af">
+                    <option value="">None / Standalone</option>
+                    {foodCourts.map(fc => (
+                      <option key={fc.id} value={fc.id}>{fc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label  className="ext-cls-0c40bbfd">DESCRIPTION</label>
                 <textarea value={newNode.description} onChange={(e) => setNewNode({ ...newNode, description: e.target.value })} className="st-cls-ec82538c" />

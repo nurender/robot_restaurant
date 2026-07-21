@@ -4,6 +4,7 @@ import LandingPage from './components/LandingPage';
 import RobotChat from './components/RobotChat';
 import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
+import FoodCourtHome from './components/FoodCourtHome';
 import { API_URL } from './config';
 import toast, { Toaster } from 'react-hot-toast';
 import ThemeEngine from './components/ThemeEngine';
@@ -115,6 +116,19 @@ function CustomerApp() {
     const params = new URLSearchParams(window.location.search);
     return !!params.get('s');
   });
+
+  // Direct Restaurant Access (e.g. from Food Court)
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const restId = params.get('restaurant');
+    if (restId && !params.get('s')) {
+      setSession({
+        restaurant: parseInt(restId),
+        is_food_court: true,
+        table: null // Takeaway or generic Food Court ordering
+      });
+    }
+  }, []);
 
   // 🔎 Secure Token se Auto-Login
   React.useEffect(() => {
@@ -249,6 +263,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<CustomerApp />} />
+          <Route path="/fc/:id" element={<FoodCourtHome />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/*" element={
             <ProtectedRoute>

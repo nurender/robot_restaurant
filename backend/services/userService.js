@@ -53,7 +53,7 @@ class UserService {
     // Removed AI columns
     _getRestaurantFields() {
         return [
-            'name', 'branch_code', 'brand_name', 'description', 'branch_type',
+            'name', 'branch_code', 'brand_name', 'description', 'branch_type', 'organization_id',
             'address', 'landmark', 'city', 'state', 'country', 'pincode', 'latitude', 'longitude',
             'phone', 'whatsapp_number', 'email', 'manager_name', 'emergency_contact',
             'working_hours', 'is_24x7', 'is_temp_closed',
@@ -64,6 +64,7 @@ class UserService {
     }
 
     async createRestaurant(data) {
+        if (data.organization_id === '') data.organization_id = null;
         const fields = this._getRestaurantFields();
         const values = fields.map(f => data[f]);
         const placeholders = fields.map((_, i) => `$${i + 1}`).join(',');
@@ -73,6 +74,7 @@ class UserService {
     }
 
     async updateRestaurant(id, data) {
+        if (data.organization_id === '') data.organization_id = null;
         const fields = this._getRestaurantFields();
         const values = fields.map(f => data[f]);
         const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
