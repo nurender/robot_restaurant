@@ -1,23 +1,23 @@
 import React from 'react';
 import { Utensils, Zap, ShieldCheck, Sparkles, QrCode, ArrowRight, Mic, Cpu, Users, TrendingUp, Clock, Globe, CheckCircle2 } from 'lucide-react';
-import './LandingPage.css';
+const LandingPage = ({
+  onStartDemo,
+  onAdminLogin
+}) => {
+  return <div className="landing-container animate-fade-in">
 
-const LandingPage = ({ onStartDemo, onAdminLogin }) => {
-  return (
-    <div className="landing-container animate-fade-in">
-
-      {/* 🔥 Urgency Banner */}
+      {}
       <div className="urgency-banner">
         <span className="fire-icon">🔥</span>
         <span><strong>Jaipur Beta Launch</strong> – First 10 Restaurants Get Free Setup & Integration</span>
       </div>
 
-      {/* Background Particles/Blobs */}
+      {}
       <div className="mesh-gradient"></div>
       <div className="floating-sphere sphere-1"></div>
       <div className="floating-sphere sphere-2"></div>
 
-      {/* 🧭 Navigation */}
+      {}
       <nav className="premium-nav">
         <div className="brand">
           <div className="logo-box">
@@ -36,7 +36,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
 
       <main className="main-content">
 
-        {/* 🚀 Hero Section */}
+        {}
         <section className="hero-grid">
           <div className="hero-text-block">
             <div className="neural-badge">
@@ -66,7 +66,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
             </div>
           </div>
 
-          {/* 🎥 Live Demo Chat UI */}
+          {}
           <div className="chat-demo-wrapper">
             <div className="chat-mockup glass-panel">
               <div className="mockup-header">
@@ -95,7 +95,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* 📈 Stats Banner */}
+        {}
         <section className="stats-banner glass-panel">
           <div className="stat-item">
             <h2>5,000+</h2>
@@ -118,7 +118,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* 📱 How It Works (B2C Flow) */}
+        {}
         <section className="how-it-works">
           <div className="section-header">
             <h2>Zero Friction Ordering</h2>
@@ -146,7 +146,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* 💰 Restaurant Owner Benefits (B2B) */}
+        {}
         <section className="b2b-benefits">
           <div className="section-header">
             <h2>Why Owners Love Robo</h2>
@@ -176,7 +176,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* 🧠 Security & Tech Stack */}
+        {}
         <section className="tech-stack glass-panel">
           <div className="tech-content">
             <h2>Enterprise-Grade Tech</h2>
@@ -192,7 +192,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* ⭐ Testimonials */}
+        {}
         <section className="testimonials">
           <div className="testimonial-card glass-panel">
             <p className="quote">"Customers love talking to Robo. Our table turnaround time has dropped drastically, and tip averages are up because the experience is magical."</p>
@@ -206,7 +206,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* ❓ FAQ */}
+        {}
         <section className="faq-section">
           <h2>Quick Questions</h2>
           <div className="faq-grid">
@@ -225,7 +225,7 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </section>
 
-        {/* 📞 Bottom CTA */}
+        {}
         <section className="bottom-cta">
           <h2>Want Robo In Your Restaurant?</h2>
           <p>Join the future of dining today. Get a free demo and setup for your cafe.</p>
@@ -251,8 +251,6 @@ const LandingPage = ({ onStartDemo, onAdminLogin }) => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default LandingPage;

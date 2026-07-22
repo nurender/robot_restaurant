@@ -1,52 +1,55 @@
-import './ReportsView.css';
 import React, { useState, useMemo } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area, PieChart, Pie, Cell, LineChart, Line
-} from 'recharts';
-import { 
-  FileText, Download, Calendar, Filter, RefreshCw, BarChart2, DollarSign, 
-  ShoppingBag, Users, Tag, CreditCard, Layers, CheckCircle, Clock, 
-  ArrowUpRight, Mail, Settings, Sparkles, AlertCircle, FileSpreadsheet, File
-} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { FileText, Download, Calendar, Filter, RefreshCw, BarChart2, DollarSign, ShoppingBag, Users, Tag, CreditCard, Layers, CheckCircle, Clock, ArrowUpRight, Mail, Settings, Sparkles, AlertCircle, FileSpreadsheet, File } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-export default function ReportsView({ 
-  orders = [], 
-  menuItems = [], 
-  categories = [], 
-  restaurantsList = [], 
-  customers = [], 
-  feedbackList = [], 
-  fetchData, 
-  formatDate = (d) => new Date(d).toLocaleString()
+export default function ReportsView({
+  orders = [],
+  menuItems = [],
+  categories = [],
+  restaurantsList = [],
+  customers = [],
+  feedbackList = [],
+  fetchData,
+  formatDate = d => new Date(d).toLocaleString()
 }) {
-  const [activeReportTab, setActiveReportTab] = useState('sales'); // 'sales', 'orders', 'menu', 'customers', 'payments', 'branches', 'scheduled'
-  
-  // Filtering States
-  const [dateFilter, setDateFilter] = useState('7days'); // 'today', 'yesterday', '7days', '30days', 'custom'
+  const [activeReportTab, setActiveReportTab] = useState('sales');
+  const [dateFilter, setDateFilter] = useState('7days');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [branchFilter, setBranchFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [orderTypeFilter, setOrderTypeFilter] = useState('all'); // 'all', 'qr', 'pos'
+  const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
-
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Scheduled Reports state
   const [scheduleFreq, setScheduleFreq] = useState('Daily');
   const [scheduleEmail, setScheduleEmail] = useState('');
   const [scheduleFormat, setScheduleFormat] = useState('PDF');
-
-  // Reports list state
-  const [reportsList, setReportsList] = useState([
-    { id: 1, name: 'Q2 Sales Performance Summary', type: 'Sales', createdBy: 'Super Admin', date: '2026-07-15', size: '2.4 MB', status: 'Ready' },
-    { id: 2, name: 'June QR Ordering Traffic Logs', type: 'Traffic', createdBy: 'Stall Manager', date: '2026-07-01', size: '15.8 MB', status: 'Ready' },
-    { id: 3, name: 'Unified Tax Audit Report (Q1)', type: 'Finance', createdBy: 'Accountant Node', date: '2026-06-15', size: '940 KB', status: 'Archived' }
-  ]);
-
+  const [reportsList, setReportsList] = useState([{
+    id: 1,
+    name: 'Q2 Sales Performance Summary',
+    type: 'Sales',
+    createdBy: 'Super Admin',
+    date: '2026-07-15',
+    size: '2.4 MB',
+    status: 'Ready'
+  }, {
+    id: 2,
+    name: 'June QR Ordering Traffic Logs',
+    type: 'Traffic',
+    createdBy: 'Stall Manager',
+    date: '2026-07-01',
+    size: '15.8 MB',
+    status: 'Ready'
+  }, {
+    id: 3,
+    name: 'Unified Tax Audit Report (Q1)',
+    type: 'Finance',
+    createdBy: 'Accountant Node',
+    date: '2026-06-15',
+    size: '940 KB',
+    status: 'Archived'
+  }]);
   const handleRefresh = async () => {
     setIsRefreshing(true);
     setIsLoading(true);
@@ -56,8 +59,7 @@ export default function ReportsView({
       setIsLoading(false);
     }, 600);
   };
-
-  const handleSaveSchedule = (e) => {
+  const handleSaveSchedule = e => {
     e.preventDefault();
     if (!scheduleEmail) {
       toast.error('Please enter a recipient email.');
@@ -66,44 +68,30 @@ export default function ReportsView({
     toast.success(`Reports scheduled successfully! Sent to ${scheduleEmail} (${scheduleFreq})`);
     setScheduleEmail('');
   };
-
-  // Helper to parse order dates safely
-  const parseOrderDate = (order) => {
+  const parseOrderDate = order => {
     const val = order.created_at || order.timestamp;
     if (!val) return null;
     const d = new Date(isNaN(val) ? val : Number(val));
     return isNaN(d.getTime()) ? null : d;
   };
-
-  // Filtered orders hook
   const filteredOrders = useMemo(() => {
     const now = new Date();
     const todayStr = now.toDateString();
-
     const yesterday = new Date();
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toDateString();
-
     return orders.filter(o => {
-      // 1. Branch Filter
       if (branchFilter !== 'all' && String(o.restaurant_id) !== String(branchFilter)) {
         return false;
       }
-
-      // 2. Order Type Filter
       const isQR = o.tablenumber && o.tablenumber !== 'POS';
       if (orderTypeFilter === 'qr' && !isQR) return false;
       if (orderTypeFilter === 'pos' && isQR) return false;
-
-      // 3. Payment Filter
       if (paymentFilter !== 'all' && o.payment_method?.toLowerCase() !== paymentFilter.toLowerCase()) {
         return false;
       }
-
-      // 4. Date Range Filter
       const orderDate = parseOrderDate(o);
       if (!orderDate) return false;
-
       if (dateFilter === 'today') {
         return orderDate.toDateString() === todayStr;
       }
@@ -129,8 +117,6 @@ export default function ReportsView({
       return true;
     });
   }, [orders, dateFilter, customStartDate, customEndDate, branchFilter, orderTypeFilter, paymentFilter]);
-
-  // Aggregated analytics metrics
   const reportData = useMemo(() => {
     const totalRev = filteredOrders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
     const totalCount = filteredOrders.length;
@@ -138,79 +124,88 @@ export default function ReportsView({
     const pendingCount = filteredOrders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
     const cancelledCount = filteredOrders.filter(o => o.status === 'cancelled').length;
     const avgOrderVal = totalCount ? Math.round(totalRev / totalCount) : 0;
-
-    // Daily breakdown for sparklines & graphs
     const dailyMap = {};
     filteredOrders.forEach(o => {
       const oDate = parseOrderDate(o);
       if (!oDate) return;
-      const key = oDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const key = oDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
       if (!dailyMap[key]) {
-        dailyMap[key] = { name: key, revenue: 0, orders: 0 };
+        dailyMap[key] = {
+          name: key,
+          revenue: 0,
+          orders: 0
+        };
       }
       dailyMap[key].revenue += parseFloat(o.total || 0);
       dailyMap[key].orders += 1;
     });
     const dailyData = Object.values(dailyMap);
-
-    // Menu Sales
     const menuSalesMap = {};
     filteredOrders.forEach(o => {
       let items = [];
       try {
         items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
-      } catch (e) { items = []; }
+      } catch (e) {
+        items = [];
+      }
       (items || []).forEach(item => {
         const name = item.name || 'Unknown Item';
         menuSalesMap[name] = (menuSalesMap[name] || 0) + (item.qty || item.quantity || 1);
       });
     });
-
-    const bestSellers = Object.entries(menuSalesMap)
-      .map(([name, qty]) => {
-        const match = menuItems.find(m => m.name === name);
-        const price = match ? Number(match.price) : 120;
-        return { name, qty, revenue: qty * price };
-      })
-      .sort((a, b) => b.qty - a.qty);
-
+    const bestSellers = Object.entries(menuSalesMap).map(([name, qty]) => {
+      const match = menuItems.find(m => m.name === name);
+      const price = match ? Number(match.price) : 120;
+      return {
+        name,
+        qty,
+        revenue: qty * price
+      };
+    }).sort((a, b) => b.qty - a.qty);
     const leastSellers = [...bestSellers].reverse().slice(0, 10);
-
-    // Payments Breakdown
-    const paymentMap = { Cash: 0, Card: 0, UPI: 0, Wallet: 0 };
+    const paymentMap = {
+      Cash: 0,
+      Card: 0,
+      UPI: 0,
+      Wallet: 0
+    };
     filteredOrders.forEach(o => {
       const pm = o.payment_method?.toUpperCase();
-      if (pm?.includes('CARD')) paymentMap.Card += parseFloat(o.total || 0);
-      else if (pm?.includes('UPI')) paymentMap.UPI += parseFloat(o.total || 0);
-      else if (pm?.includes('WALLET')) paymentMap.Wallet += parseFloat(o.total || 0);
-      else paymentMap.Cash += parseFloat(o.total || 0);
+      if (pm?.includes('CARD')) paymentMap.Card += parseFloat(o.total || 0);else if (pm?.includes('UPI')) paymentMap.UPI += parseFloat(o.total || 0);else if (pm?.includes('WALLET')) paymentMap.Wallet += parseFloat(o.total || 0);else paymentMap.Cash += parseFloat(o.total || 0);
     });
-
-    const paymentData = Object.entries(paymentMap).map(([name, value]) => ({ name, value }));
-
-    // Branch Performance
+    const paymentData = Object.entries(paymentMap).map(([name, value]) => ({
+      name,
+      value
+    }));
     const branchPerfMap = {};
     filteredOrders.forEach(o => {
       const rId = o.restaurant_id || 4;
       if (!branchPerfMap[rId]) {
         const b = restaurantsList.find(x => x.id === rId);
-        branchPerfMap[rId] = { name: b ? b.name : `Branch #${rId}`, revenue: 0, orders: 0, ratingSum: 0, ratingCount: 0 };
+        branchPerfMap[rId] = {
+          name: b ? b.name : `Branch #${rId}`,
+          revenue: 0,
+          orders: 0,
+          ratingSum: 0,
+          ratingCount: 0
+        };
       }
       branchPerfMap[rId].revenue += parseFloat(o.total || 0);
       branchPerfMap[rId].orders += 1;
     });
-
     feedbackList.forEach(f => {
       const rId = f.restaurant_id || 4;
       if (branchPerfMap[rId]) {
-        branchPerfMap[rId].ratingSum += (f.rating || 4);
+        branchPerfMap[rId].ratingSum += f.rating || 4;
         branchPerfMap[rId].ratingCount += 1;
       }
     });
-
     const branchPerfList = Object.entries(branchPerfMap).map(([id, info]) => {
       const avgRating = info.ratingCount ? (info.ratingSum / info.ratingCount).toFixed(1) : '4.6';
-      const score = Math.min(100, Math.round((info.revenue / 25000) * 40 + (info.orders / 100) * 30 + Number(avgRating) * 6));
+      const score = Math.min(100, Math.round(info.revenue / 25000 * 40 + info.orders / 100 * 30 + Number(avgRating) * 6));
       return {
         name: info.name,
         revenue: info.revenue,
@@ -220,20 +215,27 @@ export default function ReportsView({
         score
       };
     });
-
-    return { totalRev, totalCount, completedCount, pendingCount, cancelledCount, avgOrderVal, dailyData, bestSellers, leastSellers, paymentData, branchPerfList };
+    return {
+      totalRev,
+      totalCount,
+      completedCount,
+      pendingCount,
+      cancelledCount,
+      avgOrderVal,
+      dailyData,
+      bestSellers,
+      leastSellers,
+      paymentData,
+      branchPerfList
+    };
   }, [filteredOrders, menuItems, restaurantsList, feedbackList]);
-
-  // Export functions
-  const handleExport = (format) => {
+  const handleExport = format => {
     toast.success(`Exporting report as ${format}...`);
   };
-
-  return (
-    <div className="enterprise-light-reports">
+  return <div className="enterprise-light-reports">
       
 
-      {/* --- TOP HEADER ROW --- */}
+      {}
       <div className="reports-header-row">
         <div className="header-title-section">
           <h1>Reports & Analytics</h1>
@@ -252,7 +254,7 @@ export default function ReportsView({
         </div>
       </div>
 
-      {/* --- FILTER TOOLBAR --- */}
+      {}
       <div className="filter-toolbar">
         <div className="filter-row">
           <div className="filter-field">
@@ -263,25 +265,21 @@ export default function ReportsView({
           </div>
           <div className="filter-field">
             <span className="filter-label">Branch Outlet</span>
-            <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="filter-select">
+            <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="filter-select">
               <option value="all">All Outlets</option>
-              {restaurantsList.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
+              {restaurantsList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div className="filter-field">
             <span className="filter-label">Category Filter</span>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="filter-select">
+            <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="filter-select">
               <option value="all">All Categories</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
+              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
           <div className="filter-field">
             <span className="filter-label">Order Type</span>
-            <select value={orderTypeFilter} onChange={(e) => setOrderTypeFilter(e.target.value)} className="filter-select">
+            <select value={orderTypeFilter} onChange={e => setOrderTypeFilter(e.target.value)} className="filter-select">
               <option value="all">All Channels (POS & QR)</option>
               <option value="qr">QR Ordering Online</option>
               <option value="pos">POS Terminal Offline</option>
@@ -289,7 +287,7 @@ export default function ReportsView({
           </div>
           <div className="filter-field">
             <span className="filter-label">Payment Method</span>
-            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="filter-select">
+            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} className="filter-select">
               <option value="all">All Payments</option>
               <option value="cash">Cash</option>
               <option value="card">Card</option>
@@ -299,36 +297,37 @@ export default function ReportsView({
           </div>
         </div>
 
-        {/* Date Filter Selection Row */}
+        {}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
           <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'today', label: 'Today' },
-              { id: 'yesterday', label: 'Yesterday' },
-              { id: '7days', label: 'Last 7 Days' },
-              { id: '30days', label: 'Last 30 Days' },
-              { id: 'custom', label: 'Custom Date' }
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setDateFilter(f.id)}
-                className={`reports-filter-btn ${dateFilter === f.id ? 'active' : ''}`}
-              >
+            {[{
+            id: 'today',
+            label: 'Today'
+          }, {
+            id: 'yesterday',
+            label: 'Yesterday'
+          }, {
+            id: '7days',
+            label: 'Last 7 Days'
+          }, {
+            id: '30days',
+            label: 'Last 30 Days'
+          }, {
+            id: 'custom',
+            label: 'Custom Date'
+          }].map(f => <button key={f.id} onClick={() => setDateFilter(f.id)} className={`reports-filter-btn ${dateFilter === f.id ? 'active' : ''}`}>
                 {f.label}
-              </button>
-            ))}
+              </button>)}
           </div>
 
-          {dateFilter === 'custom' && (
-            <div className="flex gap-2">
-              <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="saas-select" style={{ background: '#fff', border: '1px solid #ccc' }} />
-              <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="saas-select" style={{ background: '#fff', border: '1px solid #ccc' }} />
-            </div>
-          )}
+          {dateFilter === 'custom' && <div className="flex gap-2">
+              <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="saas-select ex-style-bafde5" />
+              <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="saas-select ex-style-bafde5" />
+            </div>}
         </div>
       </div>
 
-      {/* --- BUSINESS INSIGHTS PANEL --- */}
+      {}
       <div className="insights-grid">
         <div className="insight-card blue">
           <Sparkles size={16} />
@@ -344,82 +343,117 @@ export default function ReportsView({
         </div>
       </div>
 
-      {/* --- OVERVIEW KPI CARDS --- */}
+      {}
       <div className="kpi-grid">
-        {[
-          { title: 'Total Revenue', value: `₹${reportData.totalRev.toLocaleString()}`, change: '+18.2%', icon: DollarSign, color: '#2563eb' },
-          { title: 'Total Orders', value: reportData.totalCount, change: '+14.6%', icon: ShoppingBag, color: '#10b981' },
-          { title: 'Completed Orders', value: reportData.completedCount, change: '96% Rate', icon: CheckCircle, color: '#10b981' },
-          { title: 'Pending Orders', value: reportData.pendingCount, change: 'Active Kitchen', icon: Clock, color: '#f59e0b' },
-          { title: 'Cancelled Orders', value: reportData.cancelledCount, change: '1.2% Rate', icon: AlertCircle, color: '#ef4444' },
-          { title: 'Avg Order Value', value: `₹${reportData.avgOrderVal.toLocaleString()}`, change: 'Steady', icon: Tag, color: '#8b5cf6' }
-        ].map((kpi, idx) => (
-          <div key={idx} className="kpi-card-light">
+        {[{
+        title: 'Total Revenue',
+        value: `₹${reportData.totalRev.toLocaleString()}`,
+        change: '+18.2%',
+        icon: DollarSign,
+        color: '#2563eb'
+      }, {
+        title: 'Total Orders',
+        value: reportData.totalCount,
+        change: '+14.6%',
+        icon: ShoppingBag,
+        color: '#10b981'
+      }, {
+        title: 'Completed Orders',
+        value: reportData.completedCount,
+        change: '96% Rate',
+        icon: CheckCircle,
+        color: '#10b981'
+      }, {
+        title: 'Pending Orders',
+        value: reportData.pendingCount,
+        change: 'Active Kitchen',
+        icon: Clock,
+        color: '#f59e0b'
+      }, {
+        title: 'Cancelled Orders',
+        value: reportData.cancelledCount,
+        change: '1.2% Rate',
+        icon: AlertCircle,
+        color: '#ef4444'
+      }, {
+        title: 'Avg Order Value',
+        value: `₹${reportData.avgOrderVal.toLocaleString()}`,
+        change: 'Steady',
+        icon: Tag,
+        color: '#8b5cf6'
+      }].map((kpi, idx) => <div key={idx} className="kpi-card-light">
             <div className="flex justify-between items-start">
-              <span className="kpi-title" style={{ fontSize: '10px', color: '#6b7280', fontWeight: 'bold' }}>{kpi.title}</span>
-              <kpi.icon size={16} style={{ color: kpi.color }} />
+              <span className="kpi-title ex-style-c79db7">{kpi.title}</span>
+              <kpi.icon size={16} style={{
+            color: kpi.color
+          }} />
             </div>
-            <h3 className="kpi-value" style={{ margin: '8px 0 2px 0', fontSize: '20px', fontWeight: '800' }}>{kpi.value}</h3>
-            <span className="text-[10px] font-bold" style={{ color: kpi.color }}>{kpi.change} vs prev</span>
-          </div>
-        ))}
+            <h3 className="kpi-value ex-style-ba9035">{kpi.value}</h3>
+            <span className="text-[10px] font-bold" style={{
+          color: kpi.color
+        }}>{kpi.change} vs prev</span>
+          </div>)}
       </div>
 
-      {/* --- REPORT ANALYSIS CATEGORIES SUBTABS --- */}
+      {}
       <div className="report-subtabs">
-        {[
-          { id: 'sales', label: 'Sales Performance' },
-          { id: 'orders', label: 'Order Analytics' },
-          { id: 'menu', label: 'Menu Performance' },
-          { id: 'customers', label: 'Customer Analytics' },
-          { id: 'payments', label: 'Payments breakdown' },
-          { id: 'branches', label: 'Branch Performance' },
-          { id: 'scheduled', label: 'Scheduled Reports' }
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveReportTab(t.id)}
-            className={`report-tab-btn ${activeReportTab === t.id ? 'active' : ''}`}
-          >
+        {[{
+        id: 'sales',
+        label: 'Sales Performance'
+      }, {
+        id: 'orders',
+        label: 'Order Analytics'
+      }, {
+        id: 'menu',
+        label: 'Menu Performance'
+      }, {
+        id: 'customers',
+        label: 'Customer Analytics'
+      }, {
+        id: 'payments',
+        label: 'Payments breakdown'
+      }, {
+        id: 'branches',
+        label: 'Branch Performance'
+      }, {
+        id: 'scheduled',
+        label: 'Scheduled Reports'
+      }].map(t => <button key={t.id} onClick={() => setActiveReportTab(t.id)} className={`report-tab-btn ${activeReportTab === t.id ? 'active' : ''}`}>
             {t.label}
-          </button>
-        ))}
+          </button>)}
       </div>
 
-      {/* --- CONDITIONAL TAB CONTENT --- */}
+      {}
 
-      {/* Tab 1: Sales Performance Area Graph */}
-      {activeReportTab === 'sales' && (
-        <div className="saas-card mb-6">
+      {}
+      {activeReportTab === 'sales' && <div className="saas-card mb-6">
           <div className="card-header-row">
             <h4 className="card-title"><BarChart2 size={16} className="text-[#2563eb]" /> Sales Performance Velocity</h4>
             <span className="text-[10px] text-slate-400 font-bold uppercase">Revenue Analytics</span>
           </div>
-          {reportData.dailyData.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-slate-400 text-xs font-semibold">No sales data matches these parameters.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
+          {reportData.dailyData.length === 0 ? <div className="h-64 flex items-center justify-center text-slate-400 text-xs font-semibold">No sales data matches these parameters.</div> : <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={reportData.dailyData}>
                 <defs>
                   <linearGradient id="reportsRevGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} />
                 <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' }} />
+                <Tooltip contentStyle={{
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px'
+          }} />
                 <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2.5} fillOpacity={1} fill="url(#reportsRevGrad)" />
               </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      )}
+            </ResponsiveContainer>}
+        </div>}
 
-      {/* Tab 2: Order Analytics Line Graph & Status Doughnut */}
-      {activeReportTab === 'orders' && (
-        <div className="saas-row saas-row-70-30">
+      {}
+      {activeReportTab === 'orders' && <div className="saas-row saas-row-70-30">
           <div className="saas-card">
             <h4 className="card-title mb-4">Orders Velocity Trend</h4>
             <ResponsiveContainer width="100%" height={220}>
@@ -428,7 +462,9 @@ export default function ReportsView({
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} />
                 <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
                 <Tooltip />
-                <Line type="monotone" dataKey="orders" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="orders" stroke="#10b981" strokeWidth={2.5} dot={{
+              r: 4
+            }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -441,71 +477,59 @@ export default function ReportsView({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>}
 
-      {/* Tab 3: Menu Performance (Best Sellers & Least Sellers) */}
-      {activeReportTab === 'menu' && (
-        <>
+      {}
+      {activeReportTab === 'menu' && <>
           <div className="saas-row saas-row-50-50 mb-6">
-            {/* Top 10 Best Sellers */}
+            {}
             <div className="saas-card">
               <h4 className="card-title mb-4">Top 10 Best Selling Items</h4>
-              {reportData.bestSellers.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">No items sold.</div>
-              ) : (
-                <div className="flex flex-col gap-2">
+              {reportData.bestSellers.length === 0 ? <div className="p-8 text-center text-slate-400 text-xs">No items sold.</div> : <div className="flex flex-col gap-2">
                   {reportData.bestSellers.slice(0, 10).map((item, idx) => {
-                    const maxQty = reportData.bestSellers[0]?.qty || 1;
-                    const percent = Math.round((item.qty / maxQty) * 100);
-                    return (
-                      <div key={idx} className="progress-list-item">
+              const maxQty = reportData.bestSellers[0]?.qty || 1;
+              const percent = Math.round(item.qty / maxQty * 100);
+              return <div key={idx} className="progress-list-item">
                         <div className="flex justify-between text-xs text-slate-700">
                           <strong>{item.name}</strong>
                           <span>{item.qty} units (₹{item.revenue.toLocaleString()})</span>
                         </div>
                         <div className="progress-bar-light">
-                          <div className="progress-bar-fill-blue" style={{ width: `${percent}%` }}></div>
+                          <div className="progress-bar-fill-blue" style={{
+                    width: `${percent}%`
+                  }}></div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      </div>;
+            })}
+                </div>}
             </div>
 
-            {/* Top 10 Least Sellers */}
+            {}
             <div className="saas-card">
               <h4 className="card-title mb-4">Least Selling Items</h4>
-              {reportData.leastSellers.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs font-semibold">No items sold.</div>
-              ) : (
-                <div className="flex flex-col gap-2">
+              {reportData.leastSellers.length === 0 ? <div className="p-8 text-center text-slate-400 text-xs font-semibold">No items sold.</div> : <div className="flex flex-col gap-2">
                   {reportData.leastSellers.slice(0, 10).map((item, idx) => {
-                    const maxQty = reportData.bestSellers[0]?.qty || 1;
-                    const percent = Math.round((item.qty / maxQty) * 100);
-                    return (
-                      <div key={idx} className="progress-list-item">
+              const maxQty = reportData.bestSellers[0]?.qty || 1;
+              const percent = Math.round(item.qty / maxQty * 100);
+              return <div key={idx} className="progress-list-item">
                         <div className="flex justify-between text-xs text-slate-700">
                           <strong>{item.name}</strong>
                           <span>{item.qty} units (₹{item.revenue.toLocaleString()})</span>
                         </div>
                         <div className="progress-bar-light">
-                          <div className="progress-bar-fill-red" style={{ width: `${Math.max(5, percent)}%` }}></div>
+                          <div className="progress-bar-fill-red" style={{
+                    width: `${Math.max(5, percent)}%`
+                  }}></div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      </div>;
+            })}
+                </div>}
             </div>
           </div>
-        </>
-      )}
+        </>}
 
-      {/* Tab 4: Customer Analytics */}
-      {activeReportTab === 'customers' && (
-        <div className="saas-row saas-row-50-50">
+      {}
+      {activeReportTab === 'customers' && <div className="saas-row saas-row-50-50">
           <div className="saas-card">
             <h4 className="card-title mb-4">Customer Segment Distribution</h4>
             <div className="grid grid-cols-2 gap-4">
@@ -524,46 +548,30 @@ export default function ReportsView({
             <div className="text-3xl font-black text-slate-900 mt-2">₹425.00</div>
             <p className="text-[10px] text-slate-400 mt-1 font-semibold">Average billing amount per checkout ticket.</p>
           </div>
-        </div>
-      )}
+        </div>}
 
-      {/* Tab 5: Payments breakdown Doughnut */}
-      {activeReportTab === 'payments' && (
-        <div className="saas-card">
+      {}
+      {activeReportTab === 'payments' && <div className="saas-card">
           <h4 className="card-title mb-4">Payment Methods breakdown</h4>
           <div className="flex items-center justify-around h-44">
             <ResponsiveContainer width="50%" height="100%">
               <PieChart>
-                <Pie
-                  data={reportData.paymentData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={65}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {reportData.paymentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 2 ? '#2563eb' : index === 1 ? '#10b981' : index === 3 ? '#8b5cf6' : '#d97706'} />
-                  ))}
+                <Pie data={reportData.paymentData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={5} dataKey="value">
+                  {reportData.paymentData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 2 ? '#2563eb' : index === 1 ? '#10b981' : index === 3 ? '#8b5cf6' : '#d97706'} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
             <div className="flex flex-col gap-2">
-              {reportData.paymentData.map((item, idx) => (
-                <div key={idx} className="text-xs text-slate-700">
+              {reportData.paymentData.map((item, idx) => <div key={idx} className="text-xs text-slate-700">
                   <strong>{item.name}:</strong> ₹{item.value.toLocaleString()}
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
-        </div>
-      )}
+        </div>}
 
-      {/* Tab 6: Branch Performance Scoreboard */}
-      {activeReportTab === 'branches' && (
-        <div className="reports-table-panel">
+      {}
+      {activeReportTab === 'branches' && <div className="reports-table-panel">
           <h4 className="card-title mb-4">Stall Branch Performance Scoreboard</h4>
           <div className="overflow-x-auto">
             <table className="r-table">
@@ -578,8 +586,7 @@ export default function ReportsView({
                 </tr>
               </thead>
               <tbody>
-                {reportData.branchPerfList.map((branch, idx) => (
-                  <tr key={idx}>
+                {reportData.branchPerfList.map((branch, idx) => <tr key={idx}>
                     <td className="font-bold text-slate-800">{branch.name}</td>
                     <td className="font-extrabold text-blue-600">₹{branch.revenue.toLocaleString()}</td>
                     <td className="font-semibold">{branch.orders} Orders</td>
@@ -590,22 +597,19 @@ export default function ReportsView({
                         {branch.score} / 100
                       </span>
                     </td>
-                  </tr>
-                ))}
+                  </tr>)}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        </div>}
 
-      {/* Tab 7: Scheduled Reports */}
-      {activeReportTab === 'scheduled' && (
-        <div className="saas-card">
+      {}
+      {activeReportTab === 'scheduled' && <div className="saas-card">
           <h4 className="card-title mb-4"><Calendar size={16} className="text-[#2563eb]" /> Schedule Automated Reports</h4>
           <form onSubmit={handleSaveSchedule} className="schedule-form">
             <div className="filter-field">
               <span className="filter-label">Recurrence Frequency</span>
-              <select value={scheduleFreq} onChange={(e) => setScheduleFreq(e.target.value)} className="filter-select">
+              <select value={scheduleFreq} onChange={e => setScheduleFreq(e.target.value)} className="filter-select">
                 <option value="Daily">Daily Summary</option>
                 <option value="Weekly">Weekly Digest</option>
                 <option value="Monthly">Monthly Financial Report</option>
@@ -613,18 +617,11 @@ export default function ReportsView({
             </div>
             <div className="filter-field">
               <span className="filter-label">Recipient Email</span>
-              <input 
-                type="email" 
-                placeholder="e.g. accounting@company.com" 
-                value={scheduleEmail} 
-                onChange={(e) => setScheduleEmail(e.target.value)} 
-                className="filter-select bg-white" 
-                style={{ border: '1px solid #d1d5db' }}
-              />
+              <input type="email" placeholder="e.g. accounting@company.com" value={scheduleEmail} onChange={e => setScheduleEmail(e.target.value)} className="filter-select bg-white ex-style-5a433e" />
             </div>
             <div className="filter-field">
               <span className="filter-label">Export Format</span>
-              <select value={scheduleFormat} onChange={(e) => setScheduleFormat(e.target.value)} className="filter-select">
+              <select value={scheduleFormat} onChange={e => setScheduleFormat(e.target.value)} className="filter-select">
                 <option value="PDF">PDF Format</option>
                 <option value="CSV">CSV Spreadsheet</option>
                 <option value="Excel">Excel Sheet (XLSX)</option>
@@ -632,32 +629,31 @@ export default function ReportsView({
             </div>
             <button type="submit" className="saas-btn-primary">Save Schedule</button>
           </form>
-        </div>
-      )}
+        </div>}
 
       <div className="mt-8"></div>
 
-      {/* --- EXPORT FORMATS PANEL --- */}
+      {}
       <h4 className="kpi-title mb-3">Instant Exports Engine</h4>
       <div className="export-cards-grid">
         <div onClick={() => handleExport('Excel')} className="export-card">
           <FileSpreadsheet size={24} className="text-emerald-600 mb-2" />
-          <h5 className="text-sm font-bold text-slate-800" style={{ margin: '0 0 4px 0' }}>Excel Export</h5>
-          <p className="text-[10px] text-slate-400" style={{ margin: 0 }}>Download raw tabular ledger dataset sheets.</p>
+          <h5 className="text-sm font-bold text-slate-800 ex-style-d892ac">Excel Export</h5>
+          <p className="text-[10px] text-slate-400 ex-style-2b4742">Download raw tabular ledger dataset sheets.</p>
         </div>
         <div onClick={() => handleExport('CSV')} className="export-card">
           <FileText size={24} className="text-[#2563eb] mb-2" />
-          <h5 className="text-sm font-bold text-slate-800" style={{ margin: '0 0 4px 0' }}>CSV Sheets</h5>
-          <p className="text-[10px] text-slate-400" style={{ margin: 0 }}>Lightweight comma-separated transaction records.</p>
+          <h5 className="text-sm font-bold text-slate-800 ex-style-d892ac">CSV Sheets</h5>
+          <p className="text-[10px] text-slate-400 ex-style-2b4742">Lightweight comma-separated transaction records.</p>
         </div>
         <div onClick={() => handleExport('PDF')} className="export-card">
           <File size={24} className="text-red-500 mb-2" />
-          <h5 className="text-sm font-bold text-slate-800" style={{ margin: '0 0 4px 0' }}>PDF Document</h5>
-          <p className="text-[10px] text-slate-400" style={{ margin: 0 }}>Printable, executive-ready analytical summaries.</p>
+          <h5 className="text-sm font-bold text-slate-800 ex-style-d892ac">PDF Document</h5>
+          <p className="text-[10px] text-slate-400 ex-style-2b4742">Printable, executive-ready analytical summaries.</p>
         </div>
       </div>
 
-      {/* --- BOTTOM SECTION: SYSTEM GENERATED REPORTS TABLE --- */}
+      {}
       <div className="reports-table-panel mt-6">
         <h4 className="card-title mb-4">System Archive Reports Log</h4>
         <div className="overflow-x-auto">
@@ -670,12 +666,11 @@ export default function ReportsView({
                 <th>Generated Date</th>
                 <th>File Size</th>
                 <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th className="ex-style-e12b71">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {reportsList.map(report => (
-                <tr key={report.id}>
+              {reportsList.map(report => <tr key={report.id}>
                   <td className="font-bold text-slate-800">{report.name}</td>
                   <td><span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600">{report.type}</span></td>
                   <td>{report.createdBy}</td>
@@ -686,17 +681,15 @@ export default function ReportsView({
                       {report.status}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button onClick={() => toast.success(`Viewing ${report.name}...`)} className="saas-btn-outline" style={{ fontSize: '10px', padding: '4px 8px', marginRight: '6px' }}>View</button>
-                    <button onClick={() => toast.success(`Downloading ${report.name}...`)} className="saas-btn-outline" style={{ fontSize: '10px', padding: '4px 8px' }}>Download</button>
+                  <td className="ex-style-e12b71">
+                    <button onClick={() => toast.success(`Viewing ${report.name}...`)} className="saas-btn-outline ex-style-c791a9">View</button>
+                    <button onClick={() => toast.success(`Downloading ${report.name}...`)} className="saas-btn-outline ex-style-8e0365">Download</button>
                   </td>
-                </tr>
-              ))}
+                </tr>)}
             </tbody>
           </table>
         </div>
       </div>
 
-    </div>
-  );
+    </div>;
 }

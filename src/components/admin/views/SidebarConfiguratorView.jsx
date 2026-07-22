@@ -1,79 +1,65 @@
-import './SidebarConfiguratorView.css';
 import React, { useState, useMemo } from 'react';
 import apiService from '../../../services/apiService';
 import toast from 'react-hot-toast';
-import {
-  GripVertical, Eye, EyeOff, Shield, ArrowUp, ArrowDown, Trash2,
-  Search, SlidersHorizontal, RefreshCw, LayoutGrid, CheckCircle2,
-  HelpCircle, Settings, ChevronRight
-} from 'lucide-react';
-
-export default function SidebarConfiguratorView({ orderedSidebar = [], setOrderedSidebar }) {
+import { GripVertical, Eye, EyeOff, Shield, ArrowUp, ArrowDown, Trash2, Search, SlidersHorizontal, RefreshCw, LayoutGrid, CheckCircle2, HelpCircle, Settings, ChevronRight } from 'lucide-react';
+export default function SidebarConfiguratorView({
+  orderedSidebar = [],
+  setOrderedSidebar
+}) {
   const [dragItemIndex, setDragItemIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterVisibility, setFilterVisibility] = useState('all'); // 'all', 'visible', 'hidden'
+  const [filterVisibility, setFilterVisibility] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalSidebar] = useState([...orderedSidebar]);
-
   if (!orderedSidebar || !Array.isArray(orderedSidebar)) return null;
-
-  // Search & Filter items
   const filteredItems = useMemo(() => {
     return orderedSidebar.filter(item => {
       if (!item) return false;
-      const matchesSearch = item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.path || '').toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesVisibility = filterVisibility === 'all' ||
-        (filterVisibility === 'visible' && item.is_active) ||
-        (filterVisibility === 'hidden' && !item.is_active);
-
+      const matchesSearch = item.label.toLowerCase().includes(searchQuery.toLowerCase()) || (item.path || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesVisibility = filterVisibility === 'all' || filterVisibility === 'visible' && item.is_active || filterVisibility === 'hidden' && !item.is_active;
       return matchesSearch && matchesVisibility;
     });
   }, [orderedSidebar, searchQuery, filterVisibility]);
-
-  // Statistics counters
   const stats = useMemo(() => {
     const total = orderedSidebar.length;
     const visible = orderedSidebar.filter(i => i?.is_active).length;
     const hidden = total - visible;
-    return { total, visible, hidden };
+    return {
+      total,
+      visible,
+      hidden
+    };
   }, [orderedSidebar]);
-
-  // Drag & Drop Handlers
   const handleDragStart = (e, index) => {
     setDragItemIndex(index);
     e.dataTransfer.effectAllowed = 'move';
   };
-
   const handleDragOver = (e, index) => {
     e.preventDefault();
     if (dragOverIndex !== index) {
       setDragOverIndex(index);
     }
   };
-
-  const handleDrop = async (index) => {
+  const handleDrop = async index => {
     if (dragItemIndex === null || dragItemIndex === index) return;
-
     const items = [...orderedSidebar];
     const draggedItem = items[dragItemIndex];
     items.splice(dragItemIndex, 1);
     items.splice(index, 0, draggedItem);
-
     setOrderedSidebar(items);
     setDragItemIndex(null);
     setDragOverIndex(null);
     setHasUnsavedChanges(true);
   };
-
-  // Toggle Visibility
   const handleToggleVisibility = async (index, item) => {
     try {
       const updated = [...orderedSidebar];
-      updated[index] = { ...item, is_active: !item.is_active };
+      updated[index] = {
+        ...item,
+        is_active: !item.is_active
+      };
       setOrderedSidebar(updated);
       setHasUnsavedChanges(true);
       await apiService.toggleSidebarItem(item.id, !item.is_active);
@@ -82,11 +68,12 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
       toast.error('Failed to update visibility');
     }
   };
-
-  // Push Order to DB
   const handleSaveChanges = async () => {
     try {
-      const payload = orderedSidebar.map((it, i) => it ? { id: it.id, sort_order: i } : null).filter(Boolean);
+      const payload = orderedSidebar.map((it, i) => it ? {
+        id: it.id,
+        sort_order: i
+      } : null).filter(Boolean);
       await apiService.reorderSidebar(payload);
       setHasUnsavedChanges(false);
       toast.success('Sidebar layouts saved successfully!');
@@ -94,12 +81,9 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
       toast.error('Failed to save layout changes');
     }
   };
-
-  // Move manual arrows
   const moveItem = (index, direction) => {
     const nextIndex = direction === 'up' ? index - 1 : index + 1;
     if (nextIndex < 0 || nextIndex >= orderedSidebar.length) return;
-
     const items = [...orderedSidebar];
     const targetItem = items[index];
     items.splice(index, 1);
@@ -107,19 +91,15 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
     setOrderedSidebar(items);
     setHasUnsavedChanges(true);
   };
-
   const handleResetLayout = () => {
     setOrderedSidebar([...originalSidebar]);
     setHasUnsavedChanges(false);
     toast.success('Layout reset to initial state');
   };
-
-  // Bulk operations
-  const toggleSelect = (id) => {
+  const toggleSelect = id => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
-
-  const handleBulkVisibility = async (status) => {
+  const handleBulkVisibility = async status => {
     if (selectedIds.length === 0) {
       toast.error('No modules selected.');
       return;
@@ -128,7 +108,10 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
       const updated = orderedSidebar.map(item => {
         if (selectedIds.includes(item.id)) {
           apiService.toggleSidebarItem(item.id, status);
-          return { ...item, is_active: status };
+          return {
+            ...item,
+            is_active: status
+          };
         }
         return item;
       });
@@ -139,12 +122,10 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
       toast.error('Bulk update failed');
     }
   };
-
-  return (
-    <div className="enterprise-sidebar-configurator animate-slide-up">
+  return <div className="enterprise-sidebar-configurator animate-slide-up">
       
 
-      {/* --- PAGE HEADER --- */}
+      {}
       <div className="sc-header-row">
         <div className="sc-title-section">
           <h1>Sidebar Configurator</h1>
@@ -152,13 +133,11 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
         </div>
         <div className="header-actions">
           <button onClick={handleResetLayout} className="sc-btn-outline">Reset Layout</button>
-          {/* <button onClick={handleSaveChanges} className="sc-btn-primary" disabled={!hasUnsavedChanges} style={{ opacity: hasUnsavedChanges ? 1 : 0.65 }}>
-            Save Changes
-          </button> */}
+          {}
         </div>
       </div>
 
-      {/* --- STATISTICS KPI CARDS --- */}
+      {}
       <div className="sc-stats-grid">
         <div className="sc-stat-card">
           <div className="sc-stat-icon-wrapper blue">
@@ -189,75 +168,47 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
         </div>
       </div>
 
-      {/* --- SPLIT LAYOUT --- */}
+      {}
       <div className="sc-split-layout">
 
-        {/* Left Side: Modules Configurator List */}
+        {}
         <div className="sc-card">
 
-          {/* Toolbar */}
+          {}
           <div className="sc-toolbar">
             <div className="sc-search-wrapper">
               <Search size={14} className="sc-search-icon" />
-              <input
-                type="text"
-                placeholder="Search modules..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="sc-search-input"
-              />
+              <input type="text" placeholder="Search modules..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="sc-search-input" />
             </div>
 
             <div className="flex gap-2">
-              <select
-                value={filterVisibility}
-                onChange={(e) => setFilterVisibility(e.target.value)}
-                className="saas-select"
-                style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--ap-glass-border, var(--border-default))', borderRadius: '8px', fontSize: '12px', padding: '6px' }}
-              >
+              <select value={filterVisibility} onChange={e => setFilterVisibility(e.target.value)} className="saas-select ex-style-a2c11e">
                 <option value="all">All Modules</option>
                 <option value="visible">Visible Only</option>
                 <option value="hidden">Hidden Only</option>
               </select>
 
-              {selectedIds.length > 0 && (
-                <div className="flex gap-1.5 animate-fade-in">
-                  <button onClick={() => handleBulkVisibility(true)} className="sc-btn-outline" style={{ fontSize: '11px', height: '28px', padding: '0 8px' }}>Bulk Show</button>
-                  <button onClick={() => handleBulkVisibility(false)} className="sc-btn-outline" style={{ fontSize: '11px', height: '28px', padding: '0 8px' }}>Bulk Hide</button>
-                </div>
-              )}
+              {selectedIds.length > 0 && <div className="flex gap-1.5 animate-fade-in">
+                  <button onClick={() => handleBulkVisibility(true)} className="sc-btn-outline ex-style-adc8a6">Bulk Show</button>
+                  <button onClick={() => handleBulkVisibility(false)} className="sc-btn-outline ex-style-adc8a6">Bulk Hide</button>
+                </div>}
             </div>
           </div>
 
-          {/* Modules Drag & Drop list */}
-          {filteredItems.length === 0 ? (
-            <div className="sc-empty-state">
+          {}
+          {filteredItems.length === 0 ? <div className="sc-empty-state">
               <Shield size={32} className="opacity-30 mb-2" />
               <p>No modules match your search filters.</p>
-            </div>
-          ) : (
-            <div className="sc-modules-list">
+            </div> : <div className="sc-modules-list">
               {filteredItems.map((item, index) => {
-                const isSelected = selectedIds.includes(item.id);
-                const isDragOver = dragOverIndex === index;
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`sc-module-card ${dragItemIndex === index ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDrop={() => handleDrop(index)}
-                    onDragEnd={() => { setDragItemIndex(null); setDragOverIndex(null); }}
-                  >
+            const isSelected = selectedIds.includes(item.id);
+            const isDragOver = dragOverIndex === index;
+            return <div key={item.id} className={`sc-module-card ${dragItemIndex === index ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`} draggable onDragStart={e => handleDragStart(e, index)} onDragOver={e => handleDragOver(e, index)} onDrop={() => handleDrop(index)} onDragEnd={() => {
+              setDragItemIndex(null);
+              setDragOverIndex(null);
+            }}>
                     <div className="sc-module-left">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(item.id)}
-                        className="sc-checkbox"
-                      />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)} className="sc-checkbox" />
                       <div className="sc-drag-puck">
                         <GripVertical size={14} />
                       </div>
@@ -278,63 +229,46 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
                     </div>
 
                     <div className="sc-module-controls-right">
-                      {/* Manual sorting arrow keys */}
-                      <button
-                        onClick={() => moveItem(index, 'up')}
-                        disabled={index === 0}
-                        className="sc-action-btn-mini"
-                        style={{ opacity: index === 0 ? 0.35 : 1 }}
-                        title="Move Up"
-                      >
+                      {}
+                      <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="sc-action-btn-mini" style={{
+                  opacity: index === 0 ? 0.35 : 1
+                }} title="Move Up">
                         <ArrowUp size={12} />
                       </button>
-                      <button
-                        onClick={() => moveItem(index, 'down')}
-                        disabled={index === orderedSidebar.length - 1}
-                        className="sc-action-btn-mini"
-                        style={{ opacity: index === orderedSidebar.length - 1 ? 0.35 : 1 }}
-                        title="Move Down"
-                      >
+                      <button onClick={() => moveItem(index, 'down')} disabled={index === orderedSidebar.length - 1} className="sc-action-btn-mini" style={{
+                  opacity: index === orderedSidebar.length - 1 ? 0.35 : 1
+                }} title="Move Down">
                         <ArrowDown size={12} />
                       </button>
 
-                      {/* Visibility Toggle Switch */}
-                      <button
-                        onClick={() => handleToggleVisibility(index, item)}
-                        className={`saas-switch-btn ${item.is_active ? 'active' : ''}`}
-                        title={item.is_active ? 'Hide Module' : 'Show Module'}
-                      >
+                      {}
+                      <button onClick={() => handleToggleVisibility(index, item)} className={`saas-switch-btn ${item.is_active ? 'active' : ''}`} title={item.is_active ? 'Hide Module' : 'Show Module'}>
                         <div className="saas-switch-knob" />
                       </button>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  </div>;
+          })}
+            </div>}
         </div>
 
-        {/* Right Side: Live Sidebar Preview Panel */}
+        {}
         <div className="sc-sidebar-preview-panel">
           <div className="preview-sidebar-menu">
             <h4 className="preview-header">Live Sidebar Preview</h4>
-            <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '12px', border: '1px solid var(--ap-glass-border, var(--border-default))' }}>
-              {orderedSidebar.filter(i => i?.is_active).map((item, idx) => (
-                <div key={item.id} className={`preview-item ${idx === 0 ? 'active' : ''}`}>
+            <div className="ex-style-ec119a">
+              {orderedSidebar.filter(i => i?.is_active).map((item, idx) => <div key={item.id} className={`preview-item ${idx === 0 ? 'active' : ''}`}>
                   <LayoutGrid size={14} />
                   <span>{item.label}</span>
-                  {idx === 0 && <ChevronRight size={12} style={{ marginLeft: 'auto' }} />}
-                </div>
-              ))}
+                  {idx === 0 && <ChevronRight size={12} className="ex-style-8d2f07" />}
+                </div>)}
             </div>
           </div>
         </div>
 
       </div>
 
-      {/* --- STICKY FOOTER ACTION BAR --- */}
-      {hasUnsavedChanges && (
-        <div className="sc-sticky-footer animate-slide-up">
+      {}
+      {hasUnsavedChanges && <div className="sc-sticky-footer animate-slide-up">
           <div className="changes-badge">
             <CheckCircle2 size={14} />
             <span>You have unsaved changes to the sidebar menu ordering layout.</span>
@@ -343,9 +277,7 @@ export default function SidebarConfiguratorView({ orderedSidebar = [], setOrdere
             <button onClick={handleResetLayout} className="sc-btn-outline">Cancel</button>
             <button onClick={handleSaveChanges} className="sc-btn-primary">Save Changes</button>
           </div>
-        </div>
-      )}
+        </div>}
 
-    </div>
-  );
+    </div>;
 }

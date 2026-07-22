@@ -1,20 +1,13 @@
-import './QrConfigView.css';
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import {
-  CreditCard, ShieldCheck, UserCheck, Sliders, Play, RotateCcw,
-  Save, Eye, Check, AlertCircle, Sparkles, Building, Search,
-  HelpCircle, Trash, Clock
-} from 'lucide-react';
+import { CreditCard, ShieldCheck, UserCheck, Sliders, Play, RotateCcw, Save, Eye, Check, AlertCircle, Sparkles, Building, Search, HelpCircle, Trash, Clock } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../../../config';
-
-export default function QrConfigView({ adminUser }) {
-  // State for all setting variables
+export default function QrConfigView({
+  adminUser
+}) {
   const [scope, setScope] = useState('organization');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Payment settings
   const [payBeforeConfirm, setPayBeforeConfirm] = useState(true);
   const [paymentMethods, setPaymentMethods] = useState({
     upi: true,
@@ -26,8 +19,6 @@ export default function QrConfigView({ adminUser }) {
   const [defaultPayment, setDefaultPayment] = useState('UPI');
   const [showSuccessScreen, setShowSuccessScreen] = useState(true);
   const [autoCancelTime, setAutoCancelTime] = useState('10 Minutes');
-
-  // Authentication settings
   const [requireLogin, setRequireLogin] = useState(false);
   const [loginMethods, setLoginMethods] = useState({
     mobileOtp: true,
@@ -36,15 +27,11 @@ export default function QrConfigView({ adminUser }) {
     apple: false
   });
   const [rememberCustomer, setRememberCustomer] = useState(true);
-
-  // Customer Information Table State
   const [customerDetails, setCustomerDetails] = useState({
-    name: 'required', // 'required', 'optional', 'disabled'
+    name: 'required',
     mobile: 'required',
     email: 'optional'
   });
-
-  // Ordering Preferences
   const [preferences, setPreferences] = useState({
     guestCheckout: true,
     deliveryInstructions: false,
@@ -57,23 +44,23 @@ export default function QrConfigView({ adminUser }) {
     allowMultiple: true,
     allowRepeat: false
   });
-
-  // Tip Config
   const [suggestedTips, setSuggestedTips] = useState(['₹20', '₹50', '₹100']);
   const [customTip, setCustomTip] = useState(true);
-
-  // Activity Log State
-  const [logs, setLogs] = useState([
-    { user: 'Shishir Singh (Admin)', action: 'Changed Pay Before Confirmation', oldVal: 'Disabled', newVal: 'Enabled', time: '10 Mins Ago' },
-    { user: 'Shishir Singh (Admin)', action: 'Added UPI as Default Payment', oldVal: 'Cash', newVal: 'UPI', time: '1 Hour Ago' }
-  ]);
-
-  // Track if there are unsaved changes
+  const [logs, setLogs] = useState([{
+    user: 'Shishir Singh (Admin)',
+    action: 'Changed Pay Before Confirmation',
+    oldVal: 'Disabled',
+    newVal: 'Enabled',
+    time: '10 Mins Ago'
+  }, {
+    user: 'Shishir Singh (Admin)',
+    action: 'Added UPI as Default Payment',
+    oldVal: 'Cash',
+    newVal: 'UPI',
+    time: '1 Hour Ago'
+  }]);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // Mark changes whenever states update
   const markChanged = () => setHasChanges(true);
-
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -99,28 +86,36 @@ export default function QrConfigView({ adminUser }) {
     };
     fetchConfig();
   }, [adminUser]);
-
   const handleSave = async () => {
     try {
       const restId = adminUser?.restaurant_id || 4;
       const configObj = {
-        payBeforeConfirm, paymentMethods, defaultPayment, autoCancelTime,
-        requireLogin, loginMethods, rememberCustomer, customerDetails,
-        preferences, suggestedTips, customTip
+        payBeforeConfirm,
+        paymentMethods,
+        defaultPayment,
+        autoCancelTime,
+        requireLogin,
+        loginMethods,
+        rememberCustomer,
+        customerDetails,
+        preferences,
+        suggestedTips,
+        customTip
       };
-      
       const res = await axios.post(`${API_URL}/api/mgmt/qr-config`, {
         restaurant_id: restId,
         config: configObj
       });
-      
       if (res.data.success) {
         toast.success('Configuration saved successfully to Database!');
         setHasChanges(false);
-        setLogs(prev => [
-          { user: adminUser?.name || 'Admin User', action: 'Saved QR Ordering Configuration', oldVal: 'Previous State', newVal: 'Updated State', time: 'Just Now' },
-          ...prev
-        ]);
+        setLogs(prev => [{
+          user: adminUser?.name || 'Admin User',
+          action: 'Saved QR Ordering Configuration',
+          oldVal: 'Previous State',
+          newVal: 'Updated State',
+          time: 'Just Now'
+        }, ...prev]);
       } else {
         toast.error('Failed to save configuration');
       }
@@ -129,97 +124,90 @@ export default function QrConfigView({ adminUser }) {
       console.error(error);
     }
   };
-
   const handleReset = () => {
     if (window.confirm("Are you sure you want to reset settings to default?")) {
       setPayBeforeConfirm(true);
       setRequireLogin(false);
-      setCustomerDetails({ name: 'required', mobile: 'required', email: 'optional' });
+      setCustomerDetails({
+        name: 'required',
+        mobile: 'required',
+        email: 'optional'
+      });
       setHasChanges(false);
       toast.success('Configuration reset to system defaults!');
     }
   };
-
-  return (
-    <div className="qr-config-workspace animate-slide-up">
+  return <div className="qr-config-workspace animate-slide-up">
       
 
-      {/* --- HEADER BLOCK --- */}
+      {}
       <div className="config-header">
         <div>
           <h1>QR Ordering Configuration</h1>
           <p>Configure how customers interact with QR ordering across your organization.</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <select
-            value={scope}
-            onChange={(e) => { setScope(e.target.value); markChanged(); }}
-            className="saas-select-light"
-          >
+        <div className="ex-style-3c37f6">
+          <select value={scope} onChange={e => {
+          setScope(e.target.value);
+          markChanged();
+        }} className="saas-select-light">
             <option value="organization">Entire Organization</option>
             <option value="branch">Selected Branches</option>
             <option value="hotel">Selected Hotels</option>
             <option value="floor">Selected Floors</option>
           </select>
-          <button onClick={handleReset} className="sc-btn-outline" style={{ height: '32px', fontSize: '11px', padding: '0 12px' }}>
+          <button onClick={handleReset} className="sc-btn-outline ex-style-39592b">
             <RotateCcw size={12} /> Reset to Default
           </button>
-          <button onClick={handleSave} className="sc-btn-primary" style={{ height: '32px', fontSize: '11px', padding: '0 12px' }}>
+          <button onClick={handleSave} className="sc-btn-primary ex-style-39592b">
             <Save size={12} /> Save Changes
           </button>
         </div>
       </div>
 
-      {/* --- WORKSPACE SPLIT LAYOUT --- */}
+      {}
       <div className="config-layout">
 
-        {/* Left Hand: Settings Forms */}
+        {}
         <div>
 
-          {/* CATEGORY 1: PAYMENT SETTINGS */}
+          {}
           <div className="config-card">
             <span className="config-card-title"><CreditCard size={18} className="text-blue-600" /> Payment Settings</span>
             <p className="config-card-desc">Choose whether customers must pay before the kitchen receives the order.</p>
 
             <label className="saas-switch-label">
               <span>Enable Payment Before Confirmation</span>
-              <div
-                onClick={() => { setPayBeforeConfirm(!payBeforeConfirm); markChanged(); }}
-                className={`saas-switch-container ${payBeforeConfirm ? 'active' : ''}`}
-              >
+              <div onClick={() => {
+              setPayBeforeConfirm(!payBeforeConfirm);
+              markChanged();
+            }} className={`saas-switch-container ${payBeforeConfirm ? 'active' : ''}`}>
                 <div className="saas-switch-handle" />
               </div>
             </label>
 
-            {payBeforeConfirm && (
-              <div className="config-sub-section animate-slide-up">
-                <span className="filter-label" style={{ marginBottom: '10px' }}>Active Payment Options</span>
+            {payBeforeConfirm && <div className="config-sub-section animate-slide-up">
+                <span className="filter-label ex-style-b92d25">Active Payment Options</span>
                 <div className="checkbox-grid">
-                  {Object.keys(paymentMethods).map((method) => (
-                    <label key={method} className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        checked={paymentMethods[method]}
-                        onChange={(e) => {
-                          setPaymentMethods({ ...paymentMethods, [method]: e.target.checked });
-                          markChanged();
-                        }}
-                        className="checkbox-input"
-                      />
+                  {Object.keys(paymentMethods).map(method => <label key={method} className="checkbox-item">
+                      <input type="checkbox" checked={paymentMethods[method]} onChange={e => {
+                  setPaymentMethods({
+                    ...paymentMethods,
+                    [method]: e.target.checked
+                  });
+                  markChanged();
+                }} className="checkbox-input" />
                       <span className="capitalize">{method}</span>
-                    </label>
-                  ))}
+                    </label>)}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '20px' }}>
+                <div className="ex-style-62feb5">
                   <div className="form-field-group">
                     <span>Default Payment Method</span>
-                    <select
-                      value={defaultPayment}
-                      onChange={(e) => { setDefaultPayment(e.target.value); markChanged(); }}
-                      className="saas-select-light"
-                      style={{ height: '34px' }}
-                    >
+                    <select value={defaultPayment} onChange={e => {
+                  setDefaultPayment(e.target.value);
+                  markChanged();
+                }} className="saas-select-light ex-style-db665e">
                       <option value="UPI">UPI (GooglePay/PhonePe)</option>
                       <option value="Card">Debit/Credit Card</option>
                       <option value="Cash">Cash on Counter</option>
@@ -229,12 +217,10 @@ export default function QrConfigView({ adminUser }) {
 
                   <div className="form-field-group">
                     <span>Auto Cancel Unpaid Session</span>
-                    <select
-                      value={autoCancelTime}
-                      onChange={(e) => { setAutoCancelTime(e.target.value); markChanged(); }}
-                      className="saas-select-light"
-                      style={{ height: '34px' }}
-                    >
+                    <select value={autoCancelTime} onChange={e => {
+                  setAutoCancelTime(e.target.value);
+                  markChanged();
+                }} className="saas-select-light ex-style-db665e">
                       <option value="5 Minutes">5 Minutes</option>
                       <option value="10 Minutes">10 Minutes</option>
                       <option value="15 Minutes">15 Minutes</option>
@@ -242,62 +228,54 @@ export default function QrConfigView({ adminUser }) {
                     </select>
                   </div>
                 </div>
-              </div>
-            )}
+              </div>}
           </div>
 
-          {/* CATEGORY 2: AUTHENTICATION */}
+          {}
           <div className="config-card">
             <span className="config-card-title"><ShieldCheck size={18} className="text-green-600" /> Customer Login & Verification</span>
             <p className="config-card-desc">Control login requirements for guest ordering checkouts.</p>
 
             <label className="saas-switch-label">
               <span>Require Customer Authentication before checkout</span>
-              <div
-                onClick={() => { setRequireLogin(!requireLogin); markChanged(); }}
-                className={`saas-switch-container ${requireLogin ? 'active' : ''}`}
-              >
+              <div onClick={() => {
+              setRequireLogin(!requireLogin);
+              markChanged();
+            }} className={`saas-switch-container ${requireLogin ? 'active' : ''}`}>
                 <div className="saas-switch-handle" />
               </div>
             </label>
 
-            {requireLogin && (
-              <div className="config-sub-section animate-slide-up">
-                <span className="filter-label" style={{ marginBottom: '10px' }}>Allowed Authentication Routes</span>
+            {requireLogin && <div className="config-sub-section animate-slide-up">
+                <span className="filter-label ex-style-b92d25">Allowed Authentication Routes</span>
                 <div className="checkbox-grid">
-                  {Object.keys(loginMethods).map((method) => (
-                    <label key={method} className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        checked={loginMethods[method]}
-                        onChange={(e) => {
-                          setLoginMethods({ ...loginMethods, [method]: e.target.checked });
-                          markChanged();
-                        }}
-                        className="checkbox-input"
-                      />
+                  {Object.keys(loginMethods).map(method => <label key={method} className="checkbox-item">
+                      <input type="checkbox" checked={loginMethods[method]} onChange={e => {
+                  setLoginMethods({
+                    ...loginMethods,
+                    [method]: e.target.checked
+                  });
+                  markChanged();
+                }} className="checkbox-input" />
                       <span className="capitalize">{method.replace('Otp', ' OTP')}</span>
-                    </label>
-                  ))}
+                    </label>)}
                 </div>
 
-                <div style={{ marginTop: '16px' }}>
+                <div className="ex-style-690f3e">
                   <label className="saas-switch-label">
                     <span>Remember Customer Details (auto-fill returning guests)</span>
-                    <div
-                      onClick={() => { setRememberCustomer(!rememberCustomer); markChanged(); }}
-                      className={`saas-switch-container ${rememberCustomer ? 'active' : ''}`}
-                      style={{ scale: '0.85' }}
-                    >
+                    <div onClick={() => {
+                  setRememberCustomer(!rememberCustomer);
+                  markChanged();
+                }} className={`saas-switch-container  ex-style-b8b8d2${rememberCustomer ? 'active' : ''}`}>
                       <div className="saas-switch-handle" />
                     </div>
                   </label>
                 </div>
-              </div>
-            )}
+              </div>}
           </div>
 
-          {/* CATEGORY 3: CUSTOMER DETAILS INPUT FIELDS */}
+          {}
           <div className="config-card">
             <span className="config-card-title"><UserCheck size={18} className="text-violet-600" /> Customer Details Fields</span>
             <p className="config-card-desc">Configure fields that guests must fill out during checkout.</p>
@@ -312,106 +290,88 @@ export default function QrConfigView({ adminUser }) {
                 </tr>
               </thead>
               <tbody>
-                {Object.keys(customerDetails).map((field) => (
-                  <tr key={field}>
+                {Object.keys(customerDetails).map(field => <tr key={field}>
                     <td className="font-bold capitalize">{field === 'name' ? 'Name' : field === 'mobile' ? 'Mobile Number' : 'Email Address'}</td>
                     <td>
-                      <input
-                        type="radio"
-                        name={`customer_details_${field}`}
-                        checked={customerDetails[field] === 'required'}
-                        onChange={() => { setCustomerDetails({ ...customerDetails, [field]: 'required' }); markChanged(); }}
-                        className="radio-input"
-                      />
+                      <input type="radio" name={`customer_details_${field}`} checked={customerDetails[field] === 'required'} onChange={() => {
+                    setCustomerDetails({
+                      ...customerDetails,
+                      [field]: 'required'
+                    });
+                    markChanged();
+                  }} className="radio-input" />
                     </td>
                     <td>
-                      <input
-                        type="radio"
-                        name={`customer_details_${field}`}
-                        checked={customerDetails[field] === 'optional'}
-                        onChange={() => { setCustomerDetails({ ...customerDetails, [field]: 'optional' }); markChanged(); }}
-                        className="radio-input"
-                      />
+                      <input type="radio" name={`customer_details_${field}`} checked={customerDetails[field] === 'optional'} onChange={() => {
+                    setCustomerDetails({
+                      ...customerDetails,
+                      [field]: 'optional'
+                    });
+                    markChanged();
+                  }} className="radio-input" />
                     </td>
                     <td>
-                      <input
-                        type="radio"
-                        name={`customer_details_${field}`}
-                        checked={customerDetails[field] === 'disabled'}
-                        onChange={() => { setCustomerDetails({ ...customerDetails, [field]: 'disabled' }); markChanged(); }}
-                        className="radio-input"
-                      />
+                      <input type="radio" name={`customer_details_${field}`} checked={customerDetails[field] === 'disabled'} onChange={() => {
+                    setCustomerDetails({
+                      ...customerDetails,
+                      [field]: 'disabled'
+                    });
+                    markChanged();
+                  }} className="radio-input" />
                     </td>
-                  </tr>
-                ))}
+                  </tr>)}
               </tbody>
             </table>
           </div>
 
-          {/* CATEGORY 4: ORDERING PREFERENCES */}
+          {}
           <div className="config-card">
             <span className="config-card-title"><Sliders size={18} className="text-amber-500" /> Ordering Preferences</span>
             <p className="config-card-desc">Toggle customer checkout parameters and delivery settings.</p>
 
             <div className="preference-grid">
-              {Object.keys(preferences).map((pref) => (
-                <div key={pref} className="preference-item">
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ap-text-main, var(--text-main))' }} className="capitalize">
+              {Object.keys(preferences).map(pref => <div key={pref} className="preference-item">
+                  <span className="capitalize ex-style-671d67">
                     {pref.replace(/([A-Z])/g, ' $1')}
                   </span>
-                  <div
-                    onClick={() => {
-                      setPreferences({ ...preferences, [pref]: !preferences[pref] });
-                      markChanged();
-                    }}
-                    className={`saas-switch-container ${preferences[pref] ? 'active' : ''}`}
-                    style={{ scale: '0.8' }}
-                  >
+                  <div onClick={() => {
+                setPreferences({
+                  ...preferences,
+                  [pref]: !preferences[pref]
+                });
+                markChanged();
+              }} className={`saas-switch-container  ex-style-f26ac2${preferences[pref] ? 'active' : ''}`}>
                     <div className="saas-switch-handle" />
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
 
-            {preferences.tipOption && (
-              <div className="config-sub-section animate-slide-up">
-                <span className="filter-label" style={{ marginBottom: '10px' }}>Suggested Tips Suggestions</span>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  {suggestedTips.map((tip, idx) => (
-                    <input
-                      key={idx}
-                      type="text"
-                      value={tip}
-                      onChange={(e) => {
-                        const newTips = [...suggestedTips];
-                        newTips[idx] = e.target.value;
-                        setSuggestedTips(newTips);
-                        markChanged();
-                      }}
-                      className="form-input-light"
-                      style={{ width: '80px', height: '34px' }}
-                    />
-                  ))}
+            {preferences.tipOption && <div className="config-sub-section animate-slide-up">
+                <span className="filter-label ex-style-b92d25">Suggested Tips Suggestions</span>
+                <div className="ex-style-97e041">
+                  {suggestedTips.map((tip, idx) => <input key={idx} type="text" value={tip} onChange={e => {
+                const newTips = [...suggestedTips];
+                newTips[idx] = e.target.value;
+                setSuggestedTips(newTips);
+                markChanged();
+              }} className="form-input-light ex-style-c5dbd7" />)}
                   <label className="checkbox-item pl-4">
-                    <input
-                      type="checkbox"
-                      checked={customTip}
-                      onChange={(e) => { setCustomTip(e.target.checked); markChanged(); }}
-                      className="checkbox-input"
-                    />
+                    <input type="checkbox" checked={customTip} onChange={e => {
+                  setCustomTip(e.target.checked);
+                  markChanged();
+                }} className="checkbox-input" />
                     <span>Allow Custom Tip</span>
                   </label>
                 </div>
-              </div>
-            )}
+              </div>}
           </div>
 
         </div>
 
-        {/* Right Hand Sticky Sidebar Preview */}
+        {}
         <div>
           <div className="sticky-flow-panel">
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 800, color: 'var(--ap-text-main, var(--text-main))', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h4 className="ex-style-8c3f9d">
               <Eye size={16} className="text-blue-600" /> Customer Flow Preview
             </h4>
 
@@ -442,18 +402,16 @@ export default function QrConfigView({ adminUser }) {
               </div>
             </div>
 
-            <div style={{ marginTop: '24px', borderTop: '1px solid var(--ap-glass-border, var(--border-default))', paddingTop: '16px' }}>
-              <h5 style={{ margin: '0 0 10px 0', fontSize: '11px', color: 'var(--ap-text-muted, var(--text-muted))', textTransform: 'uppercase' }}>Scope History Audit</h5>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {logs.map((log, i) => (
-                  <div key={i} className="log-item-row">
+            <div className="ex-style-244262">
+              <h5 className="ex-style-45f945">Scope History Audit</h5>
+              <div className="ex-style-ea2956">
+                {logs.map((log, i) => <div key={i} className="log-item-row">
                     <div>
                       <strong>{log.action}</strong>
-                      <p style={{ margin: '2px 0 0 0', color: 'var(--ap-text-muted, var(--text-muted))', fontSize: '9px' }}>{log.user}</p>
+                      <p className="ex-style-8c237e">{log.user}</p>
                     </div>
-                    <span style={{ fontSize: '9px', color: 'var(--ap-text-muted, var(--text-muted))' }}>{log.time}</span>
-                  </div>
-                ))}
+                    <span className="ex-style-434fbe">{log.time}</span>
+                  </div>)}
               </div>
             </div>
           </div>
@@ -461,24 +419,21 @@ export default function QrConfigView({ adminUser }) {
 
       </div>
 
-      {/* --- STICKY BOTTOM SAVEBAR PANEL --- */}
-      {hasChanges && (
-        <div className="sticky-save-bar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {}
+      {hasChanges && <div className="sticky-save-bar">
+          <div className="ex-style-1552d4">
             <AlertCircle size={18} className="text-amber-500" />
-            <span style={{ fontSize: '12px', fontWeight: 600 }}>You have unsaved changes in your configuration scope.</span>
+            <span className="ex-style-a9ee0e">You have unsaved changes in your configuration scope.</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setHasChanges(false)} className="sc-btn-outline" style={{ background: 'transparent', color: 'var(--ap-text-muted, var(--text-muted))', border: '1px solid var(--ap-glass-border, var(--border-default))', height: '30px', fontSize: '11px' }}>
+          <div className="ex-style-3c37f6">
+            <button onClick={() => setHasChanges(false)} className="sc-btn-outline ex-style-1d521a">
               Discard
             </button>
-            <button onClick={handleSave} className="sc-btn-primary" style={{ height: '30px', fontSize: '11px' }}>
+            <button onClick={handleSave} className="sc-btn-primary ex-style-d68407">
               Save Changes
             </button>
           </div>
-        </div>
-      )}
+        </div>}
 
-    </div>
-  );
+    </div>;
 }
