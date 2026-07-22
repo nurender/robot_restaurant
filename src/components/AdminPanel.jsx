@@ -91,6 +91,7 @@ const AdminPanel = () => {
           const sorted = [...validList].sort((a, b) => a.sort_order - b.sort_order);
           setOrderedSidebar(sorted);
           const validPaths = sorted.map(item => item.path);
+          if (adminUser?.role === 'super_admin') validPaths.push('hq');
 
           // Force base route mapping
           if (!tabFromUrl || !validPaths.includes(targetTab)) {
@@ -114,6 +115,7 @@ const AdminPanel = () => {
     } else {
       // Fast bypass using fetched hook data
       const validPaths = orderedSidebar.map(i => i.path);
+      if (adminUser?.role === 'super_admin') validPaths.push('hq');
       if (!validPaths.includes(activeTab)) {
         ensureValidRoute();
       }
@@ -716,6 +718,8 @@ const AdminPanel = () => {
 
   // Display ACCESS RESTRICTED ONLY if sidebar has loaded and path is decidedly unauthorized
   const validPaths = orderedSidebar?.map(item => item.path) || [];
+  if (adminUser?.role === 'super_admin') validPaths.push('hq');
+  
   if (orderedSidebar && orderedSidebar.length > 0 && !validPaths.includes(activeTab)) {
     return (
       <div className="admin-layout ext-cls-42d9d60a" >
@@ -1120,7 +1124,7 @@ const AdminPanel = () => {
             <SystemSettingsView adminUser={adminUser} restaurantsList={restaurantsList} />
           )}
 
-          {activeTab === 'super_admin' && (
+          {activeTab === 'hq' && (
             <SuperAdminView adminUser={adminUser} />
           )}
         </div>

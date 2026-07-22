@@ -39,9 +39,9 @@ const AdminSidebar = ({ activeTab, setActiveTab, adminUser, onLogout, isCollapse
 
     if (adminUser?.role === 'super_admin') {
         filteredItems.push({
-            id: 'super_admin',
-            label: 'Super Admin Portal',
-            path: 'super_admin',
+            id: 'hq',
+            label: 'Master Intelligence',
+            path: 'hq',
             icon: Shield
         });
     }

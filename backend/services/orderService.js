@@ -53,7 +53,7 @@ class OrderService {
     async getOrders(restaurant_id) {
         let query = `SELECT * FROM orders`;
         let params = [];
-        if (restaurant_id && restaurant_id !== 'null') {
+        if (restaurant_id && restaurant_id !== 'null' && restaurant_id !== 'all') {
             query += ` WHERE restaurant_id = $1 `;
             params.push(restaurant_id);
         }

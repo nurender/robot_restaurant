@@ -1,386 +1,421 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Shield, Users, CreditCard, Activity, Plus, Edit2, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { 
+  Building2, Store, Users, DollarSign, Activity, 
+  MapPin, Utensils, LayoutGrid, Clock, ShoppingBag, Shield, CheckCircle2, XCircle
+} from 'lucide-react';
+import axios from 'axios';
+import { API_URL } from '../../../config';
 import apiService from '../../../services/apiService';
+import './SuperAdminView.css';
 
 export default function SuperAdminView({ adminUser }) {
-  const [activeSubTab, setActiveSubTab] = useState('metrics'); // 'metrics', 'tenants', 'plans', 'monitor'
+  const [activeSubTab, setActiveSubTab] = useState('metrics'); // 'metrics', 'matrix', 'orders'
   
-  // Tenants State
-  const [tenants, setTenants] = useState([
-    { id: 1, name: 'Cyber Food Court', plan: 'Enterprise', status: 'active', trialEnds: '2026-12-31', contact: 'admin@cyberfood.com' },
-    { id: 2, name: 'Tandoori Junction', plan: 'Pro Monthly', status: 'active', trialEnds: '2026-09-15', contact: 'owner@tandoori.in' },
-    { id: 3, name: 'Sweet Delights Cloud', plan: 'Basic Starters', status: 'disabled', trialEnds: '2026-07-01', contact: 'billing@sweets.com' }
-  ]);
-  const [showAddTenant, setShowAddTenant] = useState(false);
-  const [newTenant, setNewTenant] = useState({ name: '', plan: 'Pro Monthly', status: 'active', trialEnds: '', contact: '' });
+  // Data states
+  const [organizations, setOrganizations] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [globalOrders, setGlobalOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Pricing Plans State
-  const [plans, setPlans] = useState([
-    { id: 1, name: 'Basic Starters', price: 999, currency: '₹', duration: 'Monthly', features: ['POS Terminal', 'Digital Menu', 'Basic Analytics'] },
-    { id: 2, name: 'Pro Monthly', price: 2499, currency: '₹', duration: 'Monthly', features: ['POS Terminal', 'QR ordering', 'Advanced Analytics', 'Rider Fleet Tracker'] },
-    { id: 3, name: 'Enterprise', price: 4999, currency: '₹', duration: 'Monthly', features: ['Multi-Branch Control', 'KDS Terminals', 'Unified Food Court Checkout', 'Custom Branding Themes', 'Roles Hierarchy'] }
-  ]);
-  const [showAddPlan, setShowAddPlan] = useState(false);
-  const [newPlan, setNewPlan] = useState({ name: '', price: 0, currency: '₹', duration: 'Monthly', featuresStr: '' });
-
-  // Monitor Metrics Mock
-  const [monitorStats, setMonitorStats] = useState({
-    activeSessions: 142,
-    apiLatency: 18, // ms
-    dbConnections: 'Healthy (12/20)',
-    cpuUsage: 14 // %
+  // Stats
+  const [stats, setStats] = useState({
+    totalOrgs: 0,
+    totalRestaurants: 0,
+    totalUsers: 0,
+    totalRevenue: 0
   });
 
   useEffect(() => {
-    // Generate slight fluctuations in latency and sessions to simulate live stats
-    const interval = setInterval(() => {
-      setMonitorStats(prev => ({
-        ...prev,
-        activeSessions: prev.activeSessions + Math.floor(Math.random() * 5) - 2,
-        apiLatency: Math.max(8, prev.apiLatency + Math.floor(Math.random() * 7) - 3),
-        cpuUsage: Math.max(5, Math.min(95, prev.cpuUsage + Math.floor(Math.random() * 5) - 2))
-      }));
-    }, 4000);
-    return () => clearInterval(interval);
+    fetchGlobalData();
   }, []);
 
-  // Tenant handlers
-  const handleCreateTenant = (e) => {
-    e.preventDefault();
-    if (!newTenant.name || !newTenant.contact) {
-      toast.error('Please enter name and contact details.');
-      return;
+  const fetchGlobalData = async () => {
+    setLoading(true);
+    try {
+      const orgsRes = await fetch(`${API_URL}/api/food-courts`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` }
+      });
+      const orgsData = orgsRes.ok ? await orgsRes.json() : [];
+      setOrganizations(orgsData);
+
+      const restRes = await apiService.getRestaurants();
+      const restData = restRes.data?.data || [];
+      setRestaurants(restData);
+
+      const usersRes = await apiService.getUsers();
+      const usersData = usersRes.data?.data || [];
+      setUsers(usersData);
+
+      let ordersData = [];
+      try {
+        const ordRes = await axios.get(`${API_URL}/api/orders`, { params: { restaurant_id: 'all' }, headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` } });
+        ordersData = ordRes.data?.data || [];
+      } catch (err) { }
+      setGlobalOrders(ordersData);
+
+      const totalRev = ordersData.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0);
+      
+      setStats({
+        totalOrgs: orgsData.length,
+        totalRestaurants: restData.length,
+        totalUsers: usersData.length,
+        totalRevenue: totalRev
+      });
+
+    } catch (error) {
+      console.error("Failed to load global data", error);
+      toast.error("Failed to load Super Admin data");
+    } finally {
+      setLoading(false);
     }
-    const created = {
-      id: tenants.length + 1,
-      ...newTenant,
-      trialEnds: newTenant.trialEnds || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    };
-    setTenants([...tenants, created]);
-    setNewTenant({ name: '', plan: 'Pro Monthly', status: 'active', trialEnds: '', contact: '' });
-    setShowAddTenant(false);
-    toast.success('Tenant added successfully!');
   };
 
-  const toggleTenantStatus = (id) => {
-    setTenants(tenants.map(t => t.id === id ? { ...t, status: t.status === 'active' ? 'disabled' : 'active' } : t));
-    toast.success('Tenant status updated');
+  const getRestaurantName = (id) => {
+    const rest = restaurants.find(r => String(r.id) === String(id));
+    return rest ? rest.name : 'Unknown Outlet';
   };
 
-  // Plan handlers
-  const handleCreatePlan = (e) => {
-    e.preventDefault();
-    if (!newPlan.name || newPlan.price <= 0) {
-      toast.error('Please enter valid name and pricing.');
-      return;
-    }
-    const created = {
-      id: plans.length + 1,
-      name: newPlan.name,
-      price: newPlan.price,
-      currency: newPlan.currency,
-      duration: newPlan.duration,
-      features: newPlan.featuresStr.split(',').map(f => f.trim()).filter(Boolean)
-    };
-    setPlans([...plans, created]);
-    setNewPlan({ name: '', price: 0, currency: '₹', duration: 'Monthly', featuresStr: '' });
-    setShowAddPlan(false);
-    toast.success('New subscription plan registered!');
-  };
+  if (loading) {
+    return (
+      <div className="view-container flex items-center justify-center min-h-[500px]">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <Activity size={40} style={{ color: 'var(--accent-color)', animation: 'pulse 2s infinite' }} />
+          <span style={{ color: 'var(--text-muted)', fontWeight: 'bold', letterSpacing: '2px', fontSize: '12px' }}>INITIALIZING CORE...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="view-container animate-slide-up view-container-deep">
+    <div className="view-container animate-fade-in sa-container">
       
-      {/* Header */}
-      <div className="view-header-row mb-6">
-        <div>
-          <h1 className="view-title flex items-center gap-2">
-            <Shield size={24} className="text-[#a78bfa]" /> Super Admin Dashboard
-          </h1>
-          <p className="text-muted">Global controller for tenants deployment, SaaS billing plans, and nodes monitoring.</p>
+      {/* Header Section */}
+      <div className="sa-header">
+        <div className="sa-header-left">
+          <div className="sa-header-icon">
+            <Shield size={32} />
+          </div>
+          <div>
+            <h1 className="sa-header-title">Master Intelligence</h1>
+            <p className="sa-header-subtitle">Enterprise command center. Global overview of all operations.</p>
+          </div>
+        </div>
+        <div className="sa-status-badge">
+          <div className="sa-status-dot"></div>
+          <span className="sa-status-text">All Systems Normal</span>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-white/5 mb-6 overflow-x-auto scrollbar-hidden">
-        <button
-          onClick={() => setActiveSubTab('metrics')}
-          className={`px-4 py-3 flex items-center gap-2 border-b-2 text-xs font-semibold whitespace-nowrap transition-all ${activeSubTab === 'metrics' ? 'border-[#7c3aed] text-white bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+      {/* Modern Sub-Navigation */}
+      <div className="sa-tabs">
+        <button 
+          onClick={() => setActiveSubTab('metrics')} 
+          className={`sa-tab ${activeSubTab === 'metrics' ? 'active' : ''}`}
         >
-          <Shield size={14} />
-          Metrics Overview
+          <Activity size={16} /> Metrics Overview
         </button>
-        <button
-          onClick={() => setActiveSubTab('tenants')}
-          className={`px-4 py-3 flex items-center gap-2 border-b-2 text-xs font-semibold whitespace-nowrap transition-all ${activeSubTab === 'tenants' ? 'border-[#7c3aed] text-white bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        <button 
+          onClick={() => setActiveSubTab('matrix')} 
+          className={`sa-tab ${activeSubTab === 'matrix' ? 'active' : ''}`}
         >
-          <Users size={14} />
-          Tenant Management ({tenants.length})
+          <LayoutGrid size={16} /> Network Matrix
         </button>
-        <button
-          onClick={() => setActiveSubTab('plans')}
-          className={`px-4 py-3 flex items-center gap-2 border-b-2 text-xs font-semibold whitespace-nowrap transition-all ${activeSubTab === 'plans' ? 'border-[#7c3aed] text-white bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        <button 
+          onClick={() => setActiveSubTab('orders')} 
+          className={`sa-tab ${activeSubTab === 'orders' ? 'active' : ''}`}
         >
-          <CreditCard size={14} />
-          Pricing & Feature Plans
-        </button>
-        <button
-          onClick={() => setActiveSubTab('monitor')}
-          className={`px-4 py-3 flex items-center gap-2 border-b-2 text-xs font-semibold whitespace-nowrap transition-all ${activeSubTab === 'monitor' ? 'border-[#7c3aed] text-white bg-white/5' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
-        >
-          <Activity size={14} />
-          Node Health Monitor
+          <ShoppingBag size={16} /> Global Orders
         </button>
       </div>
 
-      {/* --- OVERVIEW METRICS TAB --- */}
-      {activeSubTab === 'metrics' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total SaaS Tenants</span>
-            <h2 className="text-3xl font-extrabold text-white mt-2">12 Organizations</h2>
-            <p className="text-[10px] text-[#10b981] mt-1">↑ 2 new this week</p>
-          </div>
-          <div className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active Subscriptions</span>
-            <h2 className="text-3xl font-extrabold text-white mt-2">10 Accounts</h2>
-            <p className="text-[10px] text-[#10b981] mt-1">83% overall retention</p>
-          </div>
-          <div className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Monthly Recurring Revenue</span>
-            <h2 className="text-3xl font-extrabold text-white mt-2">₹34,890</h2>
-            <p className="text-[10px] text-[#10b981] mt-1">↑ 14% growth month-on-month</p>
-          </div>
-          <div className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Daily System-wide Orders</span>
-            <h2 className="text-3xl font-extrabold text-white mt-2">412 Orders</h2>
-            <p className="text-[10px] text-slate-400 mt-1">Across 18 branch outlets</p>
-          </div>
-        </div>
-      )}
-
-      {/* --- TENANTS LIST TAB --- */}
-      {activeSubTab === 'tenants' && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Deployed Tenant List</h3>
-            <button 
-              onClick={() => setShowAddTenant(!showAddTenant)}
-              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1 shadow-none"
-            >
-              <Plus size={14} /> Add Tenant Node
-            </button>
-          </div>
-
-          {showAddTenant && (
-            <div className="glass-panel p-4 mb-6 rounded-2xl border border-white/5 bg-[#1a1a24] text-white">
-              <h4 className="text-xs font-bold uppercase text-slate-400 mb-3">Provision New Tenant</h4>
-              <form onSubmit={handleCreateTenant} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted font-bold uppercase">Organization Name</span>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Cyber Chef Grill" 
-                    value={newTenant.name} 
-                    onChange={(e) => setNewTenant({ ...newTenant, name: e.target.value })} 
-                    className="bg-[#121217] border border-white/10 rounded-lg p-2 text-xs text-white" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted font-bold uppercase">Admin Email</span>
-                  <input 
-                    type="email" 
-                    placeholder="e.g. info@chef.com" 
-                    value={newTenant.contact} 
-                    onChange={(e) => setNewTenant({ ...newTenant, contact: e.target.value })} 
-                    className="bg-[#121217] border border-white/10 rounded-lg p-2 text-xs text-white" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted font-bold uppercase">Subscription Plan</span>
-                  <select 
-                    value={newTenant.plan} 
-                    onChange={(e) => setNewTenant({ ...newTenant, plan: e.target.value })} 
-                    className="bg-[#121217] border border-white/10 rounded-lg p-2 text-xs text-white"
-                  >
-                    {plans.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <button type="submit" className="btn-primary text-xs py-2 px-4 shadow-none">Provision Tenant</button>
-              </form>
-            </div>
-          )}
-
-          <div className="glass-panel bg-[#1a1a24] border border-white/5 rounded-2xl overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/5 text-[10px] text-slate-400 uppercase font-bold">
-                  <th className="p-3">Organization/Tenant</th>
-                  <th className="p-3">Plan</th>
-                  <th className="p-3">Trial/Expiry</th>
-                  <th className="p-3">Contact</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="text-white/80 text-xs">
-                {tenants.map(tenant => (
-                  <tr key={tenant.id} className="border-b border-white/5 hover:bg-white/5 transition-all">
-                    <td className="p-3 font-semibold text-white">{tenant.name}</td>
-                    <td className="p-3"><span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px]">{tenant.plan}</span></td>
-                    <td className="p-3 font-mono text-[10px]">{tenant.trialEnds}</td>
-                    <td className="p-3 text-slate-400">{tenant.contact}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${tenant.status === 'active' ? 'bg-[#10b981]/10 text-[#10b981]' : 'bg-red-400/10 text-red-400'}`}>
-                        {tenant.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right flex justify-end gap-2">
-                      <button 
-                        onClick={() => toggleTenantStatus(tenant.id)} 
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${tenant.status === 'active' ? 'border-red-400/20 text-red-400 hover:bg-red-400/10' : 'border-[#10b981]/20 text-[#10b981] hover:bg-[#10b981]/10'}`}
-                      >
-                        {tenant.status === 'active' ? 'Disable' : 'Enable'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {/* --- PLANS TAB --- */}
-      {activeSubTab === 'plans' && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Registered SaaS Billing Tiers</h3>
-            <button 
-              onClick={() => setShowAddPlan(!showAddPlan)}
-              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1 shadow-none"
-            >
-              <Plus size={14} /> Add Pricing Plan
-            </button>
-          </div>
-
-          {showAddPlan && (
-            <div className="glass-panel p-4 mb-6 rounded-2xl border border-white/5 bg-[#1a1a24] text-white">
-              <h4 className="text-xs font-bold uppercase text-slate-400 mb-3">Define New Subscription Plan</h4>
-              <form onSubmit={handleCreatePlan} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted font-bold uppercase">Plan Name</span>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Starter Pack" 
-                    value={newPlan.name} 
-                    onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })} 
-                    className="bg-[#121217] border border-white/10 rounded-lg p-2 text-xs text-white" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted font-bold uppercase">Price (INR)</span>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 1999" 
-                    value={newPlan.price} 
-                    onChange={(e) => setNewPlan({ ...newPlan, price: parseInt(e.target.value) })} 
-                    className="bg-[#121217] border border-white/10 rounded-lg p-2 text-xs text-white" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted font-bold uppercase">Features List (Comma-separated)</span>
-                  <input 
-                    type="text" 
-                    placeholder="Feature 1, Feature 2" 
-                    value={newPlan.featuresStr} 
-                    onChange={(e) => setNewPlan({ ...newPlan, featuresStr: e.target.value })} 
-                    className="bg-[#121217] border border-white/10 rounded-lg p-2 text-xs text-white" 
-                  />
-                </div>
-                <button type="submit" className="btn-primary text-xs py-2 px-4 shadow-none">Register Plan</button>
-              </form>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map(plan => (
-              <div key={plan.id} className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl flex flex-col justify-between text-white">
-                <div>
-                  <span className="text-[10px] text-[#a78bfa] font-extrabold uppercase tracking-wider block mb-2">{plan.name}</span>
-                  <h3 className="text-3xl font-extrabold">{plan.currency}{plan.price} <span className="text-xs text-slate-400 font-normal">/ {plan.duration}</span></h3>
-                  
-                  <div className="mt-4 flex flex-col gap-2">
-                    {plan.features.map((feat, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
-                        <span className="text-[#10b981] font-bold">✓</span>
-                        <span>{feat}</span>
-                      </div>
-                    ))}
+      <div className="content-scrollable">
+        
+        {/* === METRICS TAB === */}
+        {activeSubTab === 'metrics' && (
+          <div className="animate-fade-in">
+            <div className="sa-stats-grid">
+              
+              <div className="sa-stat-card">
+                <div className="sa-stat-glow" style={{ background: 'rgba(139, 92, 246, 0.5)' }}></div>
+                <div className="sa-stat-header">
+                  <span className="sa-stat-label">Total Orgs</span>
+                  <div className="sa-stat-icon-wrap" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
+                    <Building2 size={20} />
                   </div>
                 </div>
-
-                <div className="mt-6 pt-4 border-t border-white/5 flex justify-end gap-2">
-                  <button className="text-[10px] text-red-400 font-bold hover:underline">Delete</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* --- MONITOR TAB --- */}
-      {activeSubTab === 'monitor' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          <div className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl text-white">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">API Node Performance</h4>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
-                <div>
-                  <h5 className="text-xs font-bold">Average API Latency</h5>
-                  <span className="text-[10px] text-slate-400">Response time to REST requests</span>
-                </div>
-                <strong className="text-base text-[#10b981]">{monitorStats.apiLatency} ms</strong>
+                <div className="sa-stat-value">{stats.totalOrgs}</div>
               </div>
 
-              <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
-                <div>
-                  <h5 className="text-xs font-bold">DB Transaction Engine</h5>
-                  <span className="text-[10px] text-slate-400">Postgres connection pool</span>
+              <div className="sa-stat-card">
+                <div className="sa-stat-glow" style={{ background: 'rgba(16, 185, 129, 0.5)' }}></div>
+                <div className="sa-stat-header">
+                  <span className="sa-stat-label">Total Outlets</span>
+                  <div className="sa-stat-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                    <Store size={20} />
+                  </div>
                 </div>
-                <strong className="text-base text-[#10b981]">{monitorStats.dbConnections}</strong>
+                <div className="sa-stat-value">{stats.totalRestaurants}</div>
+              </div>
+
+              <div className="sa-stat-card">
+                <div className="sa-stat-glow" style={{ background: 'rgba(56, 189, 248, 0.5)' }}></div>
+                <div className="sa-stat-header">
+                  <span className="sa-stat-label">Active Staff</span>
+                  <div className="sa-stat-icon-wrap" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
+                    <Users size={20} />
+                  </div>
+                </div>
+                <div className="sa-stat-value">{stats.totalUsers}</div>
+              </div>
+
+              <div className="sa-stat-card">
+                <div className="sa-stat-glow" style={{ background: 'rgba(245, 158, 11, 0.5)' }}></div>
+                <div className="sa-stat-header">
+                  <span className="sa-stat-label">Gross Volume</span>
+                  <div className="sa-stat-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+                    <DollarSign size={20} />
+                  </div>
+                </div>
+                <div className="sa-stat-value">₹{stats.totalRevenue.toLocaleString()}</div>
+              </div>
+              
+            </div>
+            
+            {/* SaaS Coming Soon Tools Section */}
+            <div className="sa-header" style={{ marginTop: '24px', padding: '24px' }}>
+              <div style={{ width: '100%', position: 'relative', zIndex: 2 }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Shield size={20} style={{ color: '#c084fc' }} />
+                  Enterprise Features (Beta)
+                </h3>
+                
+                <div className="sa-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                   <div className="sa-stat-card" style={{ opacity: 0.6, cursor: 'not-allowed', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                      <div className="sa-stat-icon-wrap" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', width: '48px', height: '48px' }}>
+                        <Activity size={24} />
+                      </div>
+                      <div>
+                        <h4 style={{ color: '#fff', margin: '0 0 4px 0', fontSize: '14px' }}>Advanced Analytics</h4>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>Cross-organization revenue forecasting.</p>
+                      </div>
+                   </div>
+                   
+                   <div className="sa-stat-card" style={{ opacity: 0.6, cursor: 'not-allowed', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                      <div className="sa-stat-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', width: '48px', height: '48px' }}>
+                        <DollarSign size={24} />
+                      </div>
+                      <div>
+                        <h4 style={{ color: '#fff', margin: '0 0 4px 0', fontSize: '14px' }}>Billing & Tenants</h4>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>Manage subscriptions for multiple tenants.</p>
+                      </div>
+                   </div>
+  
+                   <div className="sa-stat-card" style={{ opacity: 0.6, cursor: 'not-allowed', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                      <div className="sa-stat-icon-wrap" style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', width: '48px', height: '48px' }}>
+                        <Utensils size={24} />
+                      </div>
+                      <div>
+                        <h4 style={{ color: '#fff', margin: '0 0 4px 0', fontSize: '14px' }}>Master Menu Copier</h4>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>Clone full menus across branches.</p>
+                      </div>
+                   </div>
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          <div className="glass-panel p-6 bg-[#1a1a24] border border-white/5 rounded-2xl text-white">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Core Server Status</h4>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
-                <div>
-                  <h5 className="text-xs font-bold">Live Active User Sessions</h5>
-                  <span className="text-[10px] text-slate-400">Simultaneous ordering sessions</span>
+        {/* === NETWORK MATRIX TAB === */}
+        {activeSubTab === 'matrix' && (
+          <div className="animate-fade-in">
+            {organizations.map(org => {
+              const orgRestaurants = restaurants.filter(r => String(r.organization_id) === String(org.id));
+              return (
+                <div key={org.id} className="sa-org-card">
+                  <div className="sa-org-header">
+                    <div className="sa-org-info">
+                      <div className="sa-org-icon">
+                        {org.logo_url ? <img src={org.logo_url} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} alt="org" /> : <Building2 size={24} />}
+                      </div>
+                      <div>
+                        <h3 className="sa-org-name">{org.name}</h3>
+                        <div className="sa-org-meta">
+                          <span><MapPin size={10} style={{ display: 'inline', marginRight: '4px' }} /> {org.city || 'No Location'}</span>
+                          <span>&bull;</span>
+                          <span style={{ color: 'var(--accent-color)' }}>ORG-{org.id.toString().padStart(4, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="sa-org-badge">
+                      {orgRestaurants.length} Mapped Outlets
+                    </div>
+                  </div>
+
+                  <div className="sa-rest-list">
+                    {orgRestaurants.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', padding: '20px 0' }}>No outlets mapped to this organization yet.</div>
+                    ) : (
+                      orgRestaurants.map(rest => {
+                        const restStaff = users.filter(u => String(u.restaurant_id) === String(rest.id));
+                        return (
+                          <div key={rest.id} className="sa-rest-item">
+                            <div className="sa-rest-main">
+                              <div className="sa-rest-icon">
+                                <Store size={20} />
+                              </div>
+                              <div>
+                                <h4 className="sa-rest-name">{rest.name}</h4>
+                                <div className="sa-rest-type">{rest.branch_type || 'Restaurant'} {rest.branch_code ? `• ${rest.branch_code}` : ''}</div>
+                              </div>
+                            </div>
+                            
+                            <div className="sa-staff-group">
+                              <div className="sa-avatars">
+                                {restStaff.slice(0, 5).map(staff => (
+                                  <div key={staff.id} className="sa-avatar" title={`${staff.name} (${staff.role})`}>
+                                    {staff.name.charAt(0).toUpperCase()}
+                                  </div>
+                                ))}
+                                {restStaff.length > 5 && (
+                                  <div className="sa-avatar" style={{ background: 'var(--accent-color)', fontSize: '10px' }}>
+                                    +{restStaff.length - 5}
+                                  </div>
+                                )}
+                                {restStaff.length === 0 && (
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '12px' }}>No Staff</span>
+                                )}
+                              </div>
+                              <div className="sa-staff-count">
+                                <span style={{ color: 'var(--accent-color)' }}>{restStaff.length}</span> Users
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-                <strong className="text-base text-[#a78bfa]">{monitorStats.activeSessions} online</strong>
+              );
+            })}
+
+            {/* Unassigned Restaurants */}
+            {(() => {
+              const unassigned = restaurants.filter(r => !r.organization_id);
+              if (unassigned.length === 0) return null;
+              return (
+                <div className="sa-org-card" style={{ opacity: 0.8 }}>
+                  <div className="sa-org-header" style={{ background: 'transparent' }}>
+                    <div className="sa-org-info">
+                      <div className="sa-org-icon" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Store size={24} />
+                      </div>
+                      <div>
+                        <h3 className="sa-org-name" style={{ color: 'var(--text-dim)' }}>Independent Outlets</h3>
+                        <div className="sa-org-meta">Unmapped locations</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="sa-rest-list">
+                    {unassigned.map(rest => {
+                      const restStaff = users.filter(u => String(u.restaurant_id) === String(rest.id));
+                      return (
+                        <div key={rest.id} className="sa-rest-item">
+                          <div className="sa-rest-main">
+                            <div className="sa-rest-icon" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                              <Store size={18} />
+                            </div>
+                            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>{rest.name}</span>
+                          </div>
+                          <div className="sa-staff-count" style={{ background: 'transparent', border: 'none' }}>{restStaff.length} Staff</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* === GLOBAL ORDERS TAB === */}
+        {activeSubTab === 'orders' && (
+          <div className="animate-fade-in">
+            <div className="sa-feed-header">
+              <div className="sa-feed-title-wrap">
+                <div className="sa-feed-icon">
+                  <ShoppingBag size={24} />
+                </div>
+                <div>
+                  <h2 className="sa-feed-title">Global Order Stream</h2>
+                  <p className="sa-feed-subtitle">Real-time feed of all transactions.</p>
+                </div>
               </div>
-
-              <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
-                <div>
-                  <h5 className="text-xs font-bold">Main Server CPU Usage</h5>
-                  <span className="text-[10px] text-slate-400">Web application system load</span>
-                </div>
-                <strong className="text-base text-[#a78bfa]">{monitorStats.cpuUsage}%</strong>
+              <div className="sa-feed-sync">
+                <Activity size={16} style={{ animation: 'pulse 2s infinite' }} />
+                <span>{globalOrders.length} Synced</span>
               </div>
             </div>
+
+            <div>
+              {globalOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--card-bg)', borderRadius: '24px', border: '1px solid var(--card-border)' }}>
+                  <Clock size={48} style={{ margin: '0 auto 16px auto', color: 'var(--text-muted)', opacity: 0.5 }} />
+                  <p style={{ color: 'var(--text-dim)', fontSize: '15px', fontWeight: 500 }}>Awaiting incoming orders...</p>
+                </div>
+              ) : (
+                globalOrders.map(order => {
+                  let statusClass = 'text-amber bg-amber-light';
+                  if (order.status === 'completed') statusClass = 'text-emerald bg-emerald-light';
+                  if (order.status === 'cancelled') statusClass = 'text-red bg-red-light';
+                  
+                  let payClass = order.payment_status === 'paid' ? 'text-emerald bg-emerald-light' : 'text-amber bg-amber-light';
+
+                  return (
+                    <div key={order.id} className="sa-order-item">
+                      <div className="sa-order-left">
+                        <div className="sa-order-id">
+                          <span>ID</span>
+                          <span>{order.id}</span>
+                        </div>
+                        
+                        <div className="sa-order-info">
+                          <div className="sa-order-info-top">
+                            <span className="sa-order-rest">{getRestaurantName(order.restaurant_id)}</span>
+                            <span className={`sa-order-status ${statusClass}`}>
+                              {order.status === 'completed' && <CheckCircle2 size={10} />}
+                              {order.status === 'cancelled' && <XCircle size={10} />}
+                              {order.status !== 'completed' && order.status !== 'cancelled' && <Activity size={10} />}
+                              {order.status}
+                            </span>
+                          </div>
+                          
+                          <div className="sa-order-time">
+                            <span><Clock size={10} style={{ display: 'inline', marginRight: '4px' }} /> {new Date(order.timestamp).toLocaleString()}</span>
+                            {order.tableNumber && <span className="sa-order-table">Table {order.tableNumber}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="sa-order-right">
+                        <div className="sa-order-amount">₹{order.total_amount}</div>
+                        <div className="sa-order-pay-info">
+                          <span className="sa-order-pay-method">{order.payment_method}</span>
+                          <span className={`sa-order-pay-status ${payClass}`}>
+                            {order.payment_status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
+        )}
 
-        </div>
-      )}
-
+      </div>
     </div>
   );
 }
