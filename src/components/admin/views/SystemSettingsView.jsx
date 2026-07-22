@@ -17,7 +17,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState('desktop'); // desktop, tablet, mobile
   const [originalSettings, setOriginalSettings] = useState(null);
-  
+
   const activeRestaurant = restaurantsList?.find(r => r.id === (adminUser?.restaurant_id || 4));
   const orgId = activeRestaurant?.organization_id || 1;
 
@@ -54,7 +54,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
         apiService.getSettings(adminUser?.restaurant_id || 4),
         apiService.getOrgTheme(orgId)
       ]);
-      
+
       let newSettings = { ...settings };
 
       if (res.data?.success && res.data?.data) {
@@ -88,7 +88,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
       handleFieldChange('theme_preset', 'custom');
       return;
     }
-    
+
     setSettings(prev => ({
       ...prev,
       theme_preset: preset.id,
@@ -131,7 +131,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
         apiService.updateSettings(settings),
         apiService.updateOrgTheme(orgId, themePayload)
       ]);
-      
+
       setOriginalSettings(JSON.stringify(settings));
       toast.success("Configurations saved successfully!");
 
@@ -159,7 +159,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
         root.style.setProperty('--ap-main-bg', settings.background_color);
       }
       if (settings.button_color) root.style.setProperty('--button-color', settings.button_color);
-      
+
       if (settings.sidebar_style === 'light') {
         root.style.setProperty('--sidebar-bg', '#ffffff');
         root.style.setProperty('--ap-sidebar-bg', '#ffffff');
@@ -257,7 +257,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
 
   return (
     <div className="settings-page-container">
-      
+
       {/* Header */}
       <div className="settings-top-header">
         <div className="settings-header-inner">
@@ -281,10 +281,10 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
 
       {/* Main Layout */}
       <div className="settings-main-layout">
-        
+
         {/* LEFT COLUMN (70%) */}
         <div className="settings-left-column animate-slide-up">
-          
+
           {/* Card 1: Branding */}
           <div className="settings-card">
             <div className="settings-card-header">
@@ -296,15 +296,15 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
                 <p>Basic details and main logo for your restaurant.</p>
               </div>
             </div>
-            
+
             <ImageUploadBox title="Primary Logo" field="logo_url" value={settings.logo_url} />
-            
+
             <div style={{ display: 'flex', gap: '1.5rem', width: '100%', flexWrap: 'wrap' }}>
               <div className="settings-input-group" style={{ flex: '1 1 250px' }}>
                 <label className="settings-label">Restaurant Name</label>
-                <input 
-                  type="text" 
-                  value={settings.restaurant_name || ''} 
+                <input
+                  type="text"
+                  value={settings.restaurant_name || ''}
                   onChange={(e) => handleFieldChange('restaurant_name', e.target.value)}
                   placeholder="e.g. The Golden Fork"
                   className="settings-input"
@@ -312,9 +312,9 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
               </div>
               <div className="settings-input-group" style={{ flex: '1 1 250px' }}>
                 <label className="settings-label">Brand Tagline</label>
-                <input 
-                  type="text" 
-                  value={settings.brand_tagline || ''} 
+                <input
+                  type="text"
+                  value={settings.brand_tagline || ''}
                   onChange={(e) => handleFieldChange('brand_tagline', e.target.value)}
                   placeholder="e.g. Fine Dining, Reimagined"
                   className="settings-input"
@@ -334,7 +334,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
                 <p>Select a preset or customize your brand colors.</p>
               </div>
             </div>
-            
+
             <div className="settings-input-group">
               <label className="settings-label">Theme Presets</label>
               <div className="preset-grid">
@@ -394,21 +394,21 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
                 <p>Layout and structural styles.</p>
               </div>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <div className="settings-input-group">
                 <label className="settings-label">Sidebar Style</label>
-                <SegmentedControl 
-                  options={[ { id: 'light', label: 'Light Theme' }, { id: 'dark', label: 'Dark Theme' } ]}
+                <SegmentedControl
+                  options={[{ id: 'light', label: 'Light Theme' }, { id: 'dark', label: 'Dark Theme' }]}
                   value={settings.sidebar_style}
                   onChange={(val) => handleFieldChange('sidebar_style', val)}
                 />
               </div>
-              
+
               <div className="settings-input-group">
                 <label className="settings-label">Header Style</label>
-                <SegmentedControl 
-                  options={[ { id: 'solid', label: 'Solid Color' }, { id: 'transparent', label: 'Transparent Background' } ]}
+                <SegmentedControl
+                  options={[{ id: 'solid', label: 'Solid Color' }, { id: 'transparent', label: 'Transparent Background' }]}
                   value={settings.header_style}
                   onChange={(val) => handleFieldChange('header_style', val)}
                 />
@@ -416,8 +416,8 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
 
               <div className="settings-input-group">
                 <label className="settings-label">Card Style</label>
-                <SegmentedControl 
-                  options={[ { id: 'modern', label: 'Modern UI' }, { id: 'rounded', label: 'Highly Rounded' }, { id: 'minimal', label: 'Minimalist Square' } ]}
+                <SegmentedControl
+                  options={[{ id: 'modern', label: 'Modern UI' }, { id: 'rounded', label: 'Highly Rounded' }, { id: 'minimal', label: 'Minimalist Square' }]}
                   value={settings.card_style}
                   onChange={(val) => handleFieldChange('card_style', val)}
                 />
@@ -436,7 +436,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
               </div>
               {isAdvancedOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
-            
+
             {isAdvancedOpen && (
               <div className="advanced-accordion-content animate-slide-down">
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Fine-tune individual colors for maximum control. Recommended only for advanced users.</p>
@@ -458,9 +458,9 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
                           <input type="color" value={settings[color.key] || '#ffffff'} onChange={(e) => handleFieldChange(color.key, e.target.value)} />
                           <div className="color-swatch" style={{ backgroundColor: settings[color.key] || '#ffffff' }}></div>
                         </div>
-                        <input 
-                          type="text" 
-                          value={settings[color.key] || ''} 
+                        <input
+                          type="text"
+                          value={settings[color.key] || ''}
                           onChange={(e) => handleFieldChange(color.key, e.target.value)}
                           className="settings-input"
                           style={{ padding: '0.5rem', fontSize: '0.75rem', fontFamily: 'monospace' }}
@@ -477,7 +477,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
 
         {/* RIGHT COLUMN (35%) */}
         <div className="settings-right-column animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          
+
           <div className="sticky-preview">
             <div className="preview-card">
               <div className="preview-header">
@@ -494,7 +494,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
               </div>
 
               <div className="preview-body">
-                <div 
+                <div
                   className={`preview-frame ${previewMode}`}
                   style={{
                     backgroundColor: settings.background_color || '#f8fafc',
@@ -503,7 +503,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
                 >
                   {/* Mock Sidebar */}
                   {previewMode !== 'mobile' && (
-                    <div 
+                    <div
                       style={{
                         width: '180px',
                         display: 'flex',
@@ -541,7 +541,7 @@ export default function SystemSettingsView({ adminUser, restaurantsList }) {
                       )}
                       <div style={{ width: '28px', height: '28px', borderRadius: '50%', marginLeft: 'auto', backgroundColor: settings.primary_color }}></div>
                     </div>
-                    
+
                     {settings.banner_url && (
                       <div style={{ height: '120px', width: '100%', flexShrink: 0, position: 'relative', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
                         <img src={settings.banner_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

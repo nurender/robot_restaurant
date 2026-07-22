@@ -1,18 +1,19 @@
+import './QrCodesView.css';
 import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { 
-  Building, Layers, Smartphone, DollarSign, Clock, Download, 
-  Printer, Plus, Search, ChevronRight, Eye, Trash2, Edit2, 
-  CheckCircle2, RefreshCw, X, Info, QrCode, Copy, Share2, 
+import {
+  Building, Layers, Smartphone, DollarSign, Clock, Download,
+  Printer, Plus, Search, ChevronRight, Eye, Trash2, Edit2,
+  CheckCircle2, RefreshCw, X, Info, QrCode, Copy, Share2,
   SlidersHorizontal, LayoutGrid, EyeOff, Activity, ShieldAlert
 } from 'lucide-react';
 import apiService from '../../../services/apiService';
 
-export default function QrCodesView({ 
-  restaurantTables = [], 
-  adminUser, 
-  fetchData, 
-  printTableQR 
+export default function QrCodesView({
+  restaurantTables = [],
+  adminUser,
+  fetchData,
+  printTableQR
 }) {
   // Top-level Segment: 'tables' (Restaurant) or 'rooms' (Hotel Rooms)
   const [activeSegment, setActiveSegment] = useState('tables');
@@ -38,7 +39,7 @@ export default function QrCodesView({
 
   const [showFloorModal, setShowFloorModal] = useState(false);
   const [floorForm, setFloorForm] = useState({ name: '' });
-  
+
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [roomForm, setRoomForm] = useState({ roomNumber: '', floor: '', category: 'Deluxe Room', status: 'Available' });
 
@@ -137,7 +138,7 @@ export default function QrCodesView({
       try {
         await apiService.updateTable(editingTable.id, {
           name: tableForm.name,
-          table_number: parseInt(tableForm.table_number),
+          table_number: tableForm.table_number.toString(),
           secret_token: editingTable.secret_token || editingTable.token
         });
         toast.success("Table updated successfully!");
@@ -151,11 +152,19 @@ export default function QrCodesView({
       }
       return;
     }
-    const randomSecret = `T${tableForm.table_number}-DINE${Math.floor(1000 + Math.random() * 9000)}`;
+    const generateToken = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let result = '';
+      for (let i = 0; i < 16; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    };
+    const randomSecret = generateToken();
     try {
       const restId = adminUser?.restaurant_id || 4;
       await apiService.createTable({
-        table_number: parseInt(tableForm.table_number),
+        table_number: tableForm.table_number.toString(),
         secret_token: randomSecret,
         restaurant_id: restId,
         name: tableForm.name || `Table ${tableForm.table_number}`
@@ -232,7 +241,15 @@ export default function QrCodesView({
     }
     try {
       const restId = adminUser?.restaurant_id || 4;
-      const secret = `R${roomForm.roomNumber}-R${restId}-SECRET-${Math.floor(1000 + Math.random() * 9000)}`;
+      const generateRoomToken = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 16; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+      };
+      const secret = generateRoomToken();
       await apiService.createRoom({
         restaurant_id: restId,
         floor_id: matchedFloor.id,
@@ -392,402 +409,7 @@ export default function QrCodesView({
 
   return (
     <div className="enterprise-qr-module animate-slide-up">
-      <style>{`
-        .enterprise-qr-module {
-          background-color: var(--ap-main-bg, var(--bg-deep)) !important;
-          color: var(--ap-text-main, var(--text-main)) !important;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-          min-height: 100vh;
-          padding: 24px;
-        }
 
-        /* Top SaaS Header */
-        .sc-header-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: var(--ap-card-bg, var(--card-bg));
-          padding: 20px 24px;
-          border-radius: 16px;
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          box-shadow: 0 1px 3px rgba(0,0,0,0.01);
-          margin-bottom: 24px;
-        }
-
-        .sc-title-section h1 {
-          font-size: 20px;
-          font-weight: 800;
-          color: var(--ap-text-main, var(--text-main));
-          margin: 0;
-        }
-
-        .sc-title-section p {
-          font-size: 13px;
-          color: var(--ap-text-muted, var(--text-muted));
-          margin: 4px 0 0 0;
-        }
-
-        /* Stats Cards */
-        .sc-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-
-        .sc-stat-card {
-          background: var(--ap-card-bg, var(--card-bg));
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          border-radius: 16px;
-          padding: 16px 20px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.01);
-        }
-
-        .sc-stat-icon-wrapper {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .sc-stat-icon-wrapper.blue { background-color: rgba(37, 99, 235, 0.1); color: #3b82f6; }
-        .sc-stat-icon-wrapper.green { background-color: var(--success-bg, rgba(16, 185, 129, 0.1)); color: var(--success, #10b981); }
-        .sc-stat-icon-wrapper.gray { background-color: var(--bg-tertiary); color: var(--ap-text-muted, var(--text-muted)); }
-
-        .sc-stat-label {
-          font-size: 11px;
-          font-weight: 700;
-          color: var(--ap-text-muted, var(--text-muted));
-          text-transform: uppercase;
-        }
-
-        .sc-stat-value {
-          font-size: 20px;
-          font-weight: 800;
-          color: var(--ap-text-main, var(--text-main));
-          margin: 2px 0 0 0;
-        }
-
-        /* Segment Controller Selector */
-        .segment-toolbar {
-          display: flex;
-          background: var(--bg-tertiary);
-          padding: 4px;
-          border-radius: 10px;
-          margin-bottom: 24px;
-          width: fit-content;
-        }
-
-        .segment-toggle-btn {
-          padding: 8px 16px;
-          border: none;
-          font-size: 12px;
-          font-weight: 700;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          color: var(--ap-text-muted, var(--text-muted));
-          background: transparent;
-        }
-
-        .segment-toggle-btn.active {
-          background: var(--ap-card-bg, var(--card-bg));
-          color: var(--ap-text-main, var(--text-main));
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        /* Filter Toolbar */
-        .filter-toolbar {
-          background: var(--ap-card-bg, var(--card-bg));
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          border-radius: 16px;
-          padding: 16px 20px;
-          margin-bottom: 24px;
-          display: flex;
-          flex-wrap: wrap;
-          align-items: flex-end;
-          gap: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-
-        .filter-label {
-          font-size: 10px;
-          font-weight: 700;
-          color: var(--ap-text-muted, var(--text-muted));
-          text-transform: uppercase;
-          margin-bottom: 6px;
-          display: block;
-        }
-
-        .sc-filter-group {
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 6px !important;
-          align-items: flex-start !important;
-        }
-
-        .filter-select {
-          background-color: var(--bg-tertiary);
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          border-radius: 8px;
-          padding: 8px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--ap-text-main, var(--text-main));
-          outline: none;
-          height: 38px;
-          cursor: pointer;
-        }
-
-        .sc-search-wrapper {
-          position: relative;
-          min-width: 240px;
-        }
-
-        .sc-search-input {
-          width: 100%;
-          background: var(--bg-tertiary);
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          color: var(--ap-text-main, var(--text-main));
-          border-radius: 8px;
-          padding: 8px 12px 8px 32px;
-          font-size: 13px;
-          outline: none;
-          height: 38px;
-          box-sizing: border-box;
-        }
-
-        .sc-search-icon {
-          position: absolute;
-          left: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: var(--ap-text-muted, var(--text-muted));
-        }
-
-        /* Grid setups */
-        .room-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 16px;
-        }
-
-        .room-card {
-          background: var(--ap-card-bg, var(--card-bg));
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          border-radius: 16px;
-          padding: 18px;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.01);
-          transition: all 0.2s;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-
-        .room-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        /* Status badges */
-        .status-chip {
-          font-size: 10px;
-          font-weight: 700;
-          padding: 3px 8px;
-          border-radius: 99px;
-          text-transform: uppercase;
-        }
-
-        .status-chip.available { background: var(--success-bg, rgba(16, 185, 129, 0.1)); color: var(--success, #10b981); }
-        .status-chip.occupied { background: rgba(37, 99, 235, 0.1); color: #3b82f6; }
-        .status-chip.cleaning { background: var(--warning-bg, rgba(245, 158, 11, 0.1)); color: var(--warning, #f59e0b); }
-        .status-chip.maintenance { background: var(--danger-bg, rgba(239, 68, 68, 0.1)); color: var(--danger, #ef4444); }
-
-        /* Buttons */
-        .sc-btn-primary {
-          background-color: var(--ap-accent-color, var(--accent-color)) !important;
-          color: #ffffff !important;
-          font-weight: 600 !important;
-          border-radius: 8px !important;
-          padding: 8px 16px !important;
-          border: 1px solid var(--ap-accent-color, var(--accent-color)) !important;
-          font-size: 13px !important;
-          cursor: pointer !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 6px !important;
-          transition: all 0.2s !important;
-          height: 36px !important;
-        }
-
-        .sc-btn-primary:hover {
-          background-color: var(--ap-accent-primary, var(--accent-primary)) !important;
-        }
-
-        .sc-btn-outline {
-          background-color: transparent !important;
-          color: var(--ap-text-main, var(--text-main)) !important;
-          font-weight: 600 !important;
-          border-radius: 8px !important;
-          padding: 8px 16px !important;
-          border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
-          font-size: 13px !important;
-          cursor: pointer !important;
-          transition: all 0.2s !important;
-          height: 36px !important;
-        }
-
-        .sc-btn-outline:hover {
-          background-color: var(--bg-tertiary) !important;
-        }
-
-        .sc-action-btn-mini {
-          background: var(--ap-card-bg, var(--card-bg));
-          border: 1px solid var(--ap-glass-border, var(--border-default));
-          border-radius: 6px;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: var(--ap-text-muted, var(--text-muted));
-          transition: all 0.2s;
-        }
-
-        .sc-action-btn-mini:hover {
-          background: var(--bg-tertiary);
-          color: var(--ap-text-main, var(--text-main));
-        }
-
-        /* Modals */
-        .saas-modal-backdrop {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(15, 23, 42, 0.6) !important;
-          z-index: 99999 !important;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          backdrop-filter: blur(4px);
-        }
-
-        .saas-modal-container {
-          background: var(--ap-card-bg, var(--card-bg)) !important;
-          border-radius: 16px !important;
-          width: 100%;
-          max-width: 440px;
-          padding: 24px !important;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
-          border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
-          box-sizing: border-box;
-        }
-
-        .form-field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          margin-bottom: 16px;
-        }
-
-        .form-field-group span {
-          font-size: 10px;
-          font-weight: 700;
-          color: var(--ap-text-muted, var(--text-muted));
-          text-transform: uppercase;
-          text-align: left;
-        }
-
-        .form-input-light {
-          border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
-          border-radius: 8px !important;
-          padding: 10px 12px !important;
-          font-size: 13px !important;
-          color: var(--ap-text-main, var(--text-main)) !important;
-          outline: none !important;
-          background: var(--bg-tertiary) !important;
-          box-sizing: border-box;
-          width: 100%;
-        }
-
-        /* Slide-over Drawer */
-        .saas-drawer-backdrop {
-          position: fixed;
-          top: 0;
-          right: 0;
-          bottom: 0;
-          left: 0;
-          background: rgba(17, 24, 39, 0.2);
-          z-index: 5000;
-          display: flex;
-          justify-content: flex-end;
-          backdrop-filter: blur(1px);
-        }
-
-        .saas-drawer-container {
-          background: var(--ap-card-bg, var(--card-bg));
-          width: 100%;
-          max-width: 420px;
-          height: 100%;
-          padding: 24px;
-          box-shadow: -4px 0 20px rgba(0,0,0,0.05);
-          display: flex;
-          flex-direction: column;
-          animation: slideOver 0.2s ease-out;
-        }
-
-        @keyframes slideOver {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-
-        /* Split Workspace layout */
-        .workspace-split {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 24px;
-        }
-
-        @media (min-width: 1200px) {
-          .workspace-split { grid-template-columns: 72% 28% !important; }
-        }
-
-        /* Activity Logs styles */
-        .activity-timeline {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .activity-item {
-          display: flex;
-          gap: 12px;
-          font-size: 12px;
-        }
-
-        .activity-dot {
-          width: 8px;
-          height: 8px;
-          background: var(--ap-accent-color, var(--accent-color));
-          border-radius: 50%;
-          margin-top: 4px;
-          flex-shrink: 0;
-        }
-
-      `}</style>
 
       {/* --- PAGE HEADER --- */}
       <div className="sc-header-row">
@@ -852,14 +474,14 @@ export default function QrCodesView({
 
       {/* --- SEGMENT SELECTOR CONTROL --- */}
       <div className="segment-toolbar">
-        <button 
-          onClick={() => setActiveSegment('tables')} 
+        <button
+          onClick={() => setActiveSegment('tables')}
           className={`segment-toggle-btn ${activeSegment === 'tables' ? 'active' : ''}`}
         >
           🍽️ Restaurant Tables
         </button>
-        <button 
-          onClick={() => setActiveSegment('rooms')} 
+        <button
+          onClick={() => setActiveSegment('rooms')}
           className={`segment-toggle-btn ${activeSegment === 'rooms' ? 'active' : ''}`}
         >
           🏨 Hotel Rooms Setup
@@ -885,18 +507,18 @@ export default function QrCodesView({
                     <div>
                       <div className="flex justify-between items-start">
                         <div className="flex gap-2 items-center">
-                          <input 
-                            type="checkbox" 
-                            checked={isSelected} 
-                            onChange={() => toggleSelect(t.id)} 
-                            className="sc-checkbox" 
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(t.id)}
+                            className="sc-checkbox"
                           />
                           <strong className="text-sm" style={{ color: 'var(--ap-text-main, var(--text-main))' }}>{t.name || `Table ${t.table_number}`}</strong>
                         </div>
                         <span className="status-chip available">Active</span>
                       </div>
-                      
-                      <div 
+
+                      <div
                         onClick={() => setPreviewItem({ ...t, type: 'Table', liveUrl })}
                         className="w-24 h-24 rounded-xl flex items-center justify-center border my-4 mx-auto cursor-pointer hover:border-blue-500 transition-all"
                         style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--ap-glass-border, var(--border-default))' }}
@@ -909,13 +531,13 @@ export default function QrCodesView({
 
                     <div className="mt-4 flex gap-1 border-t border-slate-100 pt-3">
                       <button onClick={() => setPreviewItem({ ...t, type: 'Table', liveUrl })} className="sc-action-btn-mini" title="Table details"><Info size={12} /></button>
-                      <button 
+                      <button
                         onClick={() => {
                           setEditingTable(t);
                           setTableForm({ table_number: t.table_number.toString(), name: t.name || `Table ${t.table_number}` });
                           setShowTableModal(true);
-                        }} 
-                        className="sc-action-btn-mini" 
+                        }}
+                        className="sc-action-btn-mini"
                         title="Edit Name"
                       >
                         <Edit2 size={12} />
@@ -940,11 +562,11 @@ export default function QrCodesView({
                   <span className="filter-label">Search Room</span>
                   <div className="sc-search-wrapper">
                     <Search size={14} className="sc-search-icon" />
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 101" 
-                      value={searchQuery} 
-                      onChange={(e) => setSearchQuery(e.target.value)} 
+                    <input
+                      type="text"
+                      placeholder="e.g. 101"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       className="sc-search-input"
                     />
                   </div>
@@ -983,7 +605,7 @@ export default function QrCodesView({
 
                 return (
                   <div key={floor.id} className="glass-panel" style={{ padding: '20px', marginBottom: '20px', background: 'var(--ap-card-bg, var(--card-bg))', border: '1px solid var(--ap-glass-border, var(--border-default))', borderRadius: '12px' }}>
-                    <div 
+                    <div
                       onClick={() => toggleFloorExpand(floor.name)}
                       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--ap-glass-border, var(--border-default))', paddingBottom: '10px', marginBottom: isExpanded ? '16px' : '0', cursor: 'pointer' }}
                     >
@@ -992,8 +614,8 @@ export default function QrCodesView({
                       </h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '11px', color: 'var(--ap-text-muted, var(--text-muted))', fontWeight: 600 }}>{floorRooms.length} Rooms</span>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteFloor(floor.id); }} 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFloor(floor.id); }}
                           style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}
                         >
                           <Trash2 size={13} />
@@ -1011,18 +633,18 @@ export default function QrCodesView({
                               <div>
                                 <div className="flex justify-between items-start">
                                   <div className="flex gap-2 items-center">
-                                    <input 
-                                      type="checkbox" 
-                                      checked={isSelected} 
-                                      onChange={() => toggleSelect(room.id)} 
-                                      className="sc-checkbox" 
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => toggleSelect(room.id)}
+                                      className="sc-checkbox"
                                     />
                                     <strong style={{ fontSize: '13px', color: 'var(--ap-text-main, var(--text-main))' }}>Room {room.roomNumber}</strong>
                                   </div>
                                   <span className={`status-chip ${room.status.toLowerCase()}`}>{room.status}</span>
                                 </div>
-                                
-                                <div 
+
+                                <div
                                   onClick={() => setPreviewItem({ ...room, type: 'Room', liveUrl: liveRoomUrl })}
                                   className="w-20 h-20 rounded-xl flex items-center justify-center border my-3 mx-auto cursor-pointer hover:border-blue-500 transition-all"
                                   style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--ap-glass-border, var(--border-default))' }}
@@ -1036,18 +658,18 @@ export default function QrCodesView({
                               <div style={{ marginTop: '16px', display: 'flex', gap: '6px', borderTop: '1px solid var(--ap-glass-border, var(--border-default))', paddingTop: '10px' }}>
                                 <button onClick={() => setPreviewItem({ ...room, type: 'Room', liveUrl: liveRoomUrl })} className="sc-action-btn-mini"><Info size={11} /></button>
                                 <button onClick={() => printTableQR(liveRoomUrl, `Room ${room.roomNumber}`)} className="sc-action-btn-mini" title="Print"><Printer size={11} /></button>
-                                <button 
+                                <button
                                   onClick={() => {
                                     setEditingRoom(room);
                                     setRoomForm({ roomNumber: room.roomNumber, floor: room.floor, category: room.category, status: room.status });
                                     setShowRoomModal(true);
-                                  }} 
+                                  }}
                                   className="sc-action-btn-mini"
                                 >
                                   <Edit2 size={11} />
                                 </button>
-                                <select 
-                                  value={room.status} 
+                                <select
+                                  value={room.status}
                                   onChange={(e) => handleUpdateStatus(room.id, e.target.value)}
                                   className="saas-select"
                                   style={{ fontSize: '10px', padding: '2px' }}
@@ -1103,22 +725,22 @@ export default function QrCodesView({
             <form onSubmit={handleSaveTable}>
               <div className="form-field-group">
                 <span>Table Number</span>
-                <input 
-                  type="text" 
-                  value={tableForm.table_number} 
-                  onChange={(e) => setTableForm({ ...tableForm, table_number: e.target.value })} 
-                  className="form-input-light" 
-                  placeholder="e.g. 5" 
+                <input
+                  type="text"
+                  value={tableForm.table_number}
+                  onChange={(e) => setTableForm({ ...tableForm, table_number: e.target.value })}
+                  className="form-input-light"
+                  placeholder="e.g. 5"
                 />
               </div>
               <div className="form-field-group">
                 <span>Table Label / Description</span>
-                <input 
-                  type="text" 
-                  value={tableForm.name} 
-                  onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })} 
-                  className="form-input-light" 
-                  placeholder="e.g. Balcony VIP" 
+                <input
+                  type="text"
+                  value={tableForm.name}
+                  onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
+                  className="form-input-light"
+                  placeholder="e.g. Balcony VIP"
                 />
               </div>
               <div className="flex justify-end gap-2 mt-4" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -1141,12 +763,12 @@ export default function QrCodesView({
             <form onSubmit={handleSaveFloor}>
               <div className="form-field-group">
                 <span>Floor Name</span>
-                <input 
-                  type="text" 
-                  value={floorForm.name} 
-                  onChange={(e) => setFloorForm({ name: e.target.value })} 
-                  className="form-input-light" 
-                  placeholder="e.g. Floor 3" 
+                <input
+                  type="text"
+                  value={floorForm.name}
+                  onChange={(e) => setFloorForm({ name: e.target.value })}
+                  className="form-input-light"
+                  placeholder="e.g. Floor 3"
                 />
               </div>
               <div className="flex justify-end gap-2 mt-4" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -1169,18 +791,18 @@ export default function QrCodesView({
             <form onSubmit={handleSaveRoom}>
               <div className="form-field-group">
                 <span>Room Number</span>
-                <input 
-                  type="text" 
-                  value={roomForm.roomNumber} 
-                  onChange={(e) => setRoomForm({ ...roomForm, roomNumber: e.target.value })} 
-                  className="form-input-light" 
-                  placeholder="e.g. 104" 
+                <input
+                  type="text"
+                  value={roomForm.roomNumber}
+                  onChange={(e) => setRoomForm({ ...roomForm, roomNumber: e.target.value })}
+                  className="form-input-light"
+                  placeholder="e.g. 104"
                 />
               </div>
               <div className="form-field-group">
                 <span>Floor Selection</span>
-                <select 
-                  value={roomForm.floor} 
+                <select
+                  value={roomForm.floor}
                   onChange={(e) => setRoomForm({ ...roomForm, floor: e.target.value })}
                   style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }}
                 >
@@ -1189,8 +811,8 @@ export default function QrCodesView({
               </div>
               <div className="form-field-group">
                 <span>Room Category</span>
-                <select 
-                  value={roomForm.category} 
+                <select
+                  value={roomForm.category}
                   onChange={(e) => setRoomForm({ ...roomForm, category: e.target.value })}
                   style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }}
                 >
@@ -1216,9 +838,9 @@ export default function QrCodesView({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '20px' }}>
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(previewItem.liveUrl)}`} 
-                alt="Live QR Key" 
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(previewItem.liveUrl)}`}
+                alt="Live QR Key"
                 style={{ width: '150px', height: '150px', borderRadius: '8px' }}
               />
               <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '12px', fontWeight: 700 }}>
@@ -1254,32 +876,32 @@ export default function QrCodesView({
             </div>
 
             <div style={{ display: 'flex', gap: '6px', marginTop: '24px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-              <button 
+              <button
                 onClick={() => {
                   navigator.clipboard.writeText(previewItem.liveUrl);
                   toast.success('Key URL copied to clipboard!');
                 }}
-                className="sc-btn-outline" 
+                className="sc-btn-outline"
                 style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', padding: '0 8px' }}
               >
                 <Copy size={12} /> Link
               </button>
-              <button 
+              <button
                 onClick={() => {
                   printTableQR(previewItem.liveUrl, previewItem.type === 'Room' ? `Room ${previewItem.roomNumber}` : previewItem.name || `Table ${previewItem.table_number}`);
                   setPreviewItem(null);
                 }}
-                className="sc-btn-outline" 
+                className="sc-btn-outline"
                 style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', padding: '0 8px' }}
               >
                 <Printer size={12} /> Print
               </button>
-              <button 
+              <button
                 onClick={() => {
                   downloadQR(previewItem.liveUrl, previewItem.type === 'Room' ? `Room-${previewItem.roomNumber}` : previewItem.name || `Table-${previewItem.table_number}`);
                   setPreviewItem(null);
                 }}
-                className="sc-btn-primary" 
+                className="sc-btn-primary"
                 style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', padding: '0 8px' }}
               >
                 <Download size={12} /> Download

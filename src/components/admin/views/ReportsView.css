@@ -1,0 +1,332 @@
+.enterprise-light-reports {
+          background-color: var(--ap-main-bg, var(--bg-deep)) !important;
+          color: var(--ap-text-main, var(--text-main)) !important;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          min-height: 100vh;
+          padding: 24px;
+        }
+
+        /* Top Header Area */
+        .reports-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: var(--ap-card-bg, var(--card-bg));
+          padding: 20px 24px;
+          border-radius: 16px;
+          border: 1px solid var(--ap-glass-border, var(--border-default));
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          margin-bottom: 24px;
+        }
+
+        .header-title-section h1 {
+          font-size: 20px;
+          font-weight: 800;
+          color: var(--ap-text-main, var(--text-main));
+          margin: 0;
+        }
+
+        .header-title-section p {
+          font-size: 13px;
+          color: var(--ap-text-muted, var(--text-muted));
+          margin: 4px 0 0 0;
+        }
+
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        /* Buttons styling */
+        .saas-btn-primary {
+          background: var(--ap-accent-color, var(--accent-color)) !important;
+          color: #ffffff !important;
+          font-weight: 600 !important;
+          border-radius: 8px !important;
+          padding: 8px 16px !important;
+          border: 1px solid var(--ap-accent-color, var(--accent-color)) !important;
+          font-size: 13px !important;
+          cursor: pointer !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          transition: all 0.2s !important;
+          height: 36px !important;
+          line-height: 1 !important;
+          box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05) !important;
+        }
+
+        .saas-btn-primary:hover {
+          background: var(--ap-accent-primary, var(--accent-primary)) !important;
+          border-color: var(--ap-accent-primary, var(--accent-primary)) !important;
+        }
+
+        .saas-btn-outline {
+          background: var(--ap-card-bg, var(--card-bg)) !important;
+          color: var(--ap-text-main, var(--text-main)) !important;
+          font-weight: 600 !important;
+          border-radius: 8px !important;
+          padding: 8px 16px !important;
+          border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
+          font-size: 13px !important;
+          cursor: pointer !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          transition: all 0.2s !important;
+          height: 36px !important;
+          line-height: 1 !important;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        }
+
+        .saas-btn-outline:hover {
+          background: var(--bg-tertiary) !important;
+          border-color: var(--ap-text-muted, var(--text-muted)) !important;
+        }
+
+        /* Filter Pills styling overrides to avoid global black borders */
+        .reports-filter-btn {
+          background-color: var(--bg-tertiary) !important;
+          color: var(--ap-text-muted, var(--text-muted)) !important;
+          border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
+          border-radius: 8px !important;
+          padding: 6px 14px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          transition: all 0.2s !important;
+          outline: none !important;
+          box-shadow: none !important;
+          line-height: 1.5 !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .reports-filter-btn:hover {
+          background-color: var(--ap-sidebar-hover, var(--sidebar-hover)) !important;
+          color: var(--ap-text-main, var(--text-main)) !important;
+          border-color: var(--ap-text-muted, var(--text-muted)) !important;
+        }
+
+        .reports-filter-btn.active {
+          background-color: var(--ap-accent-color, var(--accent-color)) !important;
+          color: #ffffff !important;
+          border-color: var(--ap-accent-color, var(--accent-color)) !important;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2) !important;
+        }
+
+        /* Filter Toolbar */
+        .filter-toolbar {
+          background: var(--ap-card-bg, var(--card-bg));
+          border: 1px solid var(--ap-glass-border, var(--border-default));
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 24px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .filter-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .filter-field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .filter-label {
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--ap-text-muted, var(--text-muted));
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .filter-select {
+          background: var(--bg-tertiary);
+          border: 1px solid var(--ap-glass-border, var(--border-default));
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--ap-text-main, var(--text-main));
+          outline: none;
+          cursor: pointer;
+        }
+
+        .filter-select:focus {
+          border-color: var(--ap-accent-color, var(--accent-color));
+          background: var(--ap-card-bg, var(--card-bg));
+        }
+
+        /* Sub-tab styling */
+        .report-subtabs {
+          display: flex;
+          border-bottom: 1px solid var(--ap-glass-border, var(--border-default));
+          margin-bottom: 24px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .report-tab-btn {
+          padding: 12px 18px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--ap-text-muted, var(--text-muted));
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          border-bottom: 2px solid transparent;
+          white-space: nowrap;
+          transition: all 0.2s;
+        }
+
+        .report-tab-btn.active {
+          color: var(--ap-accent-color, var(--accent-color));
+          border-bottom-color: var(--ap-accent-color, var(--accent-color));
+        }
+
+        /* KPI cards */
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .kpi-card-light {
+          background: var(--ap-card-bg, var(--card-bg));
+          border: 1px solid var(--ap-glass-border, var(--border-default));
+          border-radius: 16px;
+          padding: 18px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.01);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          transition: all 0.2s;
+        }
+
+        .kpi-card-light:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          border-color: var(--ap-accent-color, var(--accent-color));
+        }
+
+        /* Insights Cards */
+        .insights-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .insight-card {
+          padding: 16px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .insight-card.blue { background-color: rgba(37, 99, 235, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .insight-card.green { background-color: var(--success-bg, rgba(16, 185, 129, 0.1)); color: var(--success, #10b981); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .insight-card.orange { background-color: var(--warning-bg, rgba(245, 158, 11, 0.1)); color: var(--warning, #f59e0b); border: 1px solid rgba(245, 158, 11, 0.2); }
+
+        /* Report Tables */
+        .reports-table-panel {
+          background: var(--ap-card-bg, var(--card-bg));
+          border: 1px solid var(--ap-glass-border, var(--border-default));
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .r-table {
+          width: 100%;
+          border-collapse: collapse;
+          text-align: left;
+        }
+
+        .r-table th {
+          background: var(--bg-tertiary);
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--ap-text-muted, var(--text-muted));
+          text-transform: uppercase;
+          padding: 12px 16px;
+          border-bottom: 1px solid var(--ap-glass-border, var(--border-default));
+        }
+
+        .r-table td {
+          padding: 14px 16px;
+          font-size: 13px;
+          color: var(--ap-text-main, var(--text-main));
+          border-bottom: 1px solid var(--ap-glass-border, var(--border-default));
+        }
+
+        /* Scheduled form */
+        .schedule-form {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          align-items: flex-end;
+        }
+
+        /* Export block */
+        .export-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .export-card {
+          background: var(--ap-card-bg, var(--card-bg));
+          border: 1px solid var(--ap-glass-border, var(--border-default));
+          border-radius: 16px;
+          padding: 20px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .export-card:hover {
+          transform: translateY(-2px);
+          border-color: var(--ap-accent-color, var(--accent-color));
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Progress lists */
+        .progress-list-item {
+          display: flex;
+          flex-direction: column;
+          margin-bottom: 12px;
+        }
+
+        .progress-bar-light {
+          background-color: var(--bg-tertiary);
+          height: 6px;
+          border-radius: 99px;
+          overflow: hidden;
+          margin-top: 4px;
+        }
+
+        .progress-bar-fill-blue {
+          background-color: var(--ap-accent-color, var(--accent-color));
+          height: 100%;
+        }
+
+        .progress-bar-fill-red {
+          background-color: var(--danger, #ef4444);
+          height: 100%;
+        }

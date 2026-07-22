@@ -128,7 +128,14 @@ class TableService {
 
     async createRoom(data) {
         const { restaurant_id, floor_id, room_number, category, secret_token, status } = data;
-        const generatedToken = secret_token || `R${room_number}-R${restaurant_id || 4}-SECRET-${Math.random().toString(36).substring(7).toUpperCase()}`;
+        let generatedToken = secret_token;
+        if (!generatedToken) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            generatedToken = '';
+            for (let i = 0; i < 16; i++) {
+                generatedToken += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+        }
         const result = await pool.query(
             "INSERT INTO hotel_rooms (restaurant_id, floor_id, room_number, category, secret_token, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
             [restaurant_id || 4, floor_id, room_number, category || 'Standard', generatedToken, status || 'available']
