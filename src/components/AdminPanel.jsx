@@ -1007,7 +1007,7 @@ const AdminPanel = () => {
         </header>
 
         <div className="content-scrollable scrollbar-hidden">
-          {activeTab === 'dashboard' && <DashboardView orders={orders} menuItems={menuItems} formatDate={formatDate} feedbackList={feedbackList} restaurantsList={restaurantsList} fetchData={fetchData} />}
+          {activeTab === 'dashboard' && <DashboardView adminUser={adminUser} orders={orders} menuItems={menuItems} formatDate={formatDate} feedbackList={feedbackList} restaurantsList={restaurantsList} fetchData={fetchData} />}
 
           {activeTab === 'orders' && <OrdersHubView orders={orders} selectedDate={selectedDate} setSelectedDate={setSelectedDate} tableSearch={tableSearch} setTableSearch={setTableSearch} phoneSearch={phoneSearch} setPhoneSearch={setPhoneSearch} nameSearch={nameSearch} setNameSearch={setNameSearch} safeGetISODate={safeGetISODate} restaurantTables={restaurantTables} fetchData={fetchData} isLoading={isLoading} editingOrderId={editingOrderId} setEditingOrderId={setEditingOrderId} editFormData={editFormData} setEditFormData={setEditFormData} handleOrderUpdate={handleOrderUpdate} setShowManualOrderPopup={setShowManualOrderPopup} setManualOrderData={setManualOrderData} setIsEditingOrder={setIsEditingOrder} handlePrintBill={handlePrintBill} updateOrderStatus={updateOrderStatus} loadingStates={loadingStates} setActionLoading={setActionLoading} riders={riders} />}
 

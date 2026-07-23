@@ -110,9 +110,9 @@ export const useAdminData = (adminUser, activeTab, selectedBranchId) => {
 
   const isFetching = useRef(false);
 
-  const fetchCoreData = async () => {
+  const fetchCoreData = async (silent = false) => {
     if (!adminUser?.id) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const auth = { params: { restaurant_id: activeRestaurantId } };
       const fetchHelper = (url) => axios.get(url, auth).catch(err => {
@@ -134,7 +134,7 @@ export const useAdminData = (adminUser, activeTab, selectedBranchId) => {
     } catch (e) {
       console.error(e);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -180,10 +180,10 @@ export const useAdminData = (adminUser, activeTab, selectedBranchId) => {
     } catch (e) { }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     if (isFetching.current) return;
     isFetching.current = true;
-    await fetchCoreData();
+    await fetchCoreData(silent);
     await fetchTabData(activeTab);
     isFetching.current = false;
   };

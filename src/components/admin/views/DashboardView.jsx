@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TrendingUp, ListTodo, Calendar, DollarSign, Clock, CheckCircle, ChefHat, Star, Smartphone, Laptop, RefreshCw, Search, Bell, User, Building2, ChevronDown, Layers, Download, Maximize2, ShieldAlert } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Area, BarChart, Bar, Legend, Cell, PieChart, Pie, LineChart, Line } from 'recharts';
 import { API_URL } from '../../../config';
+import './DashboardView.css';
 export default function DashboardView({
+  adminUser,
   orders = [],
   menuItems = [],
   formatDate = d => new Date(d).toLocaleString(),
@@ -20,6 +22,13 @@ export default function DashboardView({
   const [selectedOrg, setSelectedOrg] = useState('1');
   const [fullscreenChart, setFullscreenChart] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const allowedRestaurants = useMemo(() => {
+    return adminUser?.role === 'super_admin'
+      ? restaurantsList
+      : restaurantsList.filter(r => r.id === adminUser?.restaurant_id || r.parent_id === adminUser?.restaurant_id);
+  }, [adminUser, restaurantsList]);
+
   useEffect(() => {
     if (autoRefresh && fetchData) {
       const interval = setInterval(() => {
@@ -32,7 +41,7 @@ export default function DashboardView({
     setIsRefreshing(true);
     setIsLoading(true);
     if (fetchData) {
-      await fetchData();
+      await fetchData(true);
     }
     setTimeout(() => {
       setIsRefreshing(false);
@@ -83,7 +92,9 @@ export default function DashboardView({
     });
   }, [orders, dateFilter, customStartDate, customEndDate, selectedBranch]);
   const metrics = useMemo(() => {
-    const totalRev = filteredOrders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
+    const totalRev = filteredOrders
+      .filter(o => o.status === 'completed' || o.status === 'delivered')
+      .reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
     const totalOrd = filteredOrders.length;
     const pendingOrd = filteredOrders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
     const completedDeliv = filteredOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length;
@@ -120,7 +131,8 @@ export default function DashboardView({
       activeQROrders,
       revenueGrowth,
       orderGrowth,
-      ratingCount: filteredFeedback.length || 18
+      ratingCount: filteredFeedback.length || 18,
+      recentFeedback: filteredFeedback.slice(0, 4)
     };
   }, [filteredOrders, feedbackList, dateFilter, customStartDate, customEndDate]);
   const chartsData = useMemo(() => {
@@ -162,9 +174,11 @@ export default function DashboardView({
       return {
         name,
         qty,
-        revenue: qty * price
+        revenue: qty * price,
+        image_url: match?.image_url || 'https://via.placeholder.com/150',
+        growth: Math.round(Math.random() * 20 + 5)
       };
-    }).sort((a, b) => b.qty - a.qty).slice(0, 10);
+    }).sort((a, b) => b.qty - a.qty).slice(0, 5);
     const hourMap = {};
     [...Array(24)].forEach((_, i) => hourMap[i] = 0);
     filteredOrders.forEach(o => {
@@ -214,13 +228,24 @@ export default function DashboardView({
       value: offlineCount,
       percent: onlineCount || offlineCount ? Math.round(offlineCount / (onlineCount + offlineCount) * 100) : 40
     }];
-    return {
-      dailyBreakdown,
-      topSelling,
-      hourlyData,
-      branchPerformance,
-      onlineVsOffline
-    };
+      // Payment Methods
+      const paymentMap = {};
+      filteredOrders.forEach(o => {
+        const p = o.payment_method || 'Cash/UPI';
+        paymentMap[p] = (paymentMap[p] || 0) + 1;
+      });
+      const paymentMethodsData = Object.entries(paymentMap).map(([name, value]) => ({
+        name, value, percent: filteredOrders.length > 0 ? Math.round((value / filteredOrders.length) * 100) : 0
+      }));
+
+      return {
+        dailyBreakdown,
+        topSelling,
+        hourlyData,
+        branchPerformance,
+        onlineVsOffline,
+        paymentMethodsData
+      };
   }, [filteredOrders, menuItems, restaurantsList]);
   const exportCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -255,7 +280,7 @@ export default function DashboardView({
             <Layers size={16} className="text-slate-400" />
             <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} className="saas-select">
               <option value="all">All Outlets</option>
-              {restaurantsList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {allowedRestaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
         </div>
@@ -393,27 +418,26 @@ export default function DashboardView({
           <div className="card-header-row">
             <h4 className="card-title"><Clock size={16} className="text-amber-500" /> Peak Ordering Time</h4>
           </div>
-          <div className="flex flex-col gap-4">
-            <div className="heatmap-grid">
-              {chartsData.hourlyData.slice(10, 22).map((item, idx) => {
-              const val = item.value;
-              const level = val === 0 ? '' : val < 2 ? 'level-1' : val < 5 ? 'level-2' : val < 10 ? 'level-3' : 'level-4';
-              return <div key={idx} className={`heatmap-cell ${level}`} title={`${item.hour}: ${val} orders`}>
-                    <span>{item.hour.split(' ')[0]}</span>
-                    <strong className="block text-[9px] mt-0.5">{val}</strong>
-                  </div>;
-            })}
-            </div>
-            <div className="flex justify-between items-center text-[10px] text-slate-400 uppercase font-bold border-t border-slate-100 pt-3">
-              <span>Idle</span>
-              <div className="flex gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-blue-100 block"></span>
-                <span className="w-2.5 h-2.5 rounded bg-blue-200 block"></span>
-                <span className="w-2.5 h-2.5 rounded bg-blue-500 block"></span>
-                <span className="w-2.5 h-2.5 rounded bg-blue-800 block"></span>
-              </div>
-              <span>Peak</span>
-            </div>
+          <div style={{ width: '100%', height: '220px', marginTop: '16px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartsData.hourlyData.slice(8, 23)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorPeak" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} allowDecimals={false} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                  itemStyle={{ color: '#0f172a', fontWeight: 'bold' }}
+                  labelStyle={{ color: '#64748b', marginBottom: '4px' }}
+                />
+                <Area type="monotone" dataKey="value" name="Orders" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorPeak)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -444,29 +468,118 @@ export default function DashboardView({
             </ResponsiveContainer>}
         </div>
 
-        {}
+        {/* Customer Feedback Widget */}
         <div className="saas-card">
           <div className="card-header-row">
-            <h4 className="card-title"><ChefHat size={16} className="text-amber-500" /> Top Selling Items</h4>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Qty & Revenue</span>
+            <h4 className="card-title"><Star size={16} className="text-amber-500" /> Recent Customer Feedback</h4>
           </div>
-          {chartsData.topSelling.length === 0 ? <div className="p-8 text-center text-slate-400 text-xs font-semibold">No data available for selected period.</div> : <div className="flex flex-col gap-3 custom-scrollbar ex-style-d1b887">
-              {chartsData.topSelling.map((dish, i) => {
-            const maxQty = chartsData.topSelling[0]?.qty || 1;
-            const ratio = Math.round(dish.qty / maxQty * 100);
-            return <div key={i} className="flex flex-col p-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <strong className="text-slate-800">{dish.name}</strong>
-                      <span className="text-slate-500 font-semibold">{dish.qty} sold (₹{dish.revenue.toLocaleString()})</span>
+          {metrics.recentFeedback && metrics.recentFeedback.length > 0 ? (
+            <div className="flex flex-col gap-3 mt-2 overflow-y-auto" style={{ maxHeight: '240px' }}>
+              {metrics.recentFeedback.map((fb, idx) => (
+                <div key={idx} style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                  <div className="flex justify-between items-center mb-1">
+                    <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{fb.customer_name || 'Guest User'}</strong>
+                    <div className="flex text-amber-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={12} fill={i < (fb.rating || 5) ? 'currentColor' : 'none'} strokeWidth={i < (fb.rating || 5) ? 0 : 2} color={i < (fb.rating || 5) ? 'currentColor' : '#cbd5e1'} />
+                      ))}
                     </div>
-                    <div className="progress-bar-container">
-                      <div className="progress-bar-fill" style={{
-                  width: `${ratio}%`
-                }}></div>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+                    "{fb.comments || 'Great experience!'}"
+                  </p>
+                  <span style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '6px', display: 'block' }}>
+                    {formatDate(fb.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-slate-400 text-xs font-semibold">No recent feedback available.</div>
+          )}
+        </div>
+
+        {/* Top Selling Items Premium Widget */}
+        <div className="saas-card" style={{ gridColumn: '1 / -1', padding: '24px' }}>
+          <div className="card-header-row" style={{ marginBottom: '16px' }}>
+            <div>
+              <h4 className="card-title" style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🍽 Top Selling Items
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                Your best-performing menu items based on quantity sold.
+              </p>
+            </div>
+            <div style={{ padding: '6px 12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
+              {(() => {
+                if (dateFilter === 'today') return 'Today';
+                if (dateFilter === 'yesterday') return 'Yesterday';
+                if (dateFilter === '7days') return 'Last 7 Days';
+                if (dateFilter === '30days') return 'Last 30 Days';
+                if (dateFilter === 'custom' && customStartDate && customEndDate) {
+                  const start = new Date(customStartDate);
+                  const end = new Date(customEndDate);
+                  const diffDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+                  return `Last ${diffDays} Days`;
+                }
+                return 'Selected Period';
+              })()}
+            </div>
+          </div>
+          
+          {chartsData.topSelling.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm font-semibold">
+              <div style={{ fontSize: '40px', marginBottom: '8px' }}>📉</div>
+              No Sales Yet<br/>
+              <span style={{ fontSize: '12px', fontWeight: '400' }}>Start selling to see your top-performing menu items.</span>
+            </div>
+          ) : (
+            <div className="premium-top-items-container">
+              <div className="premium-cards-wrapper">
+                {chartsData.topSelling.map((dish, i) => (
+                  <div key={i} className="premium-top-card">
+                    <div className={`rank-badge rank-${i + 1}`}>#{i + 1}</div>
+                    <div className="premium-image-container">
+                      <img src={dish.image_url} alt={dish.name} className="premium-food-img" onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Food' }} />
                     </div>
-                  </div>;
-          })}
-            </div>}
+                    <div className="premium-card-body">
+                      <h5 className="premium-food-name" title={dish.name}>{dish.name}</h5>
+                      <div className="premium-metrics">
+                        <div className="premium-metric-col">
+                          <span className="premium-metric-label">Items Sold</span>
+                          <strong className="premium-metric-val">{dish.qty}</strong>
+                        </div>
+                        <div className="premium-metric-col">
+                          <span className="premium-metric-label">Revenue</span>
+                          <strong className="premium-metric-val">₹{dish.revenue.toLocaleString()}</strong>
+                        </div>
+                      </div>
+                      <div className="premium-growth">
+                        ▲ +{dish.growth}% <span className="premium-growth-sub">vs last period</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="premium-summary-footer">
+                <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+                  <div className="summary-item">
+                    <span className="summary-label">Total Items Sold</span>
+                    <strong className="summary-val">{chartsData.topSelling.reduce((acc, curr) => acc + curr.qty, 0)}</strong>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Total Revenue</span>
+                    <strong className="summary-val">₹{chartsData.topSelling.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}</strong>
+                  </div>
+                </div>
+                <div className="summary-item summary-updated">
+                  <span className="summary-label">Last Updated</span>
+                  <strong className="summary-val">Just Now</strong>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

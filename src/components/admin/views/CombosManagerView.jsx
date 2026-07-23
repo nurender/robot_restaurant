@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Plus, ChefHat, Edit2, Trash2, Package, Search, Save } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import axios from 'axios';
 import { API_URL } from '../../../config';
 
 const CombosManagerView = ({ adminUser, restaurantId, menuItems = [], refreshData }) => {
