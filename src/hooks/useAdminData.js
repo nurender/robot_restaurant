@@ -6,7 +6,7 @@ import { io } from 'socket.io-client';
 const socket = io(API_URL, { autoConnect: true });
 
 export const useAdminData = (adminUser, activeTab, selectedBranchId) => {
-  const activeRestaurantId = selectedBranchId || adminUser?.restaurant_id || 4;
+  const activeRestaurantId = selectedBranchId !== undefined ? selectedBranchId : (adminUser?.restaurant_id !== undefined ? adminUser.restaurant_id : 4);
 
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);

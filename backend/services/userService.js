@@ -23,7 +23,8 @@ class UserService {
     }
 
     async createUser(data) {
-        const { restaurant_id, email, password, role, name } = data;
+        const { email, password, role, name } = data;
+        const restaurant_id = data.restaurant_id === '' ? null : data.restaurant_id;
         const result = await pool.query(
             "INSERT INTO users (restaurant_id, email, password, role, name) VALUES ($1,$2,$3,$4,$5) RETURNING id", 
             [restaurant_id, email, password, role, name]
@@ -32,7 +33,8 @@ class UserService {
     }
 
     async updateUser(id, data) {
-        const { name, email, password, role, restaurant_id } = data;
+        const { name, email, password, role } = data;
+        const restaurant_id = data.restaurant_id === '' ? null : data.restaurant_id;
         await pool.query(
             "UPDATE users SET name = $1, email = $2, password = $3, role = $4, restaurant_id = $5 WHERE id = $6",
             [name, email, password, role, restaurant_id, id]
@@ -53,7 +55,7 @@ class UserService {
     // Removed AI columns
     _getRestaurantFields() {
         return [
-            'name', 'branch_code', 'brand_name', 'description', 'branch_type', 'organization_id',
+            'name', 'branch_code', 'brand_name', 'description', 'branch_type', 'organization_id', 'parent_id',
             'address', 'landmark', 'city', 'state', 'country', 'pincode', 'latitude', 'longitude',
             'phone', 'whatsapp_number', 'email', 'manager_name', 'emergency_contact',
             'working_hours', 'is_24x7', 'is_temp_closed',
@@ -65,8 +67,9 @@ class UserService {
 
     async createRestaurant(data) {
         if (data.organization_id === '') data.organization_id = null;
+        if (data.parent_id === '') data.parent_id = null;
         const fields = this._getRestaurantFields();
-        const values = fields.map(f => data[f]);
+        const values = fields.map(f => data[f] === '' ? null : data[f]);
         const placeholders = fields.map((_, i) => `$${i + 1}`).join(',');
         const query = `INSERT INTO restaurants (${fields.join(',')}) VALUES (${placeholders}) RETURNING id`;
         const result = await pool.query(query, values);
@@ -75,8 +78,9 @@ class UserService {
 
     async updateRestaurant(id, data) {
         if (data.organization_id === '') data.organization_id = null;
+        if (data.parent_id === '') data.parent_id = null;
         const fields = this._getRestaurantFields();
-        const values = fields.map(f => data[f]);
+        const values = fields.map(f => data[f] === '' ? null : data[f]);
         const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
         const query = `UPDATE restaurants SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1}`;
         await pool.query(query, [...values, id]);

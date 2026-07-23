@@ -33,6 +33,7 @@ const createUser = async (req, res) => {
         const id = await userService.createUser(req.body);
         res.json({ id });
     } catch (e) {
+        console.error("CREATE USER ERROR:", e);
         res.status(500).json({ error: e.message });
     }
 };
@@ -42,6 +43,7 @@ const updateUser = async (req, res) => {
         await userService.updateUser(req.params.id, req.body);
         res.json({ success: true });
     } catch (e) {
+        console.error("UPDATE USER ERROR:", e);
         res.status(500).json({ error: e.message });
     }
 };

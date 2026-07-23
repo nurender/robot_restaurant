@@ -57,7 +57,7 @@ const AdminPanel = () => {
   const pathParts = location.pathname.split('/');
   const tabFromUrl = pathParts.length > 2 && pathParts[2] ? pathParts[2] : null;
   const activeTab = tabFromUrl || localStorage.getItem('admin_active_tab') || 'dashboard';
-  const [selectedBranchId, setSelectedBranchId] = useState(adminUser?.restaurant_id || 4);
+  const [selectedBranchId, setSelectedBranchId] = useState(adminUser?.restaurant_id || null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const {
     orders,
@@ -209,6 +209,7 @@ const AdminPanel = () => {
     brand_name: '',
     description: '',
     branch_type: 'standalone',
+    parent_id: null,
     address: '',
     landmark: '',
     city: '',
@@ -715,6 +716,7 @@ const AdminPanel = () => {
         brand_name: '',
         description: '',
         branch_type: 'dine_in',
+        parent_id: null,
         address: '',
         landmark: '',
         city: '',
@@ -955,7 +957,8 @@ const AdminPanel = () => {
           <div className="flex items-center gap-2 mr-auto pl-4">
             {(adminUser.role === 'super_admin' || adminUser.role === 'org_admin') && restaurantsList.length > 1 && <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Active Stall/Branch:</span>
-                <select value={selectedBranchId} onChange={e => setSelectedBranchId(parseInt(e.target.value))} className="ex-style-734bef">
+                <select value={selectedBranchId || ''} onChange={e => setSelectedBranchId(e.target.value === '' ? null : parseInt(e.target.value))} className="ex-style-734bef">
+                  <option value="">All Branches (Global)</option>
                   {restaurantsList.map(r => <option key={r.id} value={r.id} className="ex-style-67c055">{r.name}</option>)}
                 </select>
               </div>}

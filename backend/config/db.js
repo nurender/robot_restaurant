@@ -404,8 +404,7 @@ const connectDB = async () => {
             value TEXT
         )`);
         // Ensure Categories table has correct constraints
-        await pool.query(`DROP TABLE IF EXISTS categories CASCADE`);
-        await pool.query(`CREATE TABLE categories (
+        await pool.query(`CREATE TABLE IF NOT EXISTS categories (
             id SERIAL PRIMARY KEY,
             restaurant_id INTEGER NOT NULL DEFAULT 1,
             name TEXT NOT NULL,
@@ -430,8 +429,7 @@ const connectDB = async () => {
             `, [cat]);
         }
 
-        await pool.query(`DROP TABLE IF EXISTS users CASCADE`);
-        await pool.query(`CREATE TABLE users (
+        await pool.query(`CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             restaurant_id INTEGER DEFAULT 4,
             email TEXT UNIQUE NOT NULL,

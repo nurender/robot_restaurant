@@ -148,122 +148,122 @@ export default function FoodCourtsView({
   };
   if (adminUser?.role !== 'super_admin') {
     return <div className="view-container">
-        <h2>Access Denied</h2>
-        <p>Only Super Admins can manage Food Courts.</p>
-      </div>;
+      <h2>Access Denied</h2>
+      <p>Only Super Admins can manage Food Courts.</p>
+    </div>;
   }
   return <div className="view-container animate-slide-up">
-      <div className="view-header-row">
-        <div className="header-left">
-          <h1 className="view-title">Food Courts</h1>
-          <p className="text-muted">Manage your shared Food Court locations and details.</p>
-        </div>
-        <button className="btn-primary" onClick={openNew}>
-          <Plus size={20} />
-          <span>Add Food Court</span>
-        </button>
+    <div className="view-header-row">
+      <div className="header-left">
+        <h1 className="view-title">Food Courts</h1>
+        <p className="text-muted">Manage your shared Food Court locations and details.</p>
       </div>
+      <button className="btn-primary" onClick={openNew}>
+        <Plus size={20} />
+        <span>Add Food Court</span>
+      </button>
+    </div>
 
-      <div className="glass-panel ex-style-d58794">
-        {loading ? <p>Loading...</p> : foodCourts.length === 0 ? <p className="text-muted">No food courts created yet.</p> : <div className="ex-style-198a39">
-            {foodCourts.map(fc => <div key={fc.id} className="ex-style-81a4a4">
-                <div className="ex-style-627b12">
-                  <div className="ex-style-1c7bba">
-                    <div className="ex-style-e875e3">
-                      <Building2 size={24} />
-                    </div>
-                    <div>
-                      <h3 className="ex-style-f3550e">{fc.name}</h3>
-                      <span className="ex-style-6b4689">
-                        ID: {fc.id}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ex-style-3c37f6">
-                    <button onClick={() => printMasterQR(fc)} className="btn-icon ex-style-b12ff2" title="Print Master QR">
-                      <QrCode size={14} />
-                    </button>
-                    <button onClick={() => openEdit(fc)} className="btn-icon ex-style-cce139" title="Edit">
-                      <Edit2 size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(fc.id)} className="btn-icon ex-style-0424e8" title="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+    <div className="glass-panel ex-style-d58794">
+      {loading ? <p>Loading...</p> : foodCourts.length === 0 ? <p className="text-muted">No food courts created yet.</p> : <div className="ex-style-198a39">
+        {foodCourts.map(fc => <div key={fc.id} className="ex-style-81a4a4">
+          <div className="ex-style-627b12">
+            <div className="ex-style-1c7bba">
+              <div className="ex-style-e875e3">
+                <Building2 size={24} />
+              </div>
+              <div>
+                <h3 className="ex-style-f3550e">{fc.name}</h3>
+                <span className="ex-style-6b4689">
+                  ID: {fc.id}
+                </span>
+              </div>
+            </div>
+            <div className="ex-style-3c37f6">
+              <button onClick={() => printMasterQR(fc)} className="btn-icon ex-style-b12ff2" title="Print Master QR">
+                <QrCode size={14} />
+              </button>
+              <button onClick={() => openEdit(fc)} className="btn-icon ex-style-cce139" title="Edit">
+                <Edit2 size={14} />
+              </button>
+              <button onClick={() => handleDelete(fc.id)} className="btn-icon ex-style-0424e8" title="Delete">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
 
-                <div className="ex-style-f3461a">
-                  <div className="ex-style-1552d4">
-                    <MapPin size={14} /> {fc.address || 'No Address'}, {fc.city}
-                  </div>
-                  <div className="ex-style-1552d4">
-                    <Phone size={14} /> {fc.contact || 'No Contact'}
-                  </div>
-                  <div className="ex-style-1552d4">
-                    <Clock size={14} /> {fc.manager ? `Managed by ${fc.manager}` : 'No Manager assigned'}
-                  </div>
-                </div>
-              </div>)}
-          </div>}
-      </div>
+          <div className="ex-style-f3461a">
+            <div className="ex-style-1552d4">
+              <MapPin size={14} /> {fc.address || 'No Address'}, {fc.city}
+            </div>
+            <div className="ex-style-1552d4">
+              <Phone size={14} /> {fc.contact || 'No Contact'}
+            </div>
+            <div className="ex-style-1552d4">
+              <Clock size={14} /> {fc.manager ? `Managed by ${fc.manager}` : 'No Manager assigned'}
+            </div>
+          </div>
+        </div>)}
+      </div>}
+    </div>
 
-      {showModal && <div className="modal-overlay ex-style-e31c2a">
-          <div className="modal-content glass-panel animate-slide-up ex-style-b791e2">
-            <h2 className="ex-style-ae37f5">
-              {editingFC ? 'Edit Food Court' : 'New Food Court'}
-            </h2>
-            <form onSubmit={handleSubmit} className="ex-style-01998c">
-              <div className="form-group">
-                <label className="ex-style-49f39e">Food Court Name *</label>
-                <input type="text" className="modal-input ex-style-7e7a53" required value={formData.name} onChange={e => setFormData({
+    {showModal && <div className="modal-overlay ex-style-e31c2a">
+      <div className="modal-content glass-panel animate-slide-up ex-style-b791e2">
+        <h2 className="ex-style-ae37f5">
+          {editingFC ? 'Edit Food Court' : 'New Food Court'}
+        </h2>
+        <form onSubmit={handleSubmit} className="ex-style-01998c">
+          <div className="form-group">
+            <label className="ex-style-49f39e">Food Court Name *</label>
+            <input type="text" className="modal-input ex-style-7e7a53" required value={formData.name} onChange={e => setFormData({
               ...formData,
               name: e.target.value
             })} placeholder="e.g. Cyber Hub Food Court" />
-              </div>
-              <div className="ex-style-06faf2">
-                <div className="form-group">
-                  <label className="ex-style-49f39e">City</label>
-                  <input type="text" className="modal-input ex-style-7e7a53" value={formData.city} onChange={e => setFormData({
+          </div>
+          <div className="ex-style-06faf2">
+            <div className="form-group">
+              <label className="ex-style-49f39e">City</label>
+              <input type="text" className="modal-input ex-style-7e7a53" value={formData.city} onChange={e => setFormData({
                 ...formData,
                 city: e.target.value
               })} placeholder="e.g. New York" />
-                </div>
-                <div className="form-group">
-                  <label className="ex-style-49f39e">Contact Phone</label>
-                  <input type="text" className="modal-input ex-style-7e7a53" value={formData.contact} onChange={e => setFormData({
+            </div>
+            <div className="form-group">
+              <label className="ex-style-49f39e">Contact Phone</label>
+              <input type="text" className="modal-input ex-style-7e7a53" value={formData.contact} onChange={e => setFormData({
                 ...formData,
                 contact: e.target.value
               })} placeholder="e.g. +1 234 567 890" />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="ex-style-49f39e">Full Address</label>
-                <textarea className="modal-input ex-style-d1d86e" rows="2" value={formData.address} onChange={e => setFormData({
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="ex-style-49f39e">Full Address</label>
+            <textarea className="modal-input ex-style-d1d86e" rows="2" value={formData.address} onChange={e => setFormData({
               ...formData,
               address: e.target.value
             })} placeholder="Complete street address" />
-              </div>
-              <div className="form-group">
-                <label className="ex-style-49f39e">Manager Name</label>
-                <input type="text" className="modal-input ex-style-7e7a53" value={formData.manager} onChange={e => setFormData({
+          </div>
+          <div className="form-group">
+            <label className="ex-style-49f39e">Manager Name</label>
+            <input type="text" className="modal-input ex-style-7e7a53" value={formData.manager} onChange={e => setFormData({
               ...formData,
               manager: e.target.value
             })} placeholder="e.g. John Doe" />
-              </div>
-              <div className="form-group">
-                <label className="ex-style-49f39e">Working Hours (JSON format)</label>
-                <textarea className="modal-input ex-style-61976a" rows="3" value={formData.working_hours} onChange={e => setFormData({
+          </div>
+          <div className="form-group">
+            <label className="ex-style-49f39e">Working Hours (JSON format)</label>
+            <textarea className="modal-input ex-style-61976a" rows="3" value={formData.working_hours} onChange={e => setFormData({
               ...formData,
               working_hours: e.target.value
             })} />
-              </div>
-              
-              <div className="ex-style-f6bed6">
-                <button type="button" onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onClick={() => setShowModal(false)} className="ex-style-d3e937">Cancel</button>
-                <button type="submit" onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={e => e.currentTarget.style.transform = 'none'} className="ex-style-2c1a43">{editingFC ? 'Save Changes' : 'Create Food Court'}</button>
-              </div>
-            </form>
           </div>
-        </div>}
-    </div>;
+
+          <div className="ex-style-f6bed6">
+            <button type="button" onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onClick={() => setShowModal(false)} className="ex-style-d3e937">Cancel</button>
+            <button type="submit" onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={e => e.currentTarget.style.transform = 'none'} className="ex-style-2c1a43">{editingFC ? 'Save Changes' : 'Create Food Court'}</button>
+          </div>
+        </form>
+      </div>
+    </div>}
+  </div>;
 }

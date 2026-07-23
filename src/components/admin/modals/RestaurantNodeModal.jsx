@@ -1,4 +1,5 @@
 import React from 'react';
+import { Wand2 } from 'lucide-react';
 
 export default function RestaurantNodeModal({
   isOpen,
@@ -24,6 +25,12 @@ export default function RestaurantNodeModal({
     }
   }, [isOpen]);
 
+  React.useEffect(() => {
+    if (isOpen && !editingNodeId && nodeActiveTab !== 'basic') {
+      setNodeActiveTab('basic');
+    }
+  }, [isOpen, editingNodeId, nodeActiveTab, setNodeActiveTab]);
+
   if (!isOpen) return null;
 
   return (
@@ -42,7 +49,7 @@ export default function RestaurantNodeModal({
             { id: 'billing', label: 'Billing' },
             { id: 'ai', label: 'AI Settings' },
             { id: 'branding', label: 'Branding' }
-          ].map(t => (
+          ].filter(t => editingNodeId ? true : t.id === 'basic').map(t => (
             <button
               key={t.id}
               type="button"
@@ -78,7 +85,38 @@ export default function RestaurantNodeModal({
                 </div>
                 <div>
                   <label  className="ext-cls-0c40bbfd">BRANCH CODE (UNIQUE) *</label>
-                  <input type="text" placeholder="e.g. CC-JP-01" value={newNode.branch_code} onChange={(e) => setNewNode({ ...newNode, branch_code: e.target.value })} required className="st-cls-30e033af" />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. CC-JP-01" 
+                      value={newNode.branch_code} 
+                      onChange={(e) => setNewNode({ ...newNode, branch_code: e.target.value })} 
+                      required 
+                      className="st-cls-30e033af" 
+                      style={{ paddingRight: '40px' }} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomNum = Math.floor(1000 + Math.random() * 9000);
+                        const prefix = newNode.name ? newNode.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() : 'RES';
+                        const generatedCode = `${prefix}-${randomNum}`;
+                        setNewNode({ ...newNode, branch_code: generatedCode });
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--accent-primary)',
+                        padding: '4px'
+                      }}
+                      title="Auto Generate Code"
+                    >
+                      <Wand2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div>
@@ -320,7 +358,7 @@ export default function RestaurantNodeModal({
               disabled={isLoading}
               
             >
-              {isLoading ? <div className="spinner-small" /> : (nodeActiveTab === 'branding' ? 'Deploy Node 🚀' : 'Next Step →')}
+              {isLoading ? <div className="spinner-small" /> : (!editingNodeId ? 'Create Restaurant 🚀' : 'Save Changes')}
             </button>
           </div>
         </form>
