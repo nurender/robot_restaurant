@@ -24,9 +24,17 @@ const connectDB = async () => {
                 logo_url TEXT,
                 cover_url TEXT,
                 theme_config JSONB DEFAULT '{}',
+                created_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        
+        try {
+            await pool.query('ALTER TABLE organizations ADD COLUMN IF NOT EXISTS created_by INTEGER');
+        } catch (err) {
+            console.log('created_by column already exists or error:', err.message);
+        }
+
         // Seed default organization for Demo
         await pool.query(`
             INSERT INTO organizations (id, name, is_food_court) 
@@ -96,10 +104,24 @@ const connectDB = async () => {
             -- Branding
             logo_url TEXT,
             cover_url TEXT,
+            delivery_radius_km DECIMAL(5, 2),
+            min_order_amount DECIMAL(10, 2),
             
+            -- Misc
+            status TEXT DEFAULT 'active',
+            settings JSONB DEFAULT '{}',
+            theme_config JSONB DEFAULT '{}',
+            is_active BOOLEAN DEFAULT TRUE,
+            created_by INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
+
+        try {
+            await pool.query('ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS created_by INTEGER');
+        } catch (err) {
+            console.log('created_by column already exists in restaurants or error:', err.message);
+        }
 
         // Migration: Ensure all new columns exist for existing deployments
         const restaurantColumns = [

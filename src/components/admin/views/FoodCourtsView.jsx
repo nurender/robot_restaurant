@@ -41,12 +41,21 @@ export default function FoodCourtsView({
   const handleSubmit = async e => {
     e.preventDefault();
     try {
+      let parsedHours = {};
+      try {
+        parsedHours = JSON.parse(formData.working_hours || '{}');
+      } catch (e) {
+        toast.error('Invalid JSON format in Working Hours');
+        return;
+      }
+
       const url = editingFC ? `${API_URL}/api/food-courts/${editingFC.id}` : `${API_URL}/api/food-courts`;
       const method = editingFC ? 'PUT' : 'POST';
       const payload = {
         ...formData,
-        working_hours: JSON.parse(formData.working_hours || '{}')
+        working_hours: parsedHours
       };
+      
       const res = await fetch(url, {
         method,
         headers: {
@@ -60,11 +69,13 @@ export default function FoodCourtsView({
         setShowModal(false);
         fetchFoodCourts();
       } else {
-        toast.error('Failed to save food court');
+        const errData = await res.json().catch(() => ({}));
+        console.error("Save food court failed", res.status, errData);
+        toast.error(errData.error || 'Failed to save food court');
       }
     } catch (err) {
-      console.error(err);
-      toast.error('Something went wrong');
+      console.error('Submit error:', err);
+      toast.error('Network error');
     }
   };
   const handleDelete = async id => {
@@ -147,8 +158,8 @@ export default function FoodCourtsView({
     }
   };
   const displayedFC = adminUser?.role === 'super_admin' 
-    ? foodCourts 
-    : foodCourts.filter(fc => fc.id === adminUser?.organization_id || fc.id === adminUser?.restaurant_id);
+  ? foodCourts 
+  : foodCourts.filter(fc => fc.id === adminUser?.organization_id || fc.id === adminUser?.restaurant_id || fc.created_by === adminUser?.id);
   return <div className="view-container animate-slide-up">
     <div className="view-header-row">
       <div className="header-left">
