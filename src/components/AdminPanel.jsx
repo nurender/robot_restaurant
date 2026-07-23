@@ -1069,7 +1069,7 @@ const AdminPanel = () => {
       <StaffMemberModal isOpen={showStaffPopup} onClose={() => setShowStaffPopup(false)} newStaff={newStaff} setNewStaff={setNewStaff} handleAddStaff={handleAddStaff} editingStaffId={editingStaffId} restaurantsList={restaurantsList} isLoading={loadingStates['save_staff']} dbRoles={dbRoles} adminUser={adminUser} />
 
       {}
-      <RestaurantNodeModal isOpen={showNodePopup} onClose={() => setShowNodePopup(false)} editingNodeId={editingNodeId} newNode={newNode} setNewNode={setNewNode} handleAddNode={handleAddNode} nodeActiveTab={nodeActiveTab} setNodeActiveTab={setNodeActiveTab} isLoading={loadingStates['save_node']} />
+      <RestaurantNodeModal adminUser={adminUser} isOpen={showNodePopup} onClose={() => setShowNodePopup(false)} editingNodeId={editingNodeId} newNode={newNode} setNewNode={setNewNode} handleAddNode={handleAddNode} nodeActiveTab={nodeActiveTab} setNodeActiveTab={setNodeActiveTab} isLoading={loadingStates['save_node']} />
       {}
       <CouponModal isOpen={showCouponPopup} onClose={() => {
       setShowCouponPopup(false);

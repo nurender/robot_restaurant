@@ -10,9 +10,14 @@ export default function RestaurantNodeModal({
   handleAddNode,
   nodeActiveTab,
   setNodeActiveTab,
-  isLoading
+  isLoading,
+  adminUser
 }) {
   const [foodCourts, setFoodCourts] = React.useState([]);
+
+  const displayedFoodCourts = adminUser?.role === 'super_admin'
+    ? foodCourts
+    : foodCourts.filter(fc => fc.id === adminUser?.organization_id || fc.id === adminUser?.restaurant_id || fc.created_by === adminUser?.id);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -139,7 +144,7 @@ export default function RestaurantNodeModal({
                   <label className="ext-cls-0c40bbfd">SELECT FOOD COURT</label>
                   <select value={newNode.organization_id || ''} onChange={(e) => setNewNode({ ...newNode, organization_id: e.target.value })} className="st-cls-30e033af">
                     <option value="">None / Standalone</option>
-                    {foodCourts.map(fc => (
+                    {displayedFoodCourts.map(fc => (
                       <option key={fc.id} value={fc.id}>{fc.name}</option>
                     ))}
                   </select>
