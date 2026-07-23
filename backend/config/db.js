@@ -280,6 +280,7 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10,2) DEFAULT 0.00`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_combo BOOLEAN DEFAULT FALSE`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS combo_components JSONB DEFAULT '[]'`);
+        await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS allow_coupons BOOLEAN DEFAULT TRUE`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_best_seller BOOLEAN DEFAULT FALSE`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_today_special BOOLEAN DEFAULT FALSE`);
         await pool.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_chef_special BOOLEAN DEFAULT FALSE`);

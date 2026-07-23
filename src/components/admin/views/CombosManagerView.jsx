@@ -95,7 +95,7 @@ const CombosManagerView = ({ adminUser, restaurantId, menuItems = [], refreshDat
         }
     };
 
-    if (!menuItems || menuItems.length === 0) return <div className="ext-cls-f88d773e">Loading Combos...</div>;
+    if (!menuItems) return <div className="ext-cls-f88d773e">Loading Combos...</div>;
 
     return (
         <div className="view-container animate-slide-up ext-cls-fe93bf26" >

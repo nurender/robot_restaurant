@@ -1016,9 +1016,9 @@ const AdminPanel = () => {
           {activeTab === 'combos' && <CombosManagerView adminUser={adminUser} restaurantId={adminUser.restaurant_id || 4} menuItems={menuItems} refreshData={fetchData} />}
 
 
-          {activeTab === 'food_courts' && adminUser.role === 'super_admin' && <FoodCourtsView adminUser={adminUser} />}
+          {activeTab === 'food_courts' && <FoodCourtsView adminUser={adminUser} />}
 
-          {activeTab === 'restaurants' && adminUser.role === 'super_admin' && <RestaurantNetworkView restaurantsList={restaurantsList} staffList={staffList} newStaff={newStaff} setNewStaff={setNewStaff} setShowStaffPopup={setShowStaffPopup} setNewNode={setNewNode} setEditingNodeId={setEditingNodeId} setShowNodePopup={setShowNodePopup} deleteRestaurant={deleteRestaurant} loadingStates={loadingStates} setEditingStaffId={setEditingStaffId} deleteUser={deleteUser} />}
+          {activeTab === 'restaurants' && <RestaurantNetworkView adminUser={adminUser} restaurantsList={restaurantsList} staffList={staffList} newStaff={newStaff} setNewStaff={setNewStaff} setShowStaffPopup={setShowStaffPopup} setNewNode={setNewNode} setEditingNodeId={setEditingNodeId} setShowNodePopup={setShowNodePopup} deleteRestaurant={deleteRestaurant} loadingStates={loadingStates} setEditingStaffId={setEditingStaffId} deleteUser={deleteUser} />}
 
           {activeTab === 'marketing' && <MarketingHubView coupons={coupons} customers={customers} />}
 
@@ -1066,7 +1066,7 @@ const AdminPanel = () => {
       {}
       {showCatPopup && <CategoryManagerModal isOpen={showCatPopup} onClose={() => setShowCatPopup(false)} categories={categories} newCatName={newCatName} setNewCatName={setNewCatName} handleAddCategory={handleAddCategory} isAdding={loadingStates['add_category']} fetchData={fetchData} />}
       {}
-      <StaffMemberModal isOpen={showStaffPopup} onClose={() => setShowStaffPopup(false)} newStaff={newStaff} setNewStaff={setNewStaff} handleAddStaff={handleAddStaff} editingStaffId={editingStaffId} restaurantsList={restaurantsList} isLoading={loadingStates['save_staff']} dbRoles={dbRoles} />
+      <StaffMemberModal isOpen={showStaffPopup} onClose={() => setShowStaffPopup(false)} newStaff={newStaff} setNewStaff={setNewStaff} handleAddStaff={handleAddStaff} editingStaffId={editingStaffId} restaurantsList={restaurantsList} isLoading={loadingStates['save_staff']} dbRoles={dbRoles} adminUser={adminUser} />
 
       {}
       <RestaurantNodeModal isOpen={showNodePopup} onClose={() => setShowNodePopup(false)} editingNodeId={editingNodeId} newNode={newNode} setNewNode={setNewNode} handleAddNode={handleAddNode} nodeActiveTab={nodeActiveTab} setNodeActiveTab={setNodeActiveTab} isLoading={loadingStates['save_node']} />

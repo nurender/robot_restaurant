@@ -1,6 +1,7 @@
 import { Plus, Store, Edit2, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import React, { useState } from 'react';
 export default function RestaurantNetworkView({
+  adminUser,
   restaurantsList,
   staffList,
   setNewStaff,
@@ -40,7 +41,13 @@ export default function RestaurantNetworkView({
     setShowNodePopup(true);
   };
 
-  const parents = restaurantsList.filter(r => !r.parent_id);
+  let parents = [];
+  if (adminUser?.role === 'super_admin') {
+    parents = restaurantsList.filter(r => !r.parent_id);
+  } else {
+    const myBranch = restaurantsList.find(r => r.id == adminUser?.restaurant_id);
+    if (myBranch) parents = [myBranch];
+  }
 
   return <div className="view-container animate-slide-up">
     <div className="view-header-row">
@@ -48,10 +55,12 @@ export default function RestaurantNetworkView({
         <h1 className="view-title">Restaurant Network</h1>
         <p className="text-muted">Overview of all active restaurants in the cluster.</p>
       </div>
-      <button className="btn-primary" onClick={() => handleOpenNewBranch()}>
-        <Plus size={20} />
-        <span>Add New Branch / Restaurant</span>
-      </button>
+      {adminUser?.role === 'super_admin' && (
+        <button className="btn-primary" onClick={() => handleOpenNewBranch()}>
+          <Plus size={20} />
+          <span>Add New Branch / Restaurant</span>
+        </button>
+      )}
     </div>
     <div className="glass-panel ext-cls-bdf67aa8">
       <table className="ext-cls-d8915f8c">

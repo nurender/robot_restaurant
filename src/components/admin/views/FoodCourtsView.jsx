@@ -146,12 +146,9 @@ export default function FoodCourtsView({
       toast.error("Failed to generate QR: " + e.message);
     }
   };
-  if (adminUser?.role !== 'super_admin') {
-    return <div className="view-container">
-      <h2>Access Denied</h2>
-      <p>Only Super Admins can manage Food Courts.</p>
-    </div>;
-  }
+  const displayedFC = adminUser?.role === 'super_admin' 
+    ? foodCourts 
+    : foodCourts.filter(fc => fc.id === adminUser?.organization_id || fc.id === adminUser?.restaurant_id);
   return <div className="view-container animate-slide-up">
     <div className="view-header-row">
       <div className="header-left">
@@ -165,8 +162,8 @@ export default function FoodCourtsView({
     </div>
 
     <div className="glass-panel ex-style-d58794">
-      {loading ? <p>Loading...</p> : foodCourts.length === 0 ? <p className="text-muted">No food courts created yet.</p> : <div className="ex-style-198a39">
-        {foodCourts.map(fc => <div key={fc.id} className="ex-style-81a4a4">
+      {loading ? <p>Loading...</p> : displayedFC.length === 0 ? <p className="text-muted">No food courts created yet.</p> : <div className="ex-style-198a39">
+        {displayedFC.map(fc => <div key={fc.id} className="ex-style-81a4a4">
           <div className="ex-style-627b12">
             <div className="ex-style-1c7bba">
               <div className="ex-style-e875e3">

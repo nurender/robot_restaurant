@@ -10,11 +10,16 @@ export default function StaffMemberModal({
   editingStaffId,
   restaurantsList,
   isLoading,
-  dbRoles
+  dbRoles,
+  adminUser
 }) {
   const [showStaffPassword, setShowStaffPassword] = useState(false);
 
   if (!isOpen) return null;
+
+  const allowedRestaurants = adminUser?.role === 'super_admin'
+    ? restaurantsList
+    : restaurantsList.filter(r => r.id === adminUser?.restaurant_id || r.parent_id === adminUser?.restaurant_id);
 
   return (
     <div className="modal-overlay ext-cls-ba6f5ec3" >
@@ -77,13 +82,14 @@ export default function StaffMemberModal({
             >
               <option value="user">USER (Default)</option>
               {dbRoles && dbRoles.length > 0 ? (
-                dbRoles.map(r => (
-                  <option key={r.name} value={r.name}>{r.name.replace('_', ' ').toUpperCase()}</option>
-                ))
+                dbRoles
+                  .filter(r => r.name !== 'super_admin' && r.name !== 'superadmin' && r.name !== 'SuperAdmin' && r.name !== 'SUPERADMIN')
+                  .map(r => (
+                    <option key={r.name} value={r.name}>{r.name.replace('_', ' ').toUpperCase()}</option>
+                  ))
               ) : (
                 <>
                   <option value="admin">Branch Admin</option>
-                  <option value="super_admin">Master Admin</option>
                 </>
               )}
             </select>
@@ -94,12 +100,13 @@ export default function StaffMemberModal({
             <select
               value={newStaff.restaurant_id || ''}
               onChange={(e) => setNewStaff({ ...newStaff, restaurant_id: e.target.value || null })}
-              className={`st-cls-ec9e7265 opacity-50 cursor-not-allowed`}
-              disabled={true}
+              className="st-cls-ec9e7265"
             >
-              <option value="">No Specific Restaurant (Global)</option>
-              {restaurantsList.map(r => (
-                <option key={r.id} value={r.id}>{r.name} ({r.city})</option>
+              {(adminUser?.role === 'super_admin' || !adminUser) && (
+                <option value="">No Specific Restaurant (Global)</option>
+              )}
+              {allowedRestaurants.map(r => (
+                <option key={r.id} value={r.id}>{r.name} {r.city ? `(${r.city})` : ''}</option>
               ))}
             </select>
           </div>

@@ -13288,7 +13288,7 @@ select option {
 }
 
 .glass-panel {
-  background: rgba(20, 20, 29, 0.6) !important;
+  /* background: rgba(20, 20, 29, 0.6) !important; */
   backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
