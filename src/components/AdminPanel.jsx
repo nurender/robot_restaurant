@@ -446,13 +446,14 @@ const AdminPanel = () => {
     localStorage.removeItem('admin_token');
     window.location.href = '/admin/login';
   };
-  const updateOrderStatus = async (id, status) => {
+  const updateOrderStatus = async (id, status, reason = '') => {
     setActionLoading(id, true);
     try {
-      await apiService.updateOrderStatus(id, status);
+      await apiService.updateOrderStatus(id, status, reason);
       setOrders(prev => prev.map(o => o.id === id ? {
         ...o,
-        status
+        status,
+        ...(status === 'cancelled' && reason ? { cancel_reason: reason } : {})
       } : o));
     } catch (e) {
       console.error(e);

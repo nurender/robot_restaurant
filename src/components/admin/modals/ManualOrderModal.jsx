@@ -41,24 +41,44 @@ export default function ManualOrderModal({
             </div>
 
             {/* Category Pills */}
-            <div  className="ext-cls-ad4fac02">
-              <button
-                onClick={() => setManualOrderCategory('All')}
-                className="status-pill ${manualOrderCategory === 'All' ? 'active' : 'inactive'} st-cls-2a1d4313"
-                
-              >
-                All Items
-              </button>
-              {categories.map(cat => (
+            <div  className="ext-cls-ad4fac02" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px', maxHeight: '155px', overflowY: 'auto', paddingRight: '4px' }}>
                 <button
-                  key={cat.id}
-                  onClick={() => setManualOrderCategory(cat.name)}
-                  className="status-pill ${manualOrderCategory === cat.name ? 'active' : 'inactive'} st-cls-2a1d4313"
-                  
+                  onClick={() => setManualOrderCategory('All')}
+                  className={`filter-pill-btn ${manualOrderCategory === 'All' ? 'active' : ''}`}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--card-border)',
+                    background: manualOrderCategory === 'All' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: manualOrderCategory === 'All' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontWeight: '700',
+                    fontSize: '11px',
+                    transition: 'all 0.2s ease'
+                  }}
                 >
-                  {cat.name}
+                  All Items
                 </button>
-              ))}
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setManualOrderCategory(cat.name)}
+                    className={`filter-pill-btn ${manualOrderCategory === cat.name ? 'active' : ''}`}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--card-border)',
+                      background: manualOrderCategory === cat.name ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                      color: manualOrderCategory === cat.name ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      fontSize: '11px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
             </div>
           </div>
 
@@ -89,11 +109,25 @@ export default function ManualOrderModal({
               return (
                 <div
                   key={item.id}
-                  onClick={() => addToManualOrder({ ...item, price: discountedPrice })}
-                  className="manual-order-card"
+                  onClick={() => item.is_active !== false && addToManualOrder({ ...item, price: discountedPrice })}
+                  className={`manual-order-card ${item.is_active === false ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                  style={item.is_active === false ? { pointerEvents: 'none' } : {}}
                 >
-                  <div  className="ext-cls-944ef08c">
+                  <div  className="ext-cls-944ef08c" style={{ position: 'relative' }}>
                     <img src={item.image_url} alt={item.name}  className="ext-cls-80fb12aa" />
+                    {item.is_active === false && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, width: '100%', height: '100%',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: '#ff4444',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 'bold', fontSize: '13px', textTransform: 'uppercase',
+                        borderRadius: '12px'
+                      }}>
+                        Unavailable
+                      </div>
+                    )}
                   </div>
                   <strong  className="ext-cls-be00bd65">
                     {item.veg_type === 'veg' && (

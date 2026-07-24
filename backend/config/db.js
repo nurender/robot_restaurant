@@ -277,6 +277,7 @@ const connectDB = async () => {
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_seat TEXT`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS applied_coupon TEXT`);
         await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) DEFAULT 0.00`);
+        await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancel_reason TEXT`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS menu (
             id TEXT PRIMARY KEY,

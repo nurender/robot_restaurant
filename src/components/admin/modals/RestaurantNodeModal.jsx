@@ -1,5 +1,6 @@
 import React from 'react';
 import { Wand2 } from 'lucide-react';
+import { API_URL } from '../../../config';
 
 export default function RestaurantNodeModal({
   isOpen,
@@ -21,7 +22,7 @@ export default function RestaurantNodeModal({
 
   React.useEffect(() => {
     if (isOpen) {
-      fetch('http://localhost:3001/api/food-courts', {
+      fetch(`${API_URL}/api/food-courts`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` }
       })
       .then(res => res.json())

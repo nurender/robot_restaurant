@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import apiService from '../../../services/apiService';
 import toast from 'react-hot-toast';
 import { RefreshCw, Plus, Calendar, Search, Phone, Users, Edit2, Edit, Printer } from 'lucide-react';
@@ -31,6 +33,10 @@ export default function OrdersHubView({
   setActionLoading,
   riders
 }) {
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+
   const handleAssignRider = async (orderId, riderId) => {
     if (!riderId) return;
     setActionLoading(orderId, true);
@@ -192,6 +198,9 @@ export default function OrdersHubView({
               {order.notes && <div className="ext-cls-8204d57c">
                 <strong className="ext-cls-ec836744">Notes:</strong> {order.notes}
               </div>}
+              {order.status === 'cancelled' && order.cancel_reason && <div className="ext-cls-8204d57c" style={{ color: 'var(--error)', marginTop: '8px' }}>
+                <strong className="ext-cls-ec836744" style={{ color: 'var(--error)' }}>Cancel Reason:</strong> {order.cancel_reason}
+              </div>}
               <button onClick={() => {
                 setIsEditingOrder(true);
                 const initialItems = [...(order.items || [])];
@@ -229,7 +238,14 @@ export default function OrdersHubView({
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                   }}
                   value={order.status}
-                  onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === 'cancelled') {
+                      setOrderToCancel(order.id);
+                      setCancelModalOpen(true);
+                    } else {
+                      updateOrderStatus(order.id, e.target.value);
+                    }
+                  }}
                   disabled={loadingStates[order.id]}
                 >
                   <option value="pending">Pending</option>
@@ -272,7 +288,10 @@ export default function OrdersHubView({
                 {order.status === 'out_for_delivery' && <button onClick={() => updateOrderStatus(order.id, 'completed')} className="btn-global-primary-sm" disabled={loadingStates[order.id]}>
                   {loadingStates[order.id] ? <div className="spinner-small" /> : 'Mark Delivered'}
                 </button>}
-                {order.status !== 'completed' && order.status !== 'cancelled' && <button onClick={() => updateOrderStatus(order.id, 'cancelled')} className="btn-global-danger-sm" disabled={loadingStates[order.id]}>
+                {order.status !== 'completed' && order.status !== 'cancelled' && <button onClick={() => {
+                  setOrderToCancel(order.id);
+                  setCancelModalOpen(true);
+                }} className="btn-global-danger-sm" disabled={loadingStates[order.id]}>
                   {loadingStates[order.id] ? <div className="spinner-small" /> : 'Cancel'}
                 </button>}
               </div>
@@ -284,5 +303,53 @@ export default function OrdersHubView({
         </div>
       </div>)}
     </div>
+
+    {cancelModalOpen && createPortal(
+      <div className="modal-overlay" style={{ zIndex: 9999 }}>
+        <div className="modal-content glass-panel animate-slide-up" style={{ maxWidth: '400px', width: '100%', padding: '24px', borderRadius: '16px', background: 'var(--card-bg)' }}>
+          <h2 style={{ marginBottom: '16px', fontSize: '1.25rem' }}>Cancel Order</h2>
+          <p style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>Please provide a reason for cancelling this order:</p>
+          <select 
+            value={cancelReason} 
+            onChange={e => setCancelReason(e.target.value)} 
+            className="modern-input" 
+            style={{ width: '100%', padding: '12px', borderRadius: '8px', marginBottom: '24px', background: 'var(--bg-deep)', color: 'var(--text-main)', border: '1px solid var(--sidebar-border)' }}
+          >
+            <option value="">Select Reason</option>
+            <option value="Out of Stock">Out of Stock</option>
+            <option value="Customer Request">Customer Request</option>
+            <option value="Fake Order">Fake Order</option>
+            <option value="Restaurant Busy">Restaurant Busy</option>
+            <option value="Other">Other</option>
+          </select>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button 
+              onClick={() => { setCancelModalOpen(false); setOrderToCancel(null); setCancelReason(''); }} 
+              className="btn-global-outline"
+              style={{ padding: '10px 24px', borderRadius: '14px' }}
+            >
+              Close
+            </button>
+            <button 
+              onClick={() => {
+                if (!cancelReason) {
+                  toast.error("Please select a reason");
+                  return;
+                }
+                updateOrderStatus(orderToCancel, 'cancelled', cancelReason);
+                setCancelModalOpen(false);
+                setOrderToCancel(null);
+                setCancelReason('');
+              }} 
+              className="btn-global-danger" 
+              disabled={!cancelReason}
+            >
+              Confirm Cancel
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
   </div>;
 }

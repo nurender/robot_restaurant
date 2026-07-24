@@ -171,7 +171,7 @@
 
 html {
   /* Global smooth theme transition */
-  transition: color 0.25s ease, background-color 0.25s ease;
+  transition: background-color 0s ease;
   overflow-x: hidden;
   overflow-y: auto;
   height: 100%;
@@ -184,7 +184,7 @@ body {
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: color 0s ease;
 }
 
 /* ============================================
@@ -412,7 +412,7 @@ textarea::placeholder {
   color: var(--accent);
   background: var(--accent-bg);
   border: 2px solid transparent;
-  transition: border-color 0.3s;
+  transition: border-;
   margin-bottom: 24px;
 
   &:hover {
@@ -647,7 +647,7 @@ textarea::placeholder {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
   line-height: 1 !important;
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05) !important;
@@ -670,7 +670,7 @@ textarea::placeholder {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
   line-height: 1 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
@@ -691,7 +691,7 @@ textarea::placeholder {
   font-size: 12px !important;
   font-weight: 600 !important;
   cursor: pointer !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   outline: none !important;
   box-shadow: none !important;
   line-height: 1.5 !important;
@@ -1225,7 +1225,7 @@ textarea::placeholder {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
 }
 
@@ -1242,7 +1242,7 @@ textarea::placeholder {
   border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
   font-size: 13px !important;
   cursor: pointer !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
 }
 
@@ -1483,7 +1483,7 @@ textarea::placeholder {
   height: 24px;
   background: var(--ap-glass-border, var(--border-default));
   border-radius: 99px;
-  transition: background-color 0.2s;
+
 }
 
 .saas-switch-container.active {
@@ -1746,7 +1746,7 @@ textarea::placeholder {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
   line-height: 1 !important;
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05) !important;
@@ -1770,7 +1770,7 @@ textarea::placeholder {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
   line-height: 1 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
@@ -1791,7 +1791,7 @@ textarea::placeholder {
   font-size: 12px !important;
   font-weight: 600 !important;
   cursor: pointer !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   outline: none !important;
   box-shadow: none !important;
   line-height: 1.5 !important;
@@ -2087,7 +2087,7 @@ textarea::placeholder {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
 }
 
@@ -2104,7 +2104,7 @@ textarea::placeholder {
   border: 1px solid var(--ap-glass-border, var(--border-default)) !important;
   font-size: 13px !important;
   cursor: pointer !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   height: 36px !important;
 }
 
@@ -2379,7 +2379,7 @@ textarea::placeholder {
   cursor: pointer;
   position: relative;
   padding: 0;
-  transition: background-color 0.2s;
+
 }
 
 .saas-switch-btn.active {
@@ -3920,7 +3920,7 @@ textarea::placeholder {
   z-index: 50;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
   border-right: 1px solid var(--ap-glass-border, var(--sidebar-border));
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease, color 0.25s ease;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0s ease;
   overflow: hidden;
 }
 
@@ -4183,7 +4183,7 @@ textarea::placeholder {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-deep) !important;
-  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), ;
 }
 
 .main-header {
@@ -4196,7 +4196,7 @@ textarea::placeholder {
   justify-content: space-between;
   padding: 0 44px;
   z-index: 40;
-  transition: background 0.25s ease, border-color 0.25s ease;
+  transition: border-color 0s ease;
 }
 
 
@@ -4313,7 +4313,7 @@ textarea::placeholder {
   border-radius: 24px;
   border: 1px solid var(--card-border) !important;
   box-shadow: var(--card-shadow);
-  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0s ease, box-shadow 0.25s ease;
 }
 
 /* --- DASHBOARD STATS --- */
@@ -5567,7 +5567,7 @@ textarea::placeholder {
   background: var(--card-bg) !important;
   border-radius: 24px !important;
   border: 1px solid var(--card-border) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
@@ -6139,7 +6139,7 @@ textarea {
   background: var(--card-bg) !important;
   border: 1px solid var(--card-border) !important;
   backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pulse-item:hover {
@@ -6229,7 +6229,7 @@ textarea {
 
 .nav-item {
   border-radius: 12px !important;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-item:hover {
@@ -6266,7 +6266,7 @@ textarea {
   background: var(--ap-glass-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 16px !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.3s ease;
 }
 
 .header-search:focus-within {
@@ -6279,7 +6279,7 @@ textarea {
   background: var(--ap-glass-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 20px !important;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(10px);
 }
 
@@ -6295,7 +6295,7 @@ textarea {
   background: var(--ap-card-bg) !important;
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 24px !important;
-  transition: all 0.4s ease !important;
+  transition: all 0.4s ease;
 }
 
 .order-card:hover,
@@ -6312,7 +6312,7 @@ textarea {
   border: 1px solid var(--ap-glass-border) !important;
   border-radius: 24px !important;
   overflow: hidden !important;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .inventory-card:hover,
@@ -6833,7 +6833,7 @@ select option {
 .table-body-row {
   border-bottom: 1px solid var(--card-border) !important;
   color: var(--text-main) !important;
-  transition: background 0.2s !important;
+
 }
 
 .hover-row:hover {
@@ -6862,6 +6862,34 @@ select option {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px var(--accent-glow);
   filter: brightness(1.1);
+}
+
+.btn-global-danger {
+  background: var(--error, #ef4444);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.btn-global-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+  filter: brightness(1.1);
+}
+
+.btn-global-danger:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-global-danger:disabled {
+  background: rgba(239, 68, 68, 0.4);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-global-danger-sm {
@@ -7099,7 +7127,7 @@ select option {
   padding: 20px !important;
   border-radius: 16px !important;
   border: 1px dashed var(--card-border) !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   color: var(--text-muted) !important;
 }
 
@@ -7293,7 +7321,7 @@ select option {
   display: flex !important;
   flex-direction: column !important;
   gap: 16px !important;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
 }
 
@@ -7520,7 +7548,7 @@ select option {
   flex-direction: column !important;
   gap: 12px !important;
   box-shadow: var(--shadow-sm) !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.3s ease;
   position: relative !important;
   overflow: hidden !important;
 }
@@ -8676,7 +8704,7 @@ select option {
 
 .ext-cls-f6070c60 {
   border-bottom: 1px solid var(--card-border) !important;
-  transition: background 0.2s !important;
+
 }
 
 .ext-cls-b65a50f4 {
@@ -9492,7 +9520,7 @@ select option {
   font-weight: 700 !important;
   font-size: 14px !important;
   border: 1px solid rgba(124, 58, 237, 0.15) !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default !important;
 }
 
@@ -9830,7 +9858,7 @@ select option {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
 }
 
 .ext-cls-7008ca5f {
@@ -9918,7 +9946,7 @@ select option {
   cursor: pointer !important;
   gap: 12px !important;
   background: var(--bg-deep) !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   color: var(--text-muted) !important;
 }
 
@@ -11604,7 +11632,7 @@ select option {
   border-radius: 4px !important;
   display: flex !important;
   align-items: center !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
 }
 
 .st-cls-7670380b {
@@ -11682,7 +11710,7 @@ select option {
   cursor: pointer !important;
   padding: 8px 14px !important;
   border-radius: 12px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -11706,7 +11734,7 @@ select option {
   padding: 10px !important;
   border-radius: 12px !important;
   cursor: pointer !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   display: flex !important;
 }
 
@@ -11717,7 +11745,7 @@ select option {
   padding: 10px !important;
   border-radius: 12px !important;
   cursor: pointer !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   display: flex !important;
 }
 
@@ -11741,7 +11769,7 @@ select option {
   cursor: pointer !important;
   padding: 10px 18px !important;
   border-radius: 12px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -11756,7 +11784,7 @@ select option {
   cursor: pointer !important;
   padding: 10px !important;
   border-radius: 12px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
 }
 
 .st-cls-11ac24cb {
@@ -11876,7 +11904,7 @@ select option {
   align-items: center !important;
   justify-content: center !important;
   font-size: 12px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
 }
 
 .st-cls-32558def {
@@ -11930,7 +11958,7 @@ select option {
   color: var(--text-main) !important;
   border: 1px solid var(--card-border) !important;
   font-size: 15px !important;
-  transition: border 0.2s !important;
+  transition: border 0.2s;
   outline: none !important;
 }
 
@@ -12316,7 +12344,7 @@ select option {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
 }
 
 .st-cls-f69098dc {
@@ -12511,7 +12539,7 @@ select option {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  transition: all 0.2s !important;
+  transition: all 0.2s;
 }
 
 .st-cls-f69098dc {
@@ -12771,7 +12799,7 @@ select option {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  transition: background 0.2s;
+
 }
 
 .sc-item:hover .sc-drag-handle {
@@ -13232,7 +13260,7 @@ select option {
 }
 
 .transition-all {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .overflow-x-auto {
@@ -13279,7 +13307,7 @@ select option {
   background: linear-gradient(135deg, rgba(26, 26, 36, 0.7) 0%, rgba(18, 18, 23, 0.9) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.04) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-card-modern:hover {
@@ -13293,7 +13321,7 @@ select option {
   backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.3s ease;
 }
 
 .glass-panel:hover {
@@ -15060,7 +15088,7 @@ select option {
   border-radius: 16px;
   margin-bottom: 12px;
   align-items: center;
-  transition: transform 0.2s, background 0.2s;
+  transition: transform 0.2s, ;
 }
 
 .premium-menu-item:hover {
@@ -15263,7 +15291,7 @@ select option {
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s;
+
 }
 
 .add-btn:hover {
@@ -15834,7 +15862,7 @@ select option {
   justify-content: center;
   color: var(--text-main);
   cursor: pointer;
-  transition: background 0.2s;
+
 }
 
 .qty-controls-premium button:hover {
@@ -17528,7 +17556,7 @@ select option {
   border-radius: 11px;
   background: #3f3f46;
   position: relative;
-  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 0, 0.2, 1);
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -17735,7 +17763,7 @@ select option {
   height: 28px;
   border-radius: 100px;
   padding: 3px;
-  transition: background 0.35s ease, box-shadow 0.35s ease;
+  transition: box-shadow 0.35s ease;
   position: relative;
 
   /* Dark mode track */
@@ -19353,7 +19381,7 @@ select option {
   outline: none;
   resize: none;
   height: 56px;
-  transition: border-color 0.2s;
+  transition: border-;
 }
 
 .ex-style-d14f4c {
@@ -19591,4 +19619,82 @@ select option {
 
 .filter-row {
   justify-content: flex-start !important;
+}
+
+/* --- THEME SWITCHING FIX (PERMANENT) --- */
+* {
+  transition-property: opacity, transform, width, height, margin, padding, border-color, box-shadow, filter, left, right, top, bottom !important;
+}
+
+/* --- COLLAPSED SIDEBAR FIXES --- */
+.admin-sidebar.collapsed {
+  width: 64px !important;
+}
+
+.admin-sidebar.collapsed .sidebar-brand {
+  padding: 12px 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-bottom: 8px !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  height: auto !important;
+}
+
+.admin-sidebar.collapsed .sidebar-toggle {
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 50% !important;
+}
+
+.admin-sidebar.collapsed .brand-logo {
+  width: 32px !important;
+  height: 32px !important;
+  margin: 0 !important;
+}
+
+.admin-sidebar.collapsed .nav-item {
+  width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  margin: 1px auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 8px !important;
+}
+
+.admin-sidebar.collapsed .nav-item svg {
+  margin: 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.admin-sidebar.collapsed .nav-item.active {
+  background: var(--ap-accent-color, #8b5cf6) !important;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4) !important;
+  border: none !important;
+}
+
+.admin-sidebar.collapsed .nav-item.active svg {
+  color: #fff !important;
+  filter: none !important;
+}
+
+.admin-sidebar.collapsed .nav-item.active::before {
+  display: none !important;
+}
+
+.admin-sidebar.collapsed .nav-item:hover {
+  transform: scale(1.05) !important;
+  background: var(--ap-sidebar-hover) !important;
+}
+
+.admin-sidebar.collapsed .nav-item.active:hover {
+  background: var(--ap-accent-color, #8b5cf6) !important;
 }

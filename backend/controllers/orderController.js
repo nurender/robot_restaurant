@@ -50,7 +50,7 @@ const updateOrder = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
     const io = req.app.get('socketio');
     try {
-        await orderService.updateOrderStatus(req.params.id, req.body.status);
+        await orderService.updateOrderStatus(req.params.id, req.body.status, req.body.cancel_reason);
 
         if (io) {
             const order = await orderService.getOrderById(req.params.id);

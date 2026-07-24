@@ -119,8 +119,12 @@ class OrderService {
         return true;
     }
 
-    async updateOrderStatus(id, status) {
-        await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, id]);
+    async updateOrderStatus(id, status, reason = null) {
+        if (status === 'cancelled' && reason) {
+            await pool.query("UPDATE orders SET status = $1, cancel_reason = $3 WHERE id = $2", [status, id, reason]);
+        } else {
+            await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, id]);
+        }
 
         if (status === 'preparing') {
             const orderRes = await pool.query("SELECT items FROM orders WHERE id = $1", [id]);

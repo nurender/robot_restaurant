@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TrendingUp, ListTodo, Calendar, DollarSign, Clock, CheckCircle, ChefHat, Star, Smartphone, Laptop, RefreshCw, Search, Bell, User, Building2, ChevronDown, Layers, Download, Maximize2, ShieldAlert } from 'lucide-react';
+import { TrendingUp, ListTodo, Calendar, DollarSign, Clock, CheckCircle, ChefHat, Star, Smartphone, Laptop, RefreshCw, Search, Bell, User, Building2, ChevronDown, Layers, Download, Maximize2, ShieldAlert, XCircle } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Area, BarChart, Bar, Legend, Cell, PieChart, Pie, LineChart, Line } from 'recharts';
 import { API_URL } from '../../../config';
 import './DashboardView.css';
@@ -98,6 +98,7 @@ export default function DashboardView({
     const totalOrd = filteredOrders.length;
     const pendingOrd = filteredOrders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
     const completedDeliv = filteredOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length;
+    const cancelledOrd = filteredOrders.filter(o => o.status === 'cancelled').length;
     const avgOrderVal = totalOrd ? Math.round(totalRev / totalOrd) : 0;
     const filteredFeedback = feedbackList.filter(f => {
       const fDate = new Date(f.created_at);
@@ -126,6 +127,7 @@ export default function DashboardView({
       totalOrd,
       pendingOrd,
       completedDeliv,
+      cancelledOrd,
       avgOrderVal,
       avgRating,
       activeQROrders,
@@ -136,8 +138,9 @@ export default function DashboardView({
     };
   }, [filteredOrders, feedbackList, dateFilter, customStartDate, customEndDate]);
   const chartsData = useMemo(() => {
+    const completedOrders = filteredOrders.filter(o => o.status === 'completed' || o.status === 'delivered');
     const dailyDataMap = {};
-    filteredOrders.forEach(o => {
+    completedOrders.forEach(o => {
       const orderDate = parseOrderDate(o);
       if (!orderDate) return;
       const key = orderDate.toLocaleDateString('en-US', {
@@ -156,7 +159,7 @@ export default function DashboardView({
     });
     const dailyBreakdown = Object.values(dailyDataMap);
     const itemMap = {};
-    filteredOrders.forEach(o => {
+    completedOrders.forEach(o => {
       let items = [];
       try {
         items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
@@ -181,7 +184,7 @@ export default function DashboardView({
     }).sort((a, b) => b.qty - a.qty).slice(0, 5);
     const hourMap = {};
     [...Array(24)].forEach((_, i) => hourMap[i] = 0);
-    filteredOrders.forEach(o => {
+    completedOrders.forEach(o => {
       const orderDate = parseOrderDate(o);
       if (!orderDate) return;
       const hour = orderDate.getHours();
@@ -361,12 +364,18 @@ export default function DashboardView({
         icon: CheckCircle,
         color: 'success'
       }, {
-        title: 'Avg Order Value',
-        value: `₹${metrics.avgOrderVal.toLocaleString()}`,
-        badgeText: 'Stable',
-        icon: ChefHat,
-        color: 'success'
-      }, {
+          title: 'Avg Order Value',
+          value: `₹${metrics.avgOrderVal.toLocaleString()}`,
+          badgeText: 'Stable',
+          icon: ChefHat,
+          color: 'success'
+        }, {
+          title: 'Cancelled Orders',
+          value: metrics.cancelledOrd,
+          badgeText: 'Lost Revenue',
+          icon: XCircle,
+          color: 'danger'
+        }, {
         title: 'Customer Rating',
         value: `${metrics.avgRating} ★`,
         badgeText: `${metrics.ratingCount} reviews`,

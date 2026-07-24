@@ -39,7 +39,7 @@ const apiService = {
   getOrders: () => axios.get(`${API_URL}/api/orders`),
   createOrder: (data) => axios.post(`${API_URL}/api/orders`, data),
   updateOrder: (id, data) => axios.put(`${API_URL}/api/orders/${id}`, data),
-  updateOrderStatus: (id, status) => axios.put(`${API_URL}/api/orders/${id}/status`, { status }),
+  updateOrderStatus: (id, status, reason) => axios.put(`${API_URL}/api/orders/${id}/status`, { status, cancel_reason: reason }),
   assignRider: (orderId, riderId) => axios.post(`${API_URL}/api/mgmt/orders/assign-rider`, { order_id: orderId, rider_id: riderId }),
   
   // --- RESTAURANTS / NODES ---

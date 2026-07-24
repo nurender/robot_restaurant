@@ -212,7 +212,7 @@ export default function NeuralInventoryView({
         </div>
 
         <div className="category-quick-filters ext-cls-8223b1f4">
-          {['All', ...categories.map(c => c.name)].map(cat => <button key={cat} className={`filter-pill-btn ${selectedCategory === cat ? 'active' : ''}`} onClick={() => setSelectedCategory(cat)} style={{
+          {['All', ...Array.from(new Set(categories.map(c => c.name)))].map(cat => <button key={cat} className={`filter-pill-btn ${selectedCategory === cat ? 'active' : ''}`} onClick={() => setSelectedCategory(cat)} style={{
           padding: '8px 18px',
           borderRadius: '12px',
           border: '1px solid var(--card-border)',
@@ -229,9 +229,9 @@ export default function NeuralInventoryView({
       </div>
 
       <div className="category-grouped-container ext-cls-a66d859e">
-        {['All', ...categories.map(c => c.name)].filter(c => selectedCategory === 'All' || c === selectedCategory).map(catName => {
+        {['All', ...Array.from(new Set(categories.map(c => c.name)))].filter(c => selectedCategory === 'All' || c === selectedCategory).map(catName => {
         if (catName === 'All') return null;
-        const catItems = menuItems.filter(item => item.category === catName && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const catItems = menuItems.filter(item => item.category === catName && (item.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()));
         if (catItems.length === 0) return null;
         const isCollapsed = collapsedCats.has(catName);
         return <div key={catName} className="category-group-block ext-cls-e3f1dc98">
@@ -253,7 +253,7 @@ export default function NeuralInventoryView({
       })}
 
         {selectedCategory === 'All' && (() => {
-        const unassignedItems = menuItems.filter(item => (!item.category || !categories.some(c => c.name === item.category)) && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const unassignedItems = menuItems.filter(item => (!item.category || !categories.some(c => c.name === item.category)) && (item.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()));
         if (unassignedItems.length === 0) return null;
         const isUnassignedCollapsed = collapsedCats.has('Unassigned');
         return <div className="category-group-block ext-cls-e3f1dc98">
